@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: ppp_postgres
+    environment:
+      POSTGRES_USER: ppp_user
+      POSTGRES_PASSWORD: ppp_password
+      POSTGRES_DB: ppp_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - ppp_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ppp_redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - ppp_redisdata:/data
+    restart: unless-stopped
+
+volumes:
+  ppp_pgdata:
+  ppp_redisdata:

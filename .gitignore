@@ -1,0 +1,61 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Output / Builds
+.next/
+dist/
+out/
+build/
+.turbo/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Env files (NEVER COMMIT SECRETS)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Uploads
+uploads/
+apps/api/uploads/
+Recursos local/
+
+# Root documents and temporary files
+*.xlsx
+*.docx
+~$*
+!apps/web/public/templates/*.xlsx
+!apps/web/public/templates/*.docx
+!apps/web/public/templates/*.png

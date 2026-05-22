@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COORDINATOR
+  STUDENT
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  coordinator   Coordinator?
+  studentProfile Student?
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+  excelImports  ExcelImport[]
+
+  @@map("users")
+}
+
+model Faculty {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  coordinators  Coordinator[]
+  programs      Program[]
+  students      Student[]
+  practices     Practice[]
+  excelImports  ExcelImport[]
+  documentTemplates DocumentTemplate[]
+
+  @@map("faculties")
+}
+
+model Coordinator {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @db.Uuid
+  facultyId String   @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  user      User     @relation(fields: [userId], references: [id])
+  faculty   Faculty  @relation(fields: [facultyId], references: [id])
+
+  @@map("coordinators")
+}
+
+model Program {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  facultyId   String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  faculty     Faculty  @relation(fields: [facultyId], references: [id])
+  students    Student[]
+
+  @@map("programs")
+}
+
+model Student {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @db.Uuid
+  facultyId   String   @db.Uuid
+  programId   String   @db.Uuid
+  dni         String   @unique
+  firstName   String
+  lastName    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  user        User     @relation(fields: [userId], references: [id])
+  faculty     Faculty  @relation(fields: [facultyId], references: [id])
+  program     Program  @relation(fields: [programId], references: [id])
+  practices   Practice[]
+  generatedDocs GeneratedDocument[]
+
+  @@map("students")
+}
+
+model Company {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @unique
+  address       String?
+  contactName   String?
+  email         String?
+  phone         String?
+  recipientName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  practices     Practice[]
+
+  @@map("companies")
+}
+
+enum PracticeStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+model Practice {
+  id              String   @id @default(uuid()) @db.Uuid
+  studentId       String   @db.Uuid
+  companyId       String   @db.Uuid
+  facultyId       String   @db.Uuid
+  academicPeriod  String   @default("2024-1")
+  tutorName       String?  
+  practiceLevel   String?  
+  academicLevel   String?
+  status          PracticeStatus @default(PENDING)
+  startDate       DateTime?
+  endDate         DateTime?
+  totalHours      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  student         Student  @relation(fields: [studentId], references: [id])
+  company         Company  @relation(fields: [companyId], references: [id])
+  faculty         Faculty  @relation(fields: [facultyId], references: [id])
+
+  @@unique([studentId, academicPeriod])
+  @@map("practices")
+}
+
+model DocumentTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  type        String   
+  content     Json     
+  facultyId   String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  faculty     Faculty  @relation(fields: [facultyId], references: [id])
+  generatedDocs GeneratedDocument[]
+
+  @@map("document_templates")
+}
+
+model GeneratedDocument {
+  id          String   @id @default(uuid()) @db.Uuid
+  templateId  String   @db.Uuid
+  studentId   String   @db.Uuid
+  fileUrl     String
+  createdAt   DateTime @default(now())
+  deletedAt   DateTime?
+
+  template    DocumentTemplate @relation(fields: [templateId], references: [id])
+  student     Student  @relation(fields: [studentId], references: [id])
+
+  @@map("generated_documents")
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model ExcelImport {
+  id          String   @id @default(uuid()) @db.Uuid
+  fileName    String
+  fileUrl     String
+  status      ImportStatus @default(PENDING)
+  facultyId   String   @db.Uuid
+  uploadedBy  String   @db.Uuid
+  errorLogs   Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  faculty     Faculty  @relation(fields: [facultyId], references: [id])
+  user        User     @relation(fields: [uploadedBy], references: [id])
+
+  @@map("excel_imports")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  userId    String   @db.Uuid
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  action     String
+  tableName  String
+  recordId   String   @db.Uuid
+  oldData    Json?
+  newData    Json?
+  createdAt  DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
