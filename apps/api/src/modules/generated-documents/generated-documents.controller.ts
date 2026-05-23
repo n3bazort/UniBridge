@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, UseGuards, Req } from '@nestjs/common';
 import { GeneratedDocumentsService } from './generated-documents.service';
 import { GenerateDocumentDto } from './dto/generate-document.dto';
 import { GenerateBatchDto } from './dto/generate-batch.dto';
@@ -19,22 +19,22 @@ export class GeneratedDocumentsController {
   @Post('generate')
   @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Genera un documento fusionando un Template con los datos de un Estudiante' })
-  generate(@Body() dto: GenerateDocumentDto) {
-    return this.service.generate(dto.templateId, dto.studentId);
+  generate(@Req() req: any, @Body() dto: GenerateDocumentDto) {
+    return this.service.generate(dto.templateId, dto.studentId, req.user?.id);
   }
 
   @Post('generate-batch')
   @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Genera múltiples documentos en segundo plano para no saturar memoria' })
-  generateBatch(@Body() dto: GenerateBatchDto) {
-    return this.service.generateBatch(dto.templateId, dto.studentIds);
+  generateBatch(@Req() req: any, @Body() dto: GenerateBatchDto) {
+    return this.service.generateBatch(dto.templateId, dto.studentIds, req.user?.id);
   }
 
   @Post('generate-solicitud')
   @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Genera una solicitud grupal agrupando a los estudiantes (DOCX)' })
-  generateSolicitud(@Body() dto: GenerateSolicitudDto) {
-    return this.service.generateSolicitudGrouped(dto.templateId, dto.studentIds);
+  generateSolicitud(@Req() req: any, @Body() dto: GenerateSolicitudDto) {
+    return this.service.generateSolicitudGrouped(dto.templateId, dto.studentIds, req.user?.id);
   }
 
   @Get()

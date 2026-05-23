@@ -22,11 +22,12 @@ model User {
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
 
-  coordinator   Coordinator?
-  studentProfile Student?
-  refreshTokens RefreshToken[]
-  auditLogs     AuditLog[]
-  excelImports  ExcelImport[]
+  coordinator        Coordinator?
+  studentProfile     Student?
+  refreshTokens      RefreshToken[]
+  auditLogs          AuditLog[]
+  excelImports       ExcelImport[]
+  generatedDocuments GeneratedDocument[]
 
   @@map("users")
 }
@@ -120,6 +121,7 @@ enum PracticeStatus {
   IN_PROGRESS
   COMPLETED
   REJECTED
+  DELAYED
 }
 
 model Practice {
@@ -164,15 +166,17 @@ model DocumentTemplate {
 }
 
 model GeneratedDocument {
-  id          String   @id @default(uuid()) @db.Uuid
-  templateId  String   @db.Uuid
-  studentId   String   @db.Uuid
-  fileUrl     String
-  createdAt   DateTime @default(now())
-  deletedAt   DateTime?
+  id            String   @id @default(uuid()) @db.Uuid
+  templateId    String   @db.Uuid
+  studentId     String   @db.Uuid
+  generatedById String?  @db.Uuid
+  fileUrl       String
+  createdAt     DateTime @default(now())
+  deletedAt     DateTime?
 
-  template    DocumentTemplate @relation(fields: [templateId], references: [id])
-  student     Student  @relation(fields: [studentId], references: [id])
+  template      DocumentTemplate @relation(fields: [templateId], references: [id])
+  student       Student          @relation(fields: [studentId], references: [id])
+  generatedBy   User?            @relation(fields: [generatedById], references: [id])
 
   @@map("generated_documents")
 }

@@ -10,7 +10,7 @@ export class GeneratedDocumentsService {
     private documentEngine: DocumentEngineService,
   ) {}
 
-  async generate(templateId: string, studentId: string) {
+  async generate(templateId: string, studentId: string, generatedById?: string) {
     // 1. Obtener template
     const template = await this.prisma.documentTemplate.findUnique({
       where: { id: templateId }
@@ -46,7 +46,14 @@ export class GeneratedDocumentsService {
 
     // 4. Delegar al Motor de Documentos
     const ext = template.type === 'DOCX' ? '.docx' : '.pdf';
-    const filename = `doc_${student.dni}_${crypto.randomUUID()}${ext}`;
+    
+    // Format: Apellidos_Empresa(max 8)_ddmmaa
+    const lastNameSanitized = student.lastName.replace(/[^a-zA-Z0-9]/g, '');
+    const companySanitized = (currentPractice?.company?.name || 'Varios').replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+    const dateObj = new Date();
+    const ddmmaa = `${String(dateObj.getDate()).padStart(2, '0')}${String(dateObj.getMonth() + 1).padStart(2, '0')}${String(dateObj.getFullYear()).slice(2)}`;
+    
+    const filename = `${lastNameSanitized}_${companySanitized}_${ddmmaa}${ext}`;
     
     const fileUrl = await this.documentEngine.generateDocument(
       template.type as 'PDF' | 'DOCX',
@@ -61,6 +68,7 @@ export class GeneratedDocumentsService {
         templateId,
         studentId,
         fileUrl,
+        generatedById,
       }
     });
   }
@@ -79,12 +87,12 @@ export class GeneratedDocumentsService {
       orderBy: { createdAt: 'desc' }
     });
   }
-  async generateBatch(templateId: string, studentIds: string[]) {
+  async generateBatch(templateId: string, studentIds: string[], generatedById?: string) {
     // Procesar en segundo plano para no bloquear la UI ni saturar la RAM con múltiples Puppeteers a la vez
     setTimeout(async () => {
       for (const studentId of studentIds) {
         try {
-          await this.generate(templateId, studentId);
+          await this.generate(templateId, studentId, generatedById);
         } catch (error) {
           console.error(`Error generando documento en lote para estudiante ${studentId}:`, error);
         }
@@ -97,7 +105,7 @@ export class GeneratedDocumentsService {
     };
   }
 
-  async generateSolicitudGrouped(templateId: string, studentIds: string[]) {
+  async generateSolicitudGrouped(templateId: string, studentIds: string[], generatedById?: string) {
     // 1. Obtener template
     const template = await this.prisma.documentTemplate.findUnique({
       where: { id: templateId }
@@ -156,9 +164,13 @@ export class GeneratedDocumentsService {
     };
 
     // 4. Delegar al Motor de Documentos
-    const companySanitized = company.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 7).toLowerCase();
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // 20260522
-    const filename = `oficio_${oficioId}_${companySanitized}_${dateStr}.docx`;
+    const companySanitized = company.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const companyFormatted = companySanitized.charAt(0).toUpperCase() + companySanitized.slice(1);
+    
+    const dateObj = new Date();
+    const ddmmyy = `${String(dateObj.getDate()).padStart(2, '0')}${String(dateObj.getMonth() + 1).padStart(2, '0')}${String(dateObj.getFullYear()).slice(2)}`;
+    
+    const filename = `Solicitud_${oficioId}_${companyFormatted}_${ddmmyy}.docx`;
     
     const fileUrl = await this.documentEngine.generateDocument(
       'DOCX',
@@ -167,14 +179,14 @@ export class GeneratedDocumentsService {
       filename
     );
 
-    // 5. Opcional: Guardar el registro en GeneratedDocument para el primer estudiante o para todos.
-    // Para simplificar, lo guardamos asociado al primer estudiante (o podríamos crear una relación N:M en el futuro)
-    await this.prisma.generatedDocument.create({
-      data: {
+    // 5. Guardar el registro en GeneratedDocument para TODOS los estudiantes involucrados.
+    await this.prisma.generatedDocument.createMany({
+      data: studentIds.map(id => ({
         templateId,
-        studentId: firstStudent.id, // Referencia principal
+        studentId: id,
         fileUrl,
-      }
+        generatedById,
+      }))
     });
 
     return { fileUrl, message: 'Oficio generado correctamente' };

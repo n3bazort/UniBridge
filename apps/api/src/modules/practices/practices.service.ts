@@ -192,93 +192,116 @@ export class PracticesService {
   async getDashboardStats(facultyId?: string) {
     const whereCondition = facultyId ? { facultyId } : {};
 
-    // 1. Total students with practices
-    const totalStudentsResult = await this.prisma.practice.groupBy({
+    // 1. KPIs
+    const activePractices = await this.prisma.practice.count({
+      where: { ...whereCondition, status: 'IN_PROGRESS' },
+    });
+
+    const activeStudentsResult = await this.prisma.practice.groupBy({
       by: ['studentId'],
-      where: whereCondition,
+      where: { ...whereCondition, status: 'IN_PROGRESS' },
     });
-    const totalStudents = totalStudentsResult.length;
+    const activeStudents = activeStudentsResult.length;
 
-    // 2. Average hours
-    const avgHoursResult = await this.prisma.practice.aggregate({
-      _avg: { totalHours: true },
-      where: whereCondition,
-    });
-    const avgHours = Math.round(avgHoursResult._avg.totalHours || 0);
-
-    // 3. Total Companies (with practices)
     const totalCompaniesResult = await this.prisma.practice.groupBy({
       by: ['companyId'],
       where: whereCondition,
     });
     const totalCompanies = totalCompaniesResult.length;
 
-    // 4. Total Tutors
-    const totalTutorsResult = await this.prisma.practice.groupBy({
-      by: ['tutorName'],
-      where: { ...whereCondition, tutorName: { not: null } },
-    });
-    const totalTutors = totalTutorsResult.length;
-
-    // 5. Distribution by practice level
-    const distributionResult = await this.prisma.practice.groupBy({
-      by: ['practiceLevel'],
-      _count: { studentId: true },
+    const hoursResult = await this.prisma.practice.aggregate({
       _sum: { totalHours: true },
-      where: { ...whereCondition, practiceLevel: { not: null } },
+      where: whereCondition,
+    });
+    const totalHours = hoursResult._sum.totalHours || 0;
+
+    const allPracticesCount = await this.prisma.practice.count({ where: whereCondition });
+    const completedPracticesCount = await this.prisma.practice.count({
+      where: { ...whereCondition, status: 'COMPLETED' },
+    });
+    const completionRate = allPracticesCount > 0 ? Math.round((completedPracticesCount / allPracticesCount) * 100) : 0;
+
+    const activeAlerts = await this.prisma.practice.count({
+      where: { ...whereCondition, status: { in: ['DELAYED', 'REJECTED'] } },
     });
 
-    const distributionByLevel = distributionResult.map((item) => ({
-      practiceLevel: item.practiceLevel,
-      studentCount: item._count.studentId,
-      totalHours: item._sum.totalHours || 0,
-    })).sort((a, b) => b.studentCount - a.studentCount);
+    // 2. Status Distribution (Donut Chart)
+    const statusDistributionResult = await this.prisma.practice.groupBy({
+      by: ['status'],
+      _count: { studentId: true },
+      where: whereCondition,
+    });
+    const statusDistribution = statusDistributionResult.map(s => ({
+      status: s.status,
+      count: s._count.studentId,
+    }));
 
-    // 6. Load by Company
+    // 3. Period Distribution (Vertical Bar Chart)
+    const periodDistributionResult = await this.prisma.practice.groupBy({
+      by: ['academicPeriod'],
+      _count: { studentId: true },
+      where: whereCondition,
+    });
+    const periodDistribution = periodDistributionResult.map(p => ({
+      period: p.academicPeriod || 'Sin definir',
+      count: p._count.studentId,
+    })).sort((a, b) => a.period.localeCompare(b.period));
+
+    // 4. Career Distribution (Horizontal Bar Chart)
+    const practicesWithProgram = await this.prisma.practice.findMany({
+      where: whereCondition,
+      select: { student: { select: { program: { select: { name: true } } } } },
+    });
+    
+    const careerMap = new Map<string, number>();
+    for (const p of practicesWithProgram) {
+      const pName = p.student?.program?.name || 'Desconocida';
+      careerMap.set(pName, (careerMap.get(pName) || 0) + 1);
+    }
+    const careerDistribution = Array.from(careerMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5); // top 5 carreras
+
+    // 5. Load by Company
     const loadByCompanyResult = await this.prisma.practice.groupBy({
       by: ['companyId'],
       _count: { studentId: true },
       where: whereCondition,
       orderBy: { _count: { studentId: 'desc' } },
-      take: 10,
+      take: 5,
     });
 
-    // Populate company names
     const companies = await this.prisma.company.findMany({
       where: { id: { in: loadByCompanyResult.map(r => r.companyId) } },
       select: { id: true, name: true }
     });
 
-    const loadByCompany = loadByCompanyResult.map((r) => {
+    const topCompanies = loadByCompanyResult.map((r) => {
       const company = companies.find(c => c.id === r.companyId);
       return {
-        companyName: company?.name || 'Empresa Desconocida',
-        studentCount: r._count.studentId,
+        name: company?.name || 'Empresa Desconocida',
+        count: r._count.studentId,
       };
     });
 
-    // 7. Load by Tutor
-    const loadByTutorResult = await this.prisma.practice.groupBy({
-      by: ['tutorName'],
-      _count: { studentId: true },
-      where: { ...whereCondition, tutorName: { not: null } },
-      orderBy: { _count: { studentId: 'desc' } },
-      take: 10,
-    });
-
-    const loadByTutor = loadByTutorResult.map((r) => ({
-      tutorName: r.tutorName,
-      studentCount: r._count.studentId,
-    }));
-
     return {
-      totalStudents,
-      avgHours,
-      totalCompanies,
-      totalTutors,
-      distributionByLevel,
-      loadByCompany,
-      loadByTutor,
+      kpis: {
+        activePractices,
+        activeStudents,
+        totalCompanies,
+        totalHours,
+        completionRate,
+        activeAlerts,
+      },
+      charts: {
+        statusDistribution,
+        periodDistribution,
+        careerDistribution,
+      },
+      operational: {
+        topCompanies,
+      }
     };
   }
 }

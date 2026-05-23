@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
+
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"] });
 
 export const metadata: Metadata = {
   title: "PPP System",
@@ -14,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className="antialiased min-h-screen">
+      <body suppressHydrationWarning className={`${inter.className} antialiased min-h-screen`} style={{ backgroundColor: 'var(--color-brand-app)', color: 'var(--color-brand-text)' }}>
         <Providers>
           {children}
         </Providers>

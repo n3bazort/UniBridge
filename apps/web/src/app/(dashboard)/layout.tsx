@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
+import { useSidebarStore } from '@/store/sidebar'
 
 export default function DashboardLayout({
   children,
@@ -14,6 +15,7 @@ export default function DashboardLayout({
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  const { isCollapsed } = useSidebarStore()
 
   useEffect(() => {
     setMounted(true)
@@ -34,11 +36,11 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
+    <div className="flex min-h-screen bg-[#f7f7f8]">
       <Sidebar />
-      <div className="flex flex-1 flex-col sm:gap-4 sm:py-4 sm:pl-14 md:pl-64">
+      <div className={`flex flex-1 flex-col transition-all duration-300 ease-in-out ${isCollapsed ? 'pl-[80px]' : 'pl-[60px] md:pl-[240px]'}`}>
         <Topbar />
-        <main className="flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+        <main className="flex-1 w-full relative">
           {children}
         </main>
       </div>

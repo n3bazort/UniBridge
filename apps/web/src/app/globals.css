@@ -28,9 +28,18 @@
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --shadow-soft: 0 1px 2px rgba(0,0,0,.03), 0 8px 24px rgba(0,0,0,.04);
+
+  --color-brand-accent: #2563eb;
+  --color-brand-sidebar: #fafafa;
+  --color-brand-app: #f7f7f8;
+  --color-brand-text: #111827;
+  --color-brand-body: #374151;
+  --color-brand-secondary: #6b7280;
+  --color-brand-muted: #9ca3af;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
