@@ -1,8 +1,19 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/stores/auth-store'
+import { useAuthStore } from '@/store/auth-store'
 import { api } from '@/lib/axios'
 import type { LoginResponse } from '@/types/auth'
+
+/** Escribe una cookie ligera que lee el middleware.ts de Next.js para proteger rutas SSR */
+function setSessionCookie(role: string, isAuthenticated: boolean) {
+  const value = encodeURIComponent(JSON.stringify({ isAuthenticated, role }))
+  // SameSite=Lax protege contra CSRF, HttpOnly=false porque el middleware Edge runtime sí puede leerla
+  document.cookie = `unibridge-session=${value}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+}
+
+function clearSessionCookie() {
+  document.cookie = 'unibridge-session=; path=/; max-age=0; SameSite=Lax'
+}
 
 export function useAuth() {
   const router = useRouter()
@@ -16,19 +27,22 @@ export function useAuth() {
     try {
       const { data } = await api.post<LoginResponse>('/auth/login', { email, password })
       
-      // Update global store
+      // Actualizar store global de Zustand
       setAuth(data.user, {
         accessToken: (data as any).access_token || data.accessToken,
         refreshToken: (data as any).refresh_token || data.refreshToken
       })
 
-      // Role-based redirects
+      // Escribir cookie de sesión para el middleware de Next.js
+      setSessionCookie(data.user.role, true)
+
+      // Redirección basada en rol
       if (data.user.role === 'ADMIN') {
-        router.push('/overview')
+        router.replace('/overview')
       } else if (data.user.role === 'COORDINATOR') {
-        router.push('/students') // Default coordinator view
+        router.replace('/students')
       } else {
-        router.push('/practices') // Default student view
+        router.replace('/student-dashboard')
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al iniciar sesión. Verifica tus credenciales.')
@@ -41,13 +55,13 @@ export function useAuth() {
   const logout = async () => {
     try {
       if (refreshToken) {
-        // Attempt to revoke the token in the backend
         await api.post('/auth/logout', { refresh_token: refreshToken }).catch(() => {})
       }
     } finally {
-      // Always clear local state even if backend request fails
+      // Limpiar store y cookie de sesión
       zustandLogout()
-      router.push('/login')
+      clearSessionCookie()
+      router.replace('/login')
     }
   }
 

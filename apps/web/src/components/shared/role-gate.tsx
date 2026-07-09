@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuthStore } from '@/stores/auth-store'
+import { useAuthStore } from '@/store/auth-store'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import type { Role } from '@/types/auth'
@@ -17,7 +17,7 @@ export function RoleGate({ children, allowedRoles }: RoleGateProps) {
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
-      router.push('/login')
+      router.replace('/login')
       return
     }
 
@@ -26,9 +26,9 @@ export function RoleGate({ children, allowedRoles }: RoleGateProps) {
     if (!hasRole) {
       // Redirect based on their actual role to prevent infinite loops
       if (user.role === 'STUDENT') {
-        router.push('/student-dashboard')
+        router.replace('/student-dashboard')
       } else {
-        router.push('/overview')
+        router.replace('/overview')
       }
     } else {
       setIsAuthorized(true)

@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { ClsModule } from 'nestjs-cls';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 import { envValidationSchema } from './infrastructure/config/env.validation';
 import { DatabaseModule } from './infrastructure/database/database.module';
@@ -20,6 +21,10 @@ import { DocumentEngineModule } from './modules/document-engine/document-engine.
 import { DocumentTemplatesModule } from './modules/document-templates/document-templates.module';
 import { GeneratedDocumentsModule } from './modules/generated-documents/generated-documents.module';
 import { TenancyInterceptor } from './common/interceptors/tenancy.interceptor';
+import { AcademicPeriodsModule } from './modules/academic-periods/academic-periods.module';
+import { MinioModule } from './modules/minio/minio.module';
+import { OpenSearchModule } from './modules/opensearch/opensearch.module';
+import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 
 @Module({
   imports: [
@@ -31,6 +36,18 @@ import { TenancyInterceptor } from './common/interceptors/tenancy.interceptor';
       global: true,
       middleware: { mount: true },
     }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'global',
+        ttl: 60000,   // 1 minuto
+        limit: 100,   // máx 100 requests por minuto por IP
+      },
+      {
+        name: 'auth',
+        ttl: 900000,  // 15 minutos
+        limit: 10,    // máx 10 intentos de login por 15 minutos
+      },
+    ]),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -55,9 +72,17 @@ import { TenancyInterceptor } from './common/interceptors/tenancy.interceptor';
     DocumentEngineModule,
     DocumentTemplatesModule,
     GeneratedDocumentsModule,
+    AcademicPeriodsModule,
+    MinioModule,
+    OpenSearchModule,
+    AuditLogsModule,
   ],
   controllers: [],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard, // Rate limiting global en todos los endpoints
+    },
     {
       provide: APP_INTERCEPTOR,
       useClass: TenancyInterceptor,

@@ -234,7 +234,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
                  if (doc.isReal && doc.url) {
                    const fullUrl = process.env.NEXT_PUBLIC_API_URL 
                       ? process.env.NEXT_PUBLIC_API_URL.replace('/api/v1', '') + doc.url
-                      : 'http://localhost:3001' + doc.url;
+                      : doc.url;
                    window.open(fullUrl, '_blank');
                  }
                }}

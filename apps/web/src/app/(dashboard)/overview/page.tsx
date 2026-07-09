@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuthStore } from '@/stores/auth-store'
+import { useAuthStore } from '@/store/auth-store'
 import { api } from '@/lib/axios'
+import { useRouter } from 'next/navigation'
 import { RoleGate } from '@/components/shared/role-gate'
 import { 
   Briefcase, 
@@ -22,14 +23,20 @@ import {
 
 export default function OverviewPage() {
   const user = useAuthStore((state) => state.user)
+  const router = useRouter()
   const [data, setData] = useState<any>(null)
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await api.get('/practices/dashboard-stats')
-        setData(res.data)
+        const [statsRes, activityRes] = await Promise.all([
+          api.get('/practices/dashboard-stats'),
+          api.get('/audit-logs?limit=5').catch(() => ({ data: [] })), // Falla silenciosamente
+        ])
+        setData(statsRes.data)
+        setRecentActivity(activityRes.data || [])
       } catch (error) {
         console.error('Error fetching stats:', error)
       } finally {
@@ -38,6 +45,21 @@ export default function OverviewPage() {
     }
     fetchStats()
   }, [])
+
+  const handleExportReport = async () => {
+    try {
+      const res = await api.get('/practices/dashboard-stats')
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `reporte-${new Date().toISOString().split('T')[0]}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Error exportando reporte', e)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -82,10 +104,16 @@ export default function OverviewPage() {
             <p className="text-sm text-slate-500 mt-1">Monitoreo ejecutivo de prácticas preprofesionales</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="h-9 px-4 text-sm font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm">
+            <button
+              onClick={handleExportReport}
+              className="h-9 px-4 text-sm font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm"
+            >
               Exportar Reporte
             </button>
-            <button className="h-9 px-4 text-sm font-medium bg-[#1a1a1a] text-white rounded-lg hover:bg-[#333333] transition-colors shadow-sm">
+            <button
+              onClick={() => router.push('/practices')}
+              className="h-9 px-4 text-sm font-medium bg-[#1a1a1a] text-white rounded-lg hover:bg-[#333333] transition-colors shadow-sm"
+            >
               Nueva Práctica
             </button>
           </div>
@@ -159,7 +187,7 @@ export default function OverviewPage() {
                     ))}
                   </Pie>
                   <RechartsTooltip 
-                    formatter={(value: number, name: string, props: any) => [value, statusLabels[props.payload.status] || props.payload.status]}
+                    formatter={(value: any, name: any, props: any) => [value, statusLabels[props.payload.status] || props.payload.status]}
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}
                   />
                 </PieChart>
@@ -221,11 +249,27 @@ export default function OverviewPage() {
           <div className="bg-white rounded-[14px] border border-slate-100 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col">
             <h3 className="text-sm font-medium text-slate-800 mb-5">Actividad Reciente</h3>
             <div className="flex-1 flex flex-col gap-4">
-              <ActivityItem icon={<FileText />} title="Documento generado" desc="Evaluación final de Josue Panta" time="Hace 10 min" iconColor="text-blue-500" />
-              <ActivityItem icon={<UploadCloud />} title="Importación exitosa" desc="Nómina 2024-1 subida (45 registros)" time="Hace 2 horas" iconColor="text-emerald-500" />
-              <ActivityItem icon={<UserPlus />} title="Estudiante asignado" desc="Erick Rodriguez asignado a Altura S.A." time="Ayer 14:30" iconColor="text-purple-500" />
+              {recentActivity.length > 0 ? (
+                recentActivity.map((log: any, i: number) => (
+                  <ActivityItem
+                    key={i}
+                    icon={<FileText />}
+                    title={`${log.action} en ${log.tableName}`}
+                    desc={`ID: ${String(log.recordId).slice(0, 8)}...`}
+                    time={new Date(log.createdAt).toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' })}
+                    iconColor="text-blue-500"
+                  />
+                ))
+              ) : (
+                <>
+                  <ActivityItem icon={<FileText />} title="Sin actividad reciente" desc="Las acciones del sistema aparecen aquí" time="" iconColor="text-slate-400" />
+                </>
+              )}
             </div>
-            <button className="mt-4 text-xs font-medium text-slate-500 hover:text-slate-800 text-left transition-colors">
+            <button
+              onClick={() => router.push('/settings')}
+              className="mt-4 text-xs font-medium text-slate-500 hover:text-slate-800 text-left transition-colors"
+            >
               Ver todo el registro →
             </button>
           </div>

@@ -3,15 +3,20 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
-import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare } from 'lucide-react'
+import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle } from 'lucide-react'
+import { FilterChip } from '@/components/ui/filter-chip'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { EntityList, type Group, type Practice } from '@/components/practices/EntityList'
 import { RightDetailPanel } from '@/components/practices/RightDetailPanel'
 import { RoleGate } from '@/components/shared/role-gate'
 import { Button } from '@/components/ui/button'
 import { useSearchStore } from '@/store/search'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 export default function PracticesPage() {
+  const router = useRouter()
   const { searchQuery } = useSearchStore()
   const queryClient = useQueryClient()
   
@@ -24,6 +29,15 @@ export default function PracticesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [activePracticeId, setActivePracticeId] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+
+  // Estados para la barra de progreso circular de generación de certificados
+  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false)
+  const [generationProgress, setGenerationProgress] = useState(0)
+  const [generationTotal, setGenerationTotal] = useState(0)
+  const [generationCurrent, setGenerationCurrent] = useState(0)
+  const [generationCurrentName, setGenerationCurrentName] = useState('')
+  const [generationResults, setGenerationResults] = useState<Array<{ studentName: string, success: boolean, fileUrl?: string, error?: string }>>([])
+  const [isGenerationFinished, setIsGenerationFinished] = useState(false)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -147,46 +161,77 @@ export default function PracticesPage() {
       toast.error("Error al actualizar el estado")
     }
   }
-
-  // Generation Logic
   const handleGenerateCertificates = async () => {
-    setIsGenerating(true)
     try {
       const templatesRes = await api.get('/document-templates')
       const defaultTemplate = templatesRes.data.find((t: any) => t.content?.isDefault === true || t.name === 'Certificado de Prácticas Oficial')
       
       if (!defaultTemplate) {
         toast.error('No se encontró una plantilla predeterminada. Por favor márcala en Documentos.')
-        setIsGenerating(false)
         return
       }
 
       const selectedPractices = rawPractices.filter((p: any) => selectedIds.has(p.id) && p.status === 'COMPLETED')
       if (selectedPractices.length === 0) {
         toast.error('No hay estudiantes con estado "Finalizado" seleccionados.')
-        setIsGenerating(false)
         return
       }
 
-      await api.post('/generated-documents/generate-batch', {
-        templateId: defaultTemplate.id,
-        studentIds: selectedPractices.map((p: any) => p.studentId)
-      })
-      toast.success(`Se están procesando ${selectedPractices.length} certificados en segundo plano`, {
-        action: {
-          label: 'Ver certificados',
-          onClick: () => router.push('/certificates')
+      // Initialize progress states
+      setGenerationTotal(selectedPractices.length)
+      setGenerationCurrent(0)
+      setGenerationProgress(0)
+      setGenerationCurrentName('')
+      setGenerationResults([])
+      setIsGenerationFinished(false)
+      setIsProgressModalOpen(true)
+      setIsGenerating(true)
+
+      const results = []
+      let index = 0
+
+      for (const practice of selectedPractices) {
+        const studentName = `${practice.student.firstName} ${practice.student.lastName}`
+        setGenerationCurrent(index + 1)
+        setGenerationCurrentName(studentName)
+        setGenerationProgress(Math.round(((index) / selectedPractices.length) * 100))
+
+        try {
+          const res = await api.post('/generated-documents/generate', {
+            templateId: defaultTemplate.id,
+            studentId: practice.studentId
+          })
+          results.push({
+            studentName,
+            success: true,
+            fileUrl: res.data.fileUrl
+          })
+        } catch (error: any) {
+          console.error(error)
+          results.push({
+            studentName,
+            success: false,
+            error: error.response?.data?.message || 'Error de comunicación'
+          })
         }
-      })
+        
+        index++
+        setGenerationProgress(Math.round((index / selectedPractices.length) * 100))
+      }
+
+      setGenerationResults(results)
+      setIsGenerationFinished(true)
+      const successCount = results.filter(r => r.success).length
+      toast.success(`¡Generación completada! ${successCount} certificados listos.`)
       setSelectedIds(new Set())
     } catch (err: any) {
       console.error(err)
-      toast.error('Error en la generación de certificados.')
+      toast.error('Error al iniciar la generación de certificados.')
+      setIsProgressModalOpen(false)
     } finally {
       setIsGenerating(false)
     }
   }
-
   const handleGenerateSolicitud = async (groupItems: Practice[]) => {
     if (!groupItems || groupItems.length === 0) return
 
@@ -222,7 +267,7 @@ export default function PracticesPage() {
       if (response.data?.fileUrl) {
         const fullUrl = process.env.NEXT_PUBLIC_API_URL 
           ? process.env.NEXT_PUBLIC_API_URL.replace('/api/v1', '') + response.data.fileUrl
-          : 'http://localhost:3001' + response.data.fileUrl;
+          : response.data.fileUrl;
         
         // Create an invisible anchor element to trigger download without opening a new tab
         const a = document.createElement('a');
@@ -306,110 +351,80 @@ export default function PracticesPage() {
           {/* Left Column: Entity List + Filters */}
           <div className="w-full xl:flex-1 flex flex-col gap-6 min-w-0">
             
-            {/* Filter Chips Bar (Moved inside left column) */}
+            {/* Filter Chips Bar */}
             <div className="flex flex-wrap items-center gap-3 w-full">
+              <FilterChip 
+                label="Periodo" 
+                value={filterPeriod} 
+                onChange={setFilterPeriod}
+                options={[
+                  { value: null, label: 'Todos' },
+                  ...periods.map(p => ({ value: p as string, label: p as string }))
+                ]} 
+              />
               
-              {/* Chip: Periodo */}
-              <div className="relative group z-[60]">
-                <div className={`flex flex-col justify-center rounded-[12px] border px-3.5 py-1.5 cursor-pointer shadow-sm transition-colors min-w-[120px] ${filterPeriod ? 'bg-[#f0f9ff] border-[#bae6fd]' : 'bg-white border-[#eef2f7] hover:bg-[#f8fafc]'}`}>
-                  <span className={`text-[11px] font-medium ${filterPeriod ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`}>Periodo</span>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className={`text-[13px] font-semibold ${filterPeriod ? 'text-[#0369a1]' : 'text-[#374151]'}`}>{filterPeriod || 'Todos'}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 ${filterPeriod ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`} />
-                  </div>
-                </div>
-                {/* Dropdown Menu */}
-                <div className="absolute left-0 top-[calc(100%+8px)] w-[160px] bg-white rounded-[12px] border border-[#eef2f7] shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-1.5">
-                   <div onClick={() => setFilterPeriod(null)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">Todos</div>
-                   {periods.map(p => (
-                     <div key={p as string} onClick={() => setFilterPeriod(p as string)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">{p as string}</div>
-                   ))}
-                </div>
-              </div>
-
-              {/* Chip: Estado */}
-              <div className="relative group z-[60]">
-                <div className={`flex flex-col justify-center rounded-[12px] border px-3.5 py-1.5 cursor-pointer shadow-sm transition-colors min-w-[120px] ${filterStatus ? 'bg-[#f0f9ff] border-[#bae6fd]' : 'bg-white border-[#eef2f7] hover:bg-[#f8fafc]'}`}>
-                  <span className={`text-[11px] font-medium ${filterStatus ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`}>Estado</span>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className={`text-[13px] font-semibold ${filterStatus ? 'text-[#0369a1]' : 'text-[#374151]'}`}>{
-                      filterStatus === 'COMPLETED' ? 'Finalizado' : filterStatus === 'PENDING' ? 'Pendiente' : filterStatus === 'DELAYED' ? 'En Atrasado' : filterStatus === 'IN_PROGRESS' ? 'En Curso' : 'Todos'
-                    }</span>
-                    <ChevronDown className={`w-3.5 h-3.5 ${filterStatus ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`} />
-                  </div>
-                </div>
-                {/* Dropdown Menu */}
-                <div className="absolute left-0 top-[calc(100%+8px)] w-[160px] bg-white rounded-[12px] border border-[#eef2f7] shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-1.5">
-                   <div onClick={() => setFilterStatus(null)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">Todos</div>
-                   <div onClick={() => setFilterStatus('PENDING')} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">Pendiente</div>
-                   <div onClick={() => setFilterStatus('IN_PROGRESS')} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">En Curso</div>
-                   <div onClick={() => setFilterStatus('DELAYED')} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">En Atrasado</div>
-                   <div onClick={() => setFilterStatus('COMPLETED')} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">Finalizado</div>
-                </div>
-              </div>
-
-              {/* Chip: Facultad */}
-              <div className="relative group hidden md:block z-[60]">
-                <div className={`flex flex-col justify-center rounded-[12px] border px-3.5 py-1.5 cursor-pointer shadow-sm transition-colors min-w-[140px] max-w-[200px] ${filterFaculty ? 'bg-[#f0f9ff] border-[#bae6fd]' : 'bg-white border-[#eef2f7] hover:bg-[#f8fafc]'}`}>
-                  <span className={`text-[11px] font-medium ${filterFaculty ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`}>Facultad</span>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className={`text-[13px] font-semibold truncate ${filterFaculty ? 'text-[#0369a1]' : 'text-[#374151]'}`}>{filterFaculty ? 'FCVT' : 'Todas'}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${filterFaculty ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`} />
-                  </div>
-                </div>
-                <div className="absolute left-0 top-[calc(100%+8px)] min-w-[200px] bg-white rounded-[12px] border border-[#eef2f7] shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-1.5">
-                   <div onClick={() => setFilterFaculty(null)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">Todas</div>
-                   {faculties.map(f => (
-                     <div key={f as string} onClick={() => setFilterFaculty(f as string)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">{f as string}</div>
-                   ))}
-                </div>
-              </div>
-
-              {/* Chip: Carrera */}
-              <div className="relative group hidden lg:block z-[60]">
-                <div className={`flex flex-col justify-center rounded-[12px] border px-3.5 py-1.5 cursor-pointer shadow-sm transition-colors min-w-[140px] max-w-[200px] ${filterProgram ? 'bg-[#f0f9ff] border-[#bae6fd]' : 'bg-white border-[#eef2f7] hover:bg-[#f8fafc]'}`}>
-                  <span className={`text-[11px] font-medium ${filterProgram ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`}>Carrera</span>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className={`text-[13px] font-semibold truncate ${filterProgram ? 'text-[#0369a1]' : 'text-[#374151]'}`}>{filterProgram ? 'TI' : 'Todas'}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${filterProgram ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`} />
-                  </div>
-                </div>
-                <div className="absolute left-0 top-[calc(100%+8px)] min-w-[200px] bg-white rounded-[12px] border border-[#eef2f7] shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-1.5">
-                   <div onClick={() => setFilterProgram(null)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">Todas</div>
-                   {programs.map(p => (
-                     <div key={p as string} onClick={() => setFilterProgram(p as string)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">{p as string}</div>
-                   ))}
-                </div>
-              </div>
+              <FilterChip 
+                label="Estado" 
+                value={filterStatus} 
+                onChange={setFilterStatus}
+                options={[
+                  { value: null, label: 'Todos' },
+                  { value: 'PENDING', label: 'Pendiente' },
+                  { value: 'IN_PROGRESS', label: 'En Curso' },
+                  { value: 'DELAYED', label: 'En Atrasado' },
+                  { value: 'COMPLETED', label: 'Finalizado' },
+                ]} 
+              />
               
-              <div className="w-[1px] h-[24px] bg-[#e5e7eb] mx-1" />
+              <FilterChip 
+                label="Facultad" 
+                className="hidden md:block"
+                value={filterFaculty} 
+                onChange={setFilterFaculty}
+                options={[
+                  { value: null, label: 'Todas' },
+                  ...faculties.map(f => ({ value: f as string, label: f as string === 'Ciencias de la Vida y Tecnología' ? 'FCVT' : f as string }))
+                ]} 
+              />
               
-              {/* Agrupar */}
-              <div 
-                onClick={() => setGroupBy(groupBy === 'company' ? 'none' : 'company')}
-                className={`hidden sm:flex flex-col justify-center rounded-[12px] border px-3.5 py-1.5 cursor-pointer shadow-sm transition-colors min-w-[120px]
-                ${groupBy === 'company' ? 'bg-[#f0f9ff] border-[#bae6fd]' : 'bg-white border-[#eef2f7] hover:bg-[#f8fafc]'}`}
-              >
-                <span className={`text-[11px] font-medium ${groupBy === 'company' ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`}>Agrupar por</span>
-                <div className="flex items-center justify-between gap-2 mt-0.5">
-                  <span className={`text-[13px] font-semibold ${groupBy === 'company' ? 'text-[#0369a1]' : 'text-[#374151]'}`}>Empresa</span>
-                  <ChevronDown className={`w-3.5 h-3.5 ${groupBy === 'company' ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`} />
-                </div>
-              </div>
+              <FilterChip 
+                label="Carrera" 
+                className="hidden lg:block"
+                value={filterProgram} 
+                onChange={setFilterProgram}
+                options={[
+                  { value: null, label: 'Todas' },
+                  ...programs.map(p => ({ value: p as string, label: p as string === 'Tecnologías de la Información' ? 'TI' : p as string }))
+                ]} 
+              />
+              
+              <div className="w-[1px] h-[24px] bg-[#e5e7eb] mx-1 hidden sm:block" />
+              
+              <FilterChip 
+                label="Agrupar por" 
+                className="hidden sm:block"
+                value={groupBy} 
+                onChange={(val) => setGroupBy((val as any) || 'none')}
+                options={[
+                  { value: 'none', label: 'Ninguno' },
+                  { value: 'company', label: 'Empresa' },
+                  { value: 'tutor', label: 'Tutor' },
+                  { value: 'level', label: 'Nivel' },
+                ]} 
+              />
 
-              {/* Filtros Dropdown Button */}
-              <div className="relative group">
+              {/* Filtros Mobile Fallback */}
+              <div className="relative group lg:hidden z-[60]">
                 <button className="flex items-center gap-2 h-[48px] px-4 bg-white rounded-[12px] border border-[#eef2f7] text-[13px] font-semibold text-[#374151] hover:bg-[#f8fafc] transition-colors shadow-sm">
                   <Filter className="w-4 h-4 text-[#6b7280]" />
-                  Filtros
+                  Más
                 </button>
-                {/* Responsive missing filters */}
-                <div className="absolute left-0 top-full mt-2 w-[220px] bg-white rounded-[16px] border border-[#eef2f7] shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-2 lg:hidden">
+                <div className="absolute left-0 top-full mt-2 w-[220px] bg-white rounded-[16px] border border-[#eef2f7] shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-2">
                    <div onClick={() => setFilterFaculty(filterFaculty ? null : 'Ciencias de la Vida y Tecnología')} className="md:hidden flex flex-col px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer mb-1">
                      <span className="text-[11px] font-medium text-[#9ca3af]">Facultad</span>
                      <span className={`text-[13px] font-semibold ${filterFaculty ? 'text-[#0369a1]' : 'text-[#374151]'}`}>{filterFaculty ? 'FCVT' : 'Todas'}</span>
                    </div>
-                   <div onClick={() => setFilterProgram(filterProgram ? null : 'Tecnologías de la Información')} className="lg:hidden flex flex-col px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer">
+                   <div onClick={() => setFilterProgram(filterProgram ? null : 'Tecnologías de la Información')} className="flex flex-col px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer">
                      <span className="text-[11px] font-medium text-[#9ca3af]">Carrera</span>
                      <span className={`text-[13px] font-semibold ${filterProgram ? 'text-[#0369a1]' : 'text-[#374151]'}`}>{filterProgram ? 'TI' : 'Todas'}</span>
                    </div>
@@ -419,9 +434,36 @@ export default function PracticesPage() {
 
             {/* Entity List */}
             {isLoading ? (
-              <div className="flex justify-center p-12 text-[#6b7280] animate-pulse font-medium">Cargando base de datos...</div>
+              <div className="flex flex-col gap-3 mt-2">
+                {[1,2,3,4,5].map(i => (
+                  <Skeleton key={i} className="h-16 w-full rounded-[16px] bg-white border border-[#eef2f7]" />
+                ))}
+              </div>
             ) : error ? (
-              <div className="text-[#ef4444] p-8 text-center font-medium">Error cargando datos.</div>
+              <div className="mt-4">
+                <EmptyState 
+                  icon={XCircle} 
+                  title="Error cargando datos" 
+                  description="Ocurrió un problema al intentar conectarse al servidor." 
+                  actionLabel="Reintentar"
+                  onAction={() => queryClient.invalidateQueries({ queryKey: ['practices-all'] })}
+                />
+              </div>
+            ) : filteredPractices.length === 0 ? (
+              <div className="mt-4">
+                <EmptyState 
+                  icon={FolderSearch} 
+                  title="No hay resultados" 
+                  description="No se encontraron prácticas que coincidan con los filtros actuales o la búsqueda." 
+                  actionLabel="Limpiar Filtros"
+                  onAction={() => {
+                    setFilterPeriod(null)
+                    setFilterStatus(null)
+                    setFilterFaculty(null)
+                    setFilterProgram(null)
+                  }}
+                />
+              </div>
             ) : (
               <EntityList 
                 groups={groups} 
@@ -457,6 +499,89 @@ export default function PracticesPage() {
           </div>
           
         </div>
+        
+        {/* Indicador de Progreso Circular Flotante (Bottom-Right, No Intrusivo, Pequeño) */}
+        {isProgressModalOpen && (
+          <div className="fixed bottom-6 right-6 z-[200] bg-white rounded-xl shadow-xl border border-slate-100 p-3.5 animate-in slide-in-from-bottom-5 duration-300">
+            {!isGenerationFinished ? (
+              <div className="flex items-center gap-3 w-[260px]">
+                {/* Progreso Circular SVG Pequeño */}
+                <div className="relative flex items-center justify-center w-10 h-10 shrink-0">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      className="text-slate-100"
+                      strokeWidth="3.5"
+                      stroke="currentColor"
+                      fill="transparent"
+                      r="16"
+                      cx="20"
+                      cy="20"
+                    />
+                    <circle
+                      className="text-blue-600 transition-all duration-300"
+                      strokeWidth="3.5"
+                      strokeDasharray={2 * Math.PI * 16}
+                      strokeDashoffset={2 * Math.PI * 16 - (generationProgress / 100) * (2 * Math.PI * 16)}
+                      strokeLinecap="round"
+                      stroke="currentColor"
+                      fill="transparent"
+                      r="16"
+                      cx="20"
+                      cy="20"
+                    />
+                  </svg>
+                  <div className="absolute flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-[#111827] leading-none">{generationProgress}%</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col min-w-0 flex-1">
+                  <h4 className="text-[12px] font-bold text-[#111827] leading-tight">Generando Certificados</h4>
+                  <span className="text-[10px] text-[#475569] mt-0.5 truncate animate-pulse font-medium">
+                    {generationCurrentName || 'Preparando...'}
+                  </span>
+                  <span className="text-[9px] text-[#9ca3af] font-medium mt-0.5">
+                    Procesando {generationCurrent} de {generationTotal}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 w-[280px]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[12px] font-bold text-[#111827] leading-tight">¡Completado!</span>
+                    <span className="text-[10px] text-slate-500 leading-tight mt-0.5">{generationTotal} listos</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => {
+                      setIsProgressModalOpen(false)
+                      router.push('/certificates')
+                    }}
+                    className="h-[28px] px-2.5 bg-[#111827] hover:bg-[#1f2937] text-white text-[10px] font-bold rounded-lg transition-colors flex items-center justify-center"
+                  >
+                    Historial
+                  </button>
+                  <button
+                    onClick={() => setIsProgressModalOpen(false)}
+                    className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </RoleGate>
   )

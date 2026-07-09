@@ -6,6 +6,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -17,9 +18,19 @@ async function bootstrap() {
   // Global Prefix
   app.setGlobalPrefix('api/v1');
 
+  // Helmet — Security headers (XSS, clickjacking, MIME sniffing, etc.)
+  // Se deshabilita contentSecurityPolicy para no romper Swagger UI en desarrollo
+  app.use(helmet({
+    contentSecurityPolicy: process.env.NODE_ENV === 'production',
+  }));
+
   // CORS
+  const corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
+    : ['http://localhost:3000'];
+
   app.enableCors({
-    origin: ['http://localhost:3000'],
+    origin: corsOrigins,
     credentials: true,
   });
 

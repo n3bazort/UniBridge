@@ -144,6 +144,7 @@ model Practice {
   student         Student  @relation(fields: [studentId], references: [id])
   company         Company  @relation(fields: [companyId], references: [id])
   faculty         Faculty  @relation(fields: [facultyId], references: [id])
+  period          AcademicPeriod? @relation(fields: [academicPeriod], references: [code])
 
   @@unique([studentId, academicPeriod])
   @@map("practices")
@@ -165,18 +166,33 @@ model DocumentTemplate {
   @@map("document_templates")
 }
 
+enum DocumentStatus {
+  VALID
+  INVALIDATED
+  SUPERSEDED
+}
+
 model GeneratedDocument {
   id            String   @id @default(uuid()) @db.Uuid
   templateId    String   @db.Uuid
   studentId     String   @db.Uuid
   generatedById String?  @db.Uuid
   fileUrl       String
+  documentCode  String?
+  documentType  String?
+  status        DocumentStatus @default(VALID)
+  invalidatedAt DateTime?
+  invalidReason String?
+  version       Int      @default(1)
+  replacedById  String?  @db.Uuid
   createdAt     DateTime @default(now())
   deletedAt     DateTime?
 
   template      DocumentTemplate @relation(fields: [templateId], references: [id])
   student       Student          @relation(fields: [studentId], references: [id])
   generatedBy   User?            @relation(fields: [generatedById], references: [id])
+  replacedBy    GeneratedDocument? @relation("DocumentReplacement", fields: [replacedById], references: [id])
+  replaces      GeneratedDocument[] @relation("DocumentReplacement")
 
   @@map("generated_documents")
 }
@@ -231,4 +247,33 @@ model AuditLog {
   user       User?    @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
+}
+
+model AcademicPeriod {
+  id            String   @id @default(uuid()) @db.Uuid
+  code          String   @unique
+  name          String
+  startDate     DateTime
+  endDate       DateTime
+  isActive      Boolean  @default(false)
+  
+  deanName      String? 
+  directorName  String? 
+
+  practices     Practice[]
+  sequences     DocumentSequence[]
+
+  @@map("academic_periods")
+}
+
+model DocumentSequence {
+  id          String   @id @default(uuid()) @db.Uuid
+  type        String   
+  periodCode  String   
+  lastNumber  Int      @default(0)
+  
+  period      AcademicPeriod @relation(fields: [periodCode], references: [code])
+
+  @@unique([type, periodCode])
+  @@map("document_sequences")
 }

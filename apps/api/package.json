@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "nest build",
-    "dev": "nest start --watch"
+    "dev": "nest start --watch",
+    "start": "node dist/main.js"
   },
   "dependencies": {
     "@nestjs/bullmq": "^10.1.0",
@@ -15,6 +16,8 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^10.4.22",
     "@nestjs/swagger": "^7.3.0",
+    "@nestjs/throttler": "^6.5.0",
+    "@opensearch-project/opensearch": "^3.6.0",
     "@ppp/db": "*",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.4.2",
@@ -22,7 +25,9 @@
     "class-validator": "^0.14.1",
     "docxtemplater": "^3.68.7",
     "exceljs": "^4.4.0",
+    "helmet": "^8.2.0",
     "joi": "^17.12.2",
+    "minio": "^8.0.7",
     "multer": "^2.0.2",
     "nestjs-cls": "^6.2.0",
     "passport": "^0.7.0",

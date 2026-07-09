@@ -94,8 +94,38 @@ export class PdfDriver implements OnModuleDestroy {
       }
     }
   }
-
   private buildHtml(template: KonvaTemplateJson): string {
+    const fs = require('fs');
+    const path = require('path');
+    const rootDir = path.resolve(process.cwd());
+
+    const toBase64DataUri = (urlPath: string): string => {
+      try {
+        if (urlPath.startsWith('/uploads/')) {
+          const relativeAssetPath = urlPath.replace(/^\//, '');
+          const pathsToTry = [
+            path.join(rootDir, relativeAssetPath),
+            path.join(rootDir, 'apps/api', relativeAssetPath),
+            path.join(rootDir, '..', relativeAssetPath),
+            path.resolve(relativeAssetPath),
+          ];
+
+          for (const absoluteAssetPath of pathsToTry) {
+            if (fs.existsSync(absoluteAssetPath) && fs.lstatSync(absoluteAssetPath).isFile()) {
+              const fileBuffer = fs.readFileSync(absoluteAssetPath);
+              const extension = path.extname(absoluteAssetPath).toLowerCase().replace(/^\./, '');
+              const mimeType = extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg' : `image/${extension}`;
+              return `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+            }
+          }
+          this.logger.warn(`No se encontró el archivo de carga para: ${urlPath} en las rutas intentadas`);
+        }
+      } catch (err) {
+        this.logger.error(`Error al convertir ${urlPath} a base64: ${err.message}`);
+      }
+      return urlPath;
+    };
+
     let elementsHtml = '';
 
     for (const el of template.elements) {
@@ -118,8 +148,12 @@ export class PdfDriver implements OnModuleDestroy {
           ">${el.content}</div>
         `;
       } else if (el.type === 'image') {
+        let imgSrc = el.content;
+        if (imgSrc.startsWith('/uploads/')) {
+          imgSrc = toBase64DataUri(imgSrc);
+        }
         elementsHtml += `
-          <img src="${el.content}" style="
+          <img src="${imgSrc}" style="
             position: absolute;
             left: ${el.x}px;
             top: ${el.y}px;
@@ -127,6 +161,18 @@ export class PdfDriver implements OnModuleDestroy {
             height: ${el.height ? el.height + 'px' : 'auto'};
           " />
         `;
+      }
+    }
+
+    let backgroundCss = '#ffffff';
+    if (template.background) {
+      if (template.background.startsWith('http')) {
+        backgroundCss = `url('${template.background}')`;
+      } else if (template.background.startsWith('/uploads/')) {
+        const base64Uri = toBase64DataUri(template.background);
+        backgroundCss = `url('${base64Uri}')`;
+      } else {
+        backgroundCss = template.background;
       }
     }
 
@@ -141,7 +187,7 @@ export class PdfDriver implements OnModuleDestroy {
             padding: 0;
             width: ${template.width}px;
             height: ${template.height}px;
-            background: ${template.background && template.background.startsWith('http') ? `url('${template.background}')` : template.background || '#ffffff'};
+            background: ${backgroundCss};
             background-size: cover;
             background-repeat: no-repeat;
             position: relative;

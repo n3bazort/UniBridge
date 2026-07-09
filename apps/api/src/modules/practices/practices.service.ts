@@ -4,15 +4,32 @@ import { CreatePracticeDto } from './dto/create-practice.dto';
 import { UpdatePracticeDto } from './dto/update-practice.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { Prisma } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class PracticesService {
   constructor(private prisma: PrismaService) {}
 
   async create(createPracticeDto: CreatePracticeDto) {
+    // Auto-assign the active academic period
+    const activePeriod = await this.prisma.academicPeriod.findFirst({ where: { isActive: true } });
+    if (!activePeriod) {
+      throw new ConflictException('No hay un periodo académico activo configurado. Contacte al administrador para activar un periodo.');
+    }
+
+    // If a period was provided, validate it matches the active one
+    if (createPracticeDto.academicPeriod && createPracticeDto.academicPeriod !== activePeriod.code) {
+      throw new ConflictException(
+        `El periodo "${createPracticeDto.academicPeriod}" no coincide con el periodo activo "${activePeriod.code}". Las prácticas solo se pueden registrar en el periodo activo.`
+      );
+    }
+
     try {
       return await this.prisma.practice.create({
-        data: createPracticeDto,
+        data: {
+          ...createPracticeDto,
+          academicPeriod: activePeriod.code, // Always use the active period
+        },
         include: {
           student: { select: { firstName: true, lastName: true } },
           company: { select: { name: true } }
@@ -94,6 +111,12 @@ export class PracticesService {
   }
 
   async bulkImport(programName: string, students: any[], facultyId?: string) {
+    // Validate active period exists
+    const activePeriod = await this.prisma.academicPeriod.findFirst({ where: { isActive: true } });
+    if (!activePeriod) {
+      throw new ConflictException('No hay un periodo académico activo configurado. Contacte al administrador para activar un periodo antes de importar.');
+    }
+
     if (!facultyId) {
       const defaultFaculty = await this.prisma.faculty.findFirst();
       if (!defaultFaculty) throw new ConflictException('No hay facultades registradas en el sistema');
@@ -132,10 +155,11 @@ export class PracticesService {
 
       let user = await this.prisma.user.findUnique({ where: { email: row.email } });
       if (!user) {
+        const hashedPassword = await bcrypt.hash(`temporal-${row.dni}`, 10);
         user = await this.prisma.user.create({
           data: {
             email: row.email,
-            password: 'temporal123',
+            password: hashedPassword,
             role: 'STUDENT'
           }
         });
@@ -159,7 +183,7 @@ export class PracticesService {
         where: {
           studentId_academicPeriod: {
             studentId: student.id,
-            academicPeriod: row.academicPeriod || '2024-1'
+            academicPeriod: row.academicPeriod || activePeriod.code
           }
         },
         update: {
@@ -174,7 +198,7 @@ export class PracticesService {
           studentId: student.id,
           companyId: company.id,
           facultyId,
-          academicPeriod: row.academicPeriod || '2024-1',
+          academicPeriod: row.academicPeriod || activePeriod.code,
           tutorName: row.tutorName,
           practiceLevel: row.practiceLevel,
           academicLevel: row.academicLevel,

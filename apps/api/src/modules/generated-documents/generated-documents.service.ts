@@ -10,6 +10,29 @@ export class GeneratedDocumentsService {
     private documentEngine: DocumentEngineService,
   ) {}
 
+  async generateSequence(type: string, periodCode: string, overrideCode?: string): Promise<string> {
+    if (overrideCode) return overrideCode;
+
+    // Check if period exists, if not use a fallback or create it
+    let period = await this.prisma.academicPeriod.findUnique({ where: { code: periodCode } });
+    if (!period) {
+       period = await this.prisma.academicPeriod.create({
+         data: { code: periodCode, name: periodCode, startDate: new Date(), endDate: new Date() }
+       });
+    }
+
+    const sequence = await this.prisma.documentSequence.upsert({
+      where: {
+        type_periodCode: { type, periodCode },
+      },
+      update: { lastNumber: { increment: 1 } },
+      create: { type, periodCode, lastNumber: 1 },
+    });
+
+    const prefix = type === 'CERTIFICADO' ? 'CERT' : 'OFIC';
+    return `${prefix}-${periodCode}-${String(sequence.lastNumber).padStart(3, '0')}`;
+  }
+
   async generate(templateId: string, studentId: string, generatedById?: string) {
     // 1. Obtener template
     const template = await this.prisma.documentTemplate.findUnique({
@@ -30,7 +53,18 @@ export class GeneratedDocumentsService {
 
     // 3. Preparar diccionario de variables
     const currentPractice = student.practices[0];
+    const academicPeriodCode = currentPractice?.academicPeriod || '2024-1';
+    
+    // Obtener configuración del periodo académico
+    const period = await this.prisma.academicPeriod.findUnique({
+      where: { code: academicPeriodCode }
+    });
+    
+    // Generar código único de documento
+    const documentCode = await this.generateSequence('CERTIFICADO', academicPeriodCode);
+
     const dataToInject = {
+      documentCode, // Inject sequence code
       studentName: `${student.firstName} ${student.lastName}`,
       studentDni: student.dni,
       programName: student.program?.name || 'N/A',
@@ -40,7 +74,9 @@ export class GeneratedDocumentsService {
       tutorName: currentPractice?.tutorName || 'N/A',
       practiceLevel: currentPractice?.practiceLevel || 'N/A',
       academicLevel: currentPractice?.academicLevel || 'N/A',
-      academicPeriod: currentPractice?.academicPeriod || 'N/A',
+      academicPeriod: academicPeriodCode,
+      deanName: period?.deanName || 'Firma Autorizada Decano',
+      directorName: period?.directorName || 'Firma Autorizada Director',
       currentDate: new Date().toLocaleDateString('es-ES'),
     };
 
@@ -68,6 +104,9 @@ export class GeneratedDocumentsService {
         templateId,
         studentId,
         fileUrl,
+        documentCode,
+        documentType: 'CERTIFICADO',
+        status: 'VALID',
         generatedById,
       }
     });
@@ -75,7 +114,34 @@ export class GeneratedDocumentsService {
 
   async findAll() {
     return this.prisma.generatedDocument.findMany({
-      include: { student: true, template: true },
+      include: { 
+        student: {
+          include: {
+            practices: {
+              include: {
+                company: true
+              }
+            }
+          }
+        }, 
+        template: true 
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async findMyDocuments(userId: string) {
+    const student = await this.prisma.student.findUnique({
+      where: { userId }
+    });
+    if (!student) throw new NotFoundException('Estudiante no encontrado');
+
+    return this.prisma.generatedDocument.findMany({
+      where: { 
+        studentId: student.id,
+        status: 'VALID' // Solo mostrar los documentos vigentes al estudiante
+      },
+      include: { template: true },
       orderBy: { createdAt: 'desc' }
     });
   }
@@ -137,16 +203,26 @@ export class GeneratedDocumentsService {
     if (!company) throw new NotFoundException('Los estudiantes seleccionados no tienen una empresa asignada');
 
     // 3. Preparar diccionario de variables reales
-    // oficioId: Generamos un código corto alfanumérico único para el documento
-    const oficioId = crypto.randomBytes(2).toString('hex').toUpperCase();
+    const academicPeriodCode = currentPractice?.academicPeriod || '2024-1';
+    
+    // Obtener configuración del periodo académico
+    const period = await this.prisma.academicPeriod.findUnique({
+      where: { code: academicPeriodCode }
+    });
+    
+    // Generamos un código único secuencial para el oficio
+    const oficioId = await this.generateSequence('SOLICITUD', academicPeriodCode);
 
     const dataToInject = {
       oficioId: oficioId,
+      documentCode: oficioId,
       currentDate: new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }),
       companyContactName: company.contactName || 'Responsable',
       companyRecipientName: company.recipientName || 'Director(a)',
       facultyName: faculty?.name || 'Facultad de Ciencias de la Vida y Tecnologías',
-      academicPeriod: currentPractice?.academicPeriod || '2026-1',
+      academicPeriod: academicPeriodCode,
+      deanName: period?.deanName || 'Firma Autorizada Decano',
+      directorName: period?.directorName || 'Firma Autorizada Director',
       companyName: company.name,
       academicTutorName: currentPractice?.tutorName || 'Docente Tutor',
       programName: program?.name || 'Carrera',
@@ -180,15 +256,73 @@ export class GeneratedDocumentsService {
     );
 
     // 5. Guardar el registro en GeneratedDocument para TODOS los estudiantes involucrados.
-    await this.prisma.generatedDocument.createMany({
-      data: studentIds.map(id => ({
+    const docs = await this.prisma.generatedDocument.createMany({
+      data: studentIds.map(studentId => ({
         templateId,
-        studentId: id,
+        studentId,
         fileUrl,
+        documentCode: oficioId,
+        documentType: 'SOLICITUD',
+        status: 'VALID',
         generatedById,
       }))
     });
 
     return { fileUrl, message: 'Oficio generado correctamente' };
+  }
+
+  async invalidate(id: string, reason: string) {
+    return this.prisma.generatedDocument.update({
+      where: { id },
+      data: {
+        status: 'INVALIDATED',
+        invalidatedAt: new Date(),
+        invalidReason: reason,
+      }
+    });
+  }
+
+  async regenerate(id: string, generatedById?: string) {
+    const oldDoc = await this.prisma.generatedDocument.findUnique({
+      where: { id },
+      include: { student: true }
+    });
+
+    if (!oldDoc) throw new NotFoundException('Documento no encontrado');
+
+    // Invalidate old one first if not already
+    await this.prisma.generatedDocument.update({
+      where: { id },
+      data: { status: 'SUPERSEDED' }
+    });
+
+    let newDoc;
+    if (oldDoc.documentType === 'SOLICITUD') {
+      newDoc = (await this.generateSolicitudGrouped(oldDoc.templateId, [oldDoc.studentId], generatedById)).fileUrl;
+    } else {
+      newDoc = await this.generate(oldDoc.templateId, oldDoc.studentId, generatedById);
+    }
+    
+    // The previous methods create a new record in DB. 
+    // We need to fetch it (it's the latest one for this student/template)
+    const latestDoc = await this.prisma.generatedDocument.findFirst({
+      where: { 
+        studentId: oldDoc.studentId,
+        templateId: oldDoc.templateId,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (latestDoc) {
+      await this.prisma.generatedDocument.update({
+        where: { id: latestDoc.id },
+        data: {
+          version: oldDoc.version + 1,
+          replacedById: oldDoc.id
+        }
+      });
+    }
+
+    return latestDoc;
   }
 }

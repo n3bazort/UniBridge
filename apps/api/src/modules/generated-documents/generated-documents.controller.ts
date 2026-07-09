@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Param, Body, UseGuards, Req } from '@nestjs/common';
 import { GeneratedDocumentsService } from './generated-documents.service';
 import { GenerateDocumentDto } from './dto/generate-document.dto';
 import { GenerateBatchDto } from './dto/generate-batch.dto';
@@ -44,10 +44,31 @@ export class GeneratedDocumentsController {
     return this.service.findAll();
   }
 
+  @Get('me')
+  @Roles(Role.STUDENT)
+  @ApiOperation({ summary: 'Obtiene los documentos del estudiante logueado' })
+  findMyDocuments(@Req() req: any) {
+    return this.service.findMyDocuments(req.user.id);
+  }
+
   @Get('student/:studentId')
-  @Roles(Role.ADMIN, Role.COORDINATOR, Role.STUDENT)
+  @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Lista documentos de un estudiante específico' })
   findByStudent(@Param('studentId') studentId: string) {
     return this.service.findByStudent(studentId);
+  }
+
+  @Patch(':id/invalidate')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Invalida un documento generado' })
+  invalidate(@Param('id') id: string, @Body('reason') reason: string) {
+    return this.service.invalidate(id, reason);
+  }
+
+  @Post(':id/regenerate')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Genera una nueva versión de un documento invalidado' })
+  regenerate(@Req() req: any, @Param('id') id: string) {
+    return this.service.regenerate(id, req.user?.id);
   }
 }

@@ -7,6 +7,7 @@ import { api } from '@/lib/axios'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/store/auth-store'
 
 /* ───────────── Tipos ───────────── */
 export interface TemplateElement {
@@ -44,17 +45,63 @@ export function CertificateDesignerFull() {
   const searchParams = useSearchParams()
   const templateId = searchParams.get('templateId')
   const queryClient = useQueryClient()
+  const user = useAuthStore((state) => state.user)
 
   const [elements, setElements] = useState<TemplateElement[]>([])
   const [selectedId, selectShape] = useState<string | null>(null)
   const [bgImageUrl, setBgImageUrl] = useState<string | null>(null)
   const [templateName, setTemplateName] = useState('')
   const [saving, setSaving] = useState(false)
+  const [isDefaultTemplate, setIsDefaultTemplate] = useState(false)
   const [image] = useImage(bgImageUrl || '')
   const stageRef = useRef<any>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const [stagePos, setStagePos] = useState({ x: 0, y: 0 })
+  const [stageScale, setStageScale] = useState(1)
 
   const CANVAS_W = 1123
   const CANVAS_H = 794
+
+  const handleWheel = (e: any) => {
+    e.evt.preventDefault();
+    const scaleBy = 1.1;
+    const stage = stageRef.current;
+    if (!stage) return;
+    const oldScale = stage.scaleX();
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+
+    const mousePointTo = {
+      x: (pointer.x - stage.x()) / oldScale,
+      y: (pointer.y - stage.y()) / oldScale,
+    };
+
+    const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
+    setStageScale(newScale);
+    setStagePos({
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y - mousePointTo.y * newScale,
+    });
+  };
+
+  // Centrar el canvas inicialmente
+  React.useEffect(() => {
+    if (containerRef.current) {
+      const containerW = containerRef.current.clientWidth;
+      const containerH = containerRef.current.clientHeight;
+      // Calcular escala inicial para que quepa en el contenedor (con margen)
+      const scale = Math.min(
+        (containerW - 40) / CANVAS_W,
+        (containerH - 40) / CANVAS_H
+      );
+      setStageScale(scale);
+      setStagePos({
+        x: (containerW - CANVAS_W * scale) / 2,
+        y: (containerH - CANVAS_H * scale) / 2,
+      });
+    }
+  }, []);
 
   // Si viene con templateId, cargar el template existente
   useQuery({
@@ -69,6 +116,9 @@ export function CertificateDesignerFull() {
       if (content?.elements) setElements(content.elements.map((el: any, i: number) => ({
         ...el, id: el.id || `loaded-${i}-${Date.now()}`
       })))
+      
+      const isDefault = tmpl.name === 'Certificado de Prácticas Oficial' || content?.isDefault === true
+      setIsDefaultTemplate(isDefault)
       return tmpl
     },
     enabled: !!templateId
@@ -114,7 +164,7 @@ export function CertificateDesignerFull() {
     formData.append('image', file)
     try {
       const response = await api.post('/document-templates/upload-image', formData)
-      const serverUrl = `http://localhost:3001${response.data.url}`
+      const serverUrl = response.data.url
       setBgImageUrl(serverUrl)
     } catch {
       setBgImageUrl(URL.createObjectURL(file))
@@ -327,10 +377,13 @@ export function CertificateDesignerFull() {
         <div className="p-4 mt-auto border-t flex flex-col gap-2">
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || (isDefaultTemplate && user?.role === 'COORDINATOR')}
             className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold rounded-md shadow-md transition-colors"
           >
-            {saving ? 'Guardando...' : '💾 Guardar Diseño Final'}
+            {saving 
+              ? 'Guardando...' 
+              : (isDefaultTemplate && user?.role === 'COORDINATOR' ? '🔒 Solo Lectura' : '💾 Guardar Diseño Final')
+            }
           </button>
           <button
             onClick={() => router.push('/documents')}
@@ -343,71 +396,113 @@ export function CertificateDesignerFull() {
 
       {/* ═══════ CANVAS CENTRAL ═══════ */}
       <div 
-        className="flex-1 bg-slate-200 overflow-auto flex items-center justify-center p-8"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) selectShape(null)
-        }}
+        ref={containerRef}
+        className="flex-1 bg-slate-200 overflow-hidden relative"
       >
-        <div style={{ 
-          width: CANVAS_W, 
-          height: CANVAS_H, 
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-          background: 'white'
-        }}>
-          <Stage 
-            width={CANVAS_W} 
-            height={CANVAS_H} 
-            ref={stageRef}
-            onMouseDown={(e) => {
-              if (e.target === e.target.getStage()) selectShape(null)
-            }}
+        <Stage 
+          width={typeof window !== 'undefined' ? window.innerWidth - 320 : CANVAS_W} 
+          height={typeof window !== 'undefined' ? window.innerHeight - 80 : CANVAS_H} 
+          ref={stageRef}
+          onWheel={handleWheel}
+          draggable
+          x={stagePos.x}
+          y={stagePos.y}
+          scaleX={stageScale}
+          scaleY={stageScale}
+          onDragEnd={(e) => {
+            // Solo actualizar pos del stage si lo que se arrastra es el stage
+            if (e.target === stageRef.current) {
+              setStagePos({ x: e.target.x(), y: e.target.y() });
+            }
+          }}
+          onMouseDown={(e) => {
+            if (e.target === e.target.getStage()) selectShape(null)
+          }}
+        >
+          <Layer>
+            {/* Sombra y Fondo blanco base simulando el papel */}
+            <Rect 
+              x={0} y={0} 
+              width={CANVAS_W} height={CANVAS_H} 
+              fill="#ffffff" 
+              shadowColor="black"
+              shadowBlur={10}
+              shadowOpacity={0.2}
+              shadowOffset={{ x: 5, y: 5 }}
+            />
+
+            {/* Imagen de fondo */}
+            {image && <KonvaImage image={image} width={CANVAS_W} height={CANVAS_H} />}
+
+            {/* Elementos de texto */}
+            {elements.map((el) => (
+              <KonvaText
+                key={el.id}
+                id={el.id}
+                text={el.content}
+                x={el.x}
+                y={el.y}
+                fontSize={el.fontSize || 20}
+                fontFamily={el.fontFamily || 'Arial'}
+                fontStyle={
+                  `${el.fontWeight === 'bold' ? 'bold ' : ''}${el.fontStyle === 'italic' ? 'italic' : ''}`.trim() || 'normal'
+                }
+                align={el.textAlign as any || 'left'}
+                fill={el.color || '#000'}
+                width={el.width || 400}
+                draggable
+                onDragStart={(e) => {
+                  e.cancelBubble = true; // Evitar arrastrar el stage
+                }}
+                onDragEnd={(e) => {
+                  e.cancelBubble = true;
+                  handleDragEnd(e, el.id);
+                }}
+                onClick={() => selectShape(el.id)}
+                onTap={() => selectShape(el.id)}
+                onTransformEnd={(e) => {
+                  const node = e.target
+                  updateElement(el.id, {
+                    x: Math.round(node.x()),
+                    y: Math.round(node.y()),
+                    width: Math.max(50, Math.round(node.width() * node.scaleX())),
+                  })
+                  node.scaleX(1)
+                  node.scaleY(1)
+                }}
+              />
+            ))}
+
+            {/* Transformer del elemento seleccionado */}
+            {selectedId && (
+              <TransformerComponent selectedId={selectedId} stageRef={stageRef} />
+            )}
+          </Layer>
+        </Stage>
+        
+        {/* Controles de Zoom Overlay */}
+        <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-white rounded-lg shadow-md p-1 border border-gray-200">
+          <button 
+            onClick={() => {
+              const newScale = stageScale / 1.2;
+              setStageScale(newScale);
+            }} 
+            className="p-2 hover:bg-gray-100 rounded text-gray-700 font-bold"
+            title="Alejar"
           >
-            <Layer>
-              {/* Fondo blanco base */}
-              <Rect x={0} y={0} width={CANVAS_W} height={CANVAS_H} fill="#ffffff" />
-
-              {/* Imagen de fondo */}
-              {image && <KonvaImage image={image} width={CANVAS_W} height={CANVAS_H} />}
-
-              {/* Elementos de texto */}
-              {elements.map((el) => (
-                <KonvaText
-                  key={el.id}
-                  id={el.id}
-                  text={el.content}
-                  x={el.x}
-                  y={el.y}
-                  fontSize={el.fontSize || 20}
-                  fontFamily={el.fontFamily || 'Arial'}
-                  fontStyle={
-                    `${el.fontWeight === 'bold' ? 'bold ' : ''}${el.fontStyle === 'italic' ? 'italic' : ''}`.trim() || 'normal'
-                  }
-                  align={el.textAlign as any || 'left'}
-                  fill={el.color || '#000'}
-                  width={el.width || 400}
-                  draggable
-                  onDragEnd={(e) => handleDragEnd(e, el.id)}
-                  onClick={() => selectShape(el.id)}
-                  onTap={() => selectShape(el.id)}
-                  onTransformEnd={(e) => {
-                    const node = e.target
-                    updateElement(el.id, {
-                      x: Math.round(node.x()),
-                      y: Math.round(node.y()),
-                      width: Math.max(50, Math.round(node.width() * node.scaleX())),
-                    })
-                    node.scaleX(1)
-                    node.scaleY(1)
-                  }}
-                />
-              ))}
-
-              {/* Transformer del elemento seleccionado */}
-              {selectedId && (
-                <TransformerComponent selectedId={selectedId} stageRef={stageRef} />
-              )}
-            </Layer>
-          </Stage>
+            -
+          </button>
+          <span className="text-xs font-semibold px-2 min-w-[3rem] text-center">{Math.round(stageScale * 100)}%</span>
+          <button 
+            onClick={() => {
+              const newScale = stageScale * 1.2;
+              setStageScale(newScale);
+            }} 
+            className="p-2 hover:bg-gray-100 rounded text-gray-700 font-bold"
+            title="Acercar"
+          >
+            +
+          </button>
         </div>
       </div>
     </div>

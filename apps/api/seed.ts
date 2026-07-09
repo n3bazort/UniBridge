@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+import * as fs from 'fs';
 
 // Cargar variables de entorno desde packages/db
 dotenv.config({ path: path.resolve(__dirname, '../../packages/db/.env') });
@@ -11,6 +12,22 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Iniciando el sembrado de la BD...');
   
+  // Ensure uploads/images directory exists
+  const imagesDir = path.resolve(__dirname, 'uploads/images');
+  if (!fs.existsSync(imagesDir)) {
+    fs.mkdirSync(imagesDir, { recursive: true });
+  }
+
+  // Copy template image
+  const sourceImage = path.resolve(__dirname, '../../apps/web/public/templates/Certificado Real.png');
+  const targetImageName = 'bg-certificado-real.png';
+  const targetImage = path.resolve(imagesDir, targetImageName);
+  
+  if (fs.existsSync(sourceImage)) {
+    fs.copyFileSync(sourceImage, targetImage);
+    console.log('✅ Imagen de fondo de certificado copiada a uploads/images');
+  }
+
   // Clear tables
   await prisma.generatedDocument.deleteMany({});
   await prisma.documentTemplate.deleteMany({});
@@ -23,7 +40,7 @@ async function main() {
   await prisma.refreshToken.deleteMany({});
   await prisma.user.deleteMany({});
 
-  const hashedPassword = await bcrypt.hash('Admin123!', 10);
+  const hashedPassword = await bcrypt.hash('@adminadmin007', 10);
   
   const user = await prisma.user.upsert({
     where: { email: 'admin@uleam.edu.ec' },
@@ -37,7 +54,7 @@ async function main() {
   
   console.log('✅ Usuario Admin maestro creado exitosamente!');
   console.log(`Email: ${user.email}`);
-  console.log(`Password: Admin123!`);
+  console.log(`Password: @adminadmin007`);
 
   const coordinator = await prisma.user.upsert({
     where: { email: 'coordinator@uleam.edu.ec' },
@@ -110,7 +127,7 @@ async function main() {
       content: {
         width: 1123,
         height: 794,
-        background: null,
+        background: '/uploads/images/bg-certificado-real.png',
         elements: [
           {
             type: 'text',

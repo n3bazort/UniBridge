@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Req, Patch } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Req, Patch, ForbiddenException } from '@nestjs/common';
 import { DocumentTemplatesService } from './document-templates.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -29,7 +29,12 @@ export class DocumentTemplatesController {
   @Post('pdf/:id') // Using POST to act as PUT or better yet @Put('pdf/:id')
   @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Actualizar template PDF existente' })
-  updatePdf(@Param('id') id: string, @Body() body: CreatePdfTemplateDto) {
+  async updatePdf(@Param('id') id: string, @Body() body: CreatePdfTemplateDto, @Req() req: any) {
+    const template = await this.service.findOne(id);
+    const isDefault = template.name === 'Certificado de Prácticas Oficial' || (template.content as any)?.isDefault === true;
+    if (isDefault && req.user?.role === Role.COORDINATOR) {
+      throw new ForbiddenException('La plantilla predeterminada solo puede ser modificada por el Administrador.');
+    }
     return this.service.updatePdfTemplate(id, body.name, body.content);
   }
 
@@ -103,13 +108,23 @@ export class DocumentTemplatesController {
   @Patch(':id/rename')
   @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Renombrar una plantilla' })
-  rename(@Param('id') id: string, @Body() body: { name: string }) {
+  async rename(@Param('id') id: string, @Body() body: { name: string }, @Req() req: any) {
+    const template = await this.service.findOne(id);
+    const isDefault = template.name === 'Certificado de Prácticas Oficial' || (template.content as any)?.isDefault === true;
+    if (isDefault && req.user?.role === Role.COORDINATOR) {
+      throw new ForbiddenException('La plantilla predeterminada solo puede ser modificada por el Administrador.');
+    }
     return this.service.rename(id, body.name);
   }
 
   @Delete(':id')
   @Roles(Role.ADMIN, Role.COORDINATOR)
-  remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const template = await this.service.findOne(id);
+    const isDefault = template.name === 'Certificado de Prácticas Oficial' || (template.content as any)?.isDefault === true;
+    if (isDefault && req.user?.role === Role.COORDINATOR) {
+      throw new ForbiddenException('La plantilla predeterminada solo puede ser eliminada por el Administrador.');
+    }
     return this.service.remove(id);
   }
 }

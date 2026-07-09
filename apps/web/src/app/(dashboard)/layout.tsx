@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuthStore } from '@/stores/auth-store'
+import { useAuthStore } from '@/store/auth-store'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -20,7 +20,7 @@ export default function DashboardLayout({
   useEffect(() => {
     setMounted(true)
     if (mounted && !isAuthenticated) {
-      router.push('/login')
+      router.replace('/login')
     }
   }, [isAuthenticated, router, mounted])
 

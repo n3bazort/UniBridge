@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: ppp_postgres
+    environment:
+      POSTGRES_USER: ppp_user
+      POSTGRES_PASSWORD: ppp_password
+      POSTGRES_DB: ppp_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - ppp_pgdata:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: ppp_redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - ppp_redisdata:/data
+    restart: always
+
+  minio:
+    image: minio/minio:latest
+    container_name: ppp_minio
+    environment:
+      MINIO_ROOT_USER: ppp_minio_admin
+      MINIO_ROOT_PASSWORD: ppp_minio_password
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - ppp_miniodata:/data
+    command: server /data --console-address ":9001"
+    restart: always
+
+  opensearch-node:
+    image: opensearchproject/opensearch:latest
+    container_name: ppp_opensearch
+    environment:
+      - cluster.name=ppp-cluster
+      - node.name=ppp-node
+      - discovery.type=single-node
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Ppp_os_password123!
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - '9200:9200'
+      - '9600:9600'
+    volumes:
+      - ppp_osdata:/usr/share/opensearch/data
+    restart: always
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:latest
+    container_name: ppp_os_dashboards
+    ports:
+      - '5601:5601'
+    environment:
+      - OPENSEARCH_HOSTS=["https://opensearch-node:9200"]
+    depends_on:
+      - opensearch-node
+    restart: always
+
+  # [NUEVO] Servicio de la API de NestJS
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: ppp_api
+    ports:
+      - '4000:4000'
+    environment:
+      - NODE_ENV=production
+      # Conexion a Base de Datos
+      - DATABASE_URL=postgresql://ppp_user:ppp_password@db:5432/ppp_db?schema=public
+      # Conexion a Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Conexion a MinIO
+      - DISABLE_MINIO=false
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_USE_SSL=false
+      - MINIO_ACCESS_KEY=ppp_minio_admin
+      - MINIO_SECRET_KEY=ppp_minio_password
+      - MINIO_BUCKET_NAME=ppp-bucket
+      # Conexion a OpenSearch
+      - DISABLE_OPENSEARCH=false
+      - OPENSEARCH_NODE=https://opensearch-node:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=Ppp_os_password123!
+      - OPENSEARCH_INDEX_PREFIX=ppp_
+      # Seguridad
+      - JWT_SECRET=super_secret_jwt_key_for_production_2026
+      - CORS_ORIGINS=http://localhost:3000,https://tu-dominio-frontend.com
+    depends_on:
+      - db
+      - redis
+      - minio
+      - opensearch-node
+    restart: always
+
+volumes:
+  ppp_pgdata:
+  ppp_redisdata:
+  ppp_miniodata:
+  ppp_osdata:

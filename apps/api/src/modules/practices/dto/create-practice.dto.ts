@@ -15,9 +15,10 @@ export class CreatePracticeDto {
   @IsUUID()
   facultyId!: string;
 
-  @ApiProperty({ example: '2024-1' })
+  @ApiPropertyOptional({ example: '2024-1', description: 'Se asigna automáticamente del periodo activo si no se envía' })
   @IsString()
-  academicPeriod!: string;
+  @IsOptional()
+  academicPeriod?: string;
 
   @ApiPropertyOptional({ enum: PracticeStatus })
   @IsEnum(PracticeStatus)

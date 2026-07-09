@@ -23,6 +23,57 @@ services:
       - ppp_redisdata:/data
     restart: unless-stopped
 
+  minio:
+    image: minio/minio:latest
+    container_name: ppp_minio
+    environment:
+      MINIO_ROOT_USER: ppp_minio_admin
+      MINIO_ROOT_PASSWORD: ppp_minio_password
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - ppp_miniodata:/data
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+
+  opensearch-node:
+    image: opensearchproject/opensearch:latest
+    container_name: ppp_opensearch
+    environment:
+      - cluster.name=ppp-cluster
+      - node.name=ppp-node
+      - discovery.type=single-node
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Ppp_os_password123!
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - '9200:9200'
+      - '9600:9600'
+    volumes:
+      - ppp_osdata:/usr/share/opensearch/data
+    restart: unless-stopped
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:latest
+    container_name: ppp_os_dashboards
+    ports:
+      - '5601:5601'
+    environment:
+      - OPENSEARCH_HOSTS=["https://opensearch-node:9200"]
+    depends_on:
+      - opensearch-node
+    restart: unless-stopped
+
 volumes:
   ppp_pgdata:
   ppp_redisdata:
+  ppp_miniodata:
+  ppp_osdata:
