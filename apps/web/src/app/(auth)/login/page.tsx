@@ -1,9 +1,12 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useAuth } from '@/hooks/use-auth'
+import { useAuthStore } from '@/store/auth-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,6 +20,20 @@ type LoginFormValues = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
   const { login, isLoading, error } = useAuth()
+  const { isAuthenticated, user } = useAuthStore()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === 'ADMIN') {
+        router.replace('/overview')
+      } else if (user.role === 'COORDINATOR') {
+        router.replace('/students')
+      } else {
+        router.replace('/dashboard')
+      }
+    }
+  }, [isAuthenticated, user, router])
 
   const {
     register,
@@ -42,7 +59,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <div className="w-full max-w-md space-y-8 rounded-xl bg-background p-8 shadow-lg border border-border">
         <div className="text-center">
-          <h2 className="text-2xl font-bold tracking-tight">Sistema PPP</h2>
+          <h2 className="text-2xl font-bold tracking-tight">UniBridge</h2>
           <p className="text-sm text-muted-foreground mt-2">Ingresa a tu cuenta para continuar</p>
         </div>
 
@@ -58,7 +75,7 @@ export default function LoginPage() {
             <Input 
               id="email"
               type="email" 
-              placeholder="admin@uleam.edu.ec" 
+              placeholder="juan@uleam.edu.ec" 
               {...register('email')}
               className={errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}
               disabled={isLoading}

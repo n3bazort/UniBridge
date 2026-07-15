@@ -82,6 +82,18 @@ export function StudentDetailPanel({ student }: StudentDetailPanelProps) {
                 </span>
               </div>
             </div>
+
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 text-[#cbd5e1]">
+                <Phone size={18} />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[13px] text-[#64748b] font-medium">Teléfono / Celular</span>
+                <span className="text-[14px] text-[#1e293b] font-medium">
+                  {student.phone || 'No registrado'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

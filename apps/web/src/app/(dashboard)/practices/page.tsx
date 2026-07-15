@@ -3,15 +3,23 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
-import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare } from 'lucide-react'
+import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle, Loader2 } from 'lucide-react'
+import { FilterChip } from '@/components/ui/filter-chip'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { EntityList, type Group, type Practice } from '@/components/practices/EntityList'
+import { ReassignCompanyModal, rememberRecentCompany, type ReassignImpact } from '@/components/practices/ReassignCompanyModal'
+import { FloatingActionBar } from '@/components/practices/FloatingActionBar'
+import { ConfirmCertificatesModal } from '@/components/practices/ConfirmCertificatesModal'
 import { RightDetailPanel } from '@/components/practices/RightDetailPanel'
 import { RoleGate } from '@/components/shared/role-gate'
 import { Button } from '@/components/ui/button'
 import { useSearchStore } from '@/store/search'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 export default function PracticesPage() {
+  const router = useRouter()
   const { searchQuery } = useSearchStore()
   const queryClient = useQueryClient()
   
@@ -21,9 +29,27 @@ export default function PracticesPage() {
   const [filterProgram, setFilterProgram] = useState<string | null>(null)
   const [groupBy, setGroupBy] = useState<'none' | 'company' | 'tutor' | 'level'>('company')
   
+  const [activeTab, setActiveTab] = useState<'assigned' | 'unassigned'>('assigned')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [activePracticeId, setActivePracticeId] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+
+  // Reasignación de empresa
+  const [reassignPractice, setReassignPractice] = useState<Practice | null>(null)
+  const [isReassigning, setIsReassigning] = useState(false)
+  const [recentlyInvalidatedDocIds, setRecentlyInvalidatedDocIds] = useState<Set<string>>(new Set())
+
+  // Confirmación de emisión de certificados (con palomita de auto-firma)
+  const [showConfirmCerts, setShowConfirmCerts] = useState(false)
+
+  // Estados para la barra de progreso circular de generación de certificados
+  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false)
+  const [generationProgress, setGenerationProgress] = useState(0)
+  const [generationTotal, setGenerationTotal] = useState(0)
+  const [generationCurrent, setGenerationCurrent] = useState(0)
+  const [generationCurrentName, setGenerationCurrentName] = useState('')
+  const [generationResults, setGenerationResults] = useState<Array<{ studentName: string, success: boolean, fileUrl?: string, error?: string }>>([])
+  const [isGenerationFinished, setIsGenerationFinished] = useState(false)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -36,7 +62,7 @@ export default function PracticesPage() {
   }, [])
 
   // 1. Fetch real data
-  const { data: response, isLoading, error } = useQuery({
+  const { data: response, isLoading: isLoadingPractices, error } = useQuery({
     queryKey: ['practices-all'],
     queryFn: async () => {
       const res = await api.get('/practices', { params: { page: 1, limit: 500 } })
@@ -44,7 +70,33 @@ export default function PracticesPage() {
     }
   })
 
-  const rawPractices: Practice[] = response?.data || []
+  const { data: responseUnassigned, isLoading: isLoadingUnassigned } = useQuery({
+    queryKey: ['students-unassigned'],
+    queryFn: async () => {
+      const res = await api.get('/students', { params: { page: 1, limit: 500, unassignedOnly: true } })
+      return res.data
+    }
+  })
+
+  // Mapear los estudiantes a formato "Practice" falso para usar EntityList
+  const unassignedPractices = useMemo(() => {
+    if (!responseUnassigned?.data) return []
+    return responseUnassigned.data.map((student: any) => ({
+      id: `unassigned-${student.id}`,
+      studentId: student.id,
+      student,
+      company: { name: 'Sin Empresa Asignada', contactName: '' },
+      tutorName: 'Sin Tutor',
+      academicLevel: 'N/A',
+      practiceLevel: 'N/A',
+      status: 'Sin Asignar',
+      totalHours: 0,
+      createdAt: new Date().toISOString()
+    }))
+  }, [responseUnassigned])
+
+  const rawPractices: Practice[] = activeTab === 'assigned' ? (response?.data || []) : unassignedPractices
+  const isLoading = activeTab === 'assigned' ? isLoadingPractices : isLoadingUnassigned
 
   // Dynamic filter options based on raw data
   const periods = useMemo(() => Array.from(new Set((rawPractices as any[]).map(p => p.academicPeriod || '2024-1'))).sort(), [rawPractices])
@@ -137,56 +189,230 @@ export default function PracticesPage() {
     setActivePracticeId(p.id)
   }
 
+  // ── Elegibilidad de la selección para emitir certificados ──
+  // Requisitos: práctica finalizada + solicitud (oficio) vigente vinculada.
+  // Si UNO solo falla, la acción se bloquea hasta que lo quiten de la selección.
+  const hasValidSolicitud = (p: Practice) =>
+    (p.student.generatedDocs || []).some(d => d.template.type === 'DOCX' && (d.status ?? 'VALID') === 'VALID')
+
+  const certEligibility = useMemo(() => {
+    const selected = rawPractices.filter(p => selectedIds.has(p.id))
+    const notCompleted = selected.filter(p => p.status !== 'COMPLETED')
+    const noSolicitud = selected.filter(p => p.status === 'COMPLETED' && !hasValidSolicitud(p))
+    const eligible = selected.filter(p => p.status === 'COMPLETED' && hasValidSolicitud(p))
+
+    let blockedReason: string | null = null
+    if (noSolicitud.length > 0) {
+      const names = noSolicitud.slice(0, 2).map(p => p.student.firstName).join(', ')
+      blockedReason = `${noSolicitud.length} sin solicitud vigente (${names}${noSolicitud.length > 2 ? '…' : ''}). Genera la solicitud grupal o quítalos.`
+    } else if (notCompleted.length > 0) {
+      blockedReason = `${notCompleted.length} sin finalizar. Solo se certifican prácticas terminadas.`
+    }
+
+    return { selected, eligible, notCompleted, noSolicitud, blockedReason }
+  }, [rawPractices, selectedIds])
+
+  /** Quita de la selección a los que bloquean la emisión, en un click. */
+  const handleDeselectBlockers = () => {
+    const blockers = new Set([...certEligibility.noSolicitud, ...certEligibility.notCompleted].map(p => p.id))
+    setSelectedIds(new Set([...selectedIds].filter(id => !blockers.has(id))))
+    toast.success(`${blockers.size} estudiante(s) quitados de la selección`)
+  }
+
+  /** El ícono de documento lleva a su ficha en Certificados (no abre el archivo). */
+  const handleDocumentClick = (docId: string) => {
+    router.push(`/certificates?highlight=${docId}`)
+  }
+
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
       await api.patch(`/practices/${id}`, { status: newStatus })
       queryClient.invalidateQueries({ queryKey: ['practices-all'] })
       toast.success("Estado actualizado exitosamente")
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      toast.error("Error al actualizar el estado")
+      toast.error(error.response?.data?.message || "Error al actualizar el estado")
     }
   }
 
-  // Generation Logic
-  const handleGenerateCertificates = async () => {
-    setIsGenerating(true)
+  const handleEditPhone = async (studentId: string, phone: string) => {
+    try {
+      await api.patch(`/students/${studentId}`, { phone })
+      queryClient.invalidateQueries({ queryKey: ['practices-all'] })
+      toast.success("Celular actualizado exitosamente")
+    } catch (error: any) {
+      console.error(error)
+      toast.error("Error al actualizar el celular del estudiante")
+    }
+  }
+
+  // ── Reasignación de empresa ──
+  // Impacto mostrado en el modal: la solicitud es grupal, así que mover a un
+  // estudiante invalida el oficio de TODOS los que comparten el documentCode.
+  const reassignImpact = useMemo<ReassignImpact | null>(() => {
+    if (!reassignPractice) return null
+    const validDocx = (reassignPractice.student.generatedDocs || []).find(
+      d => d.template.type === 'DOCX' && (d.status ?? 'VALID') === 'VALID'
+    )
+    if (!validDocx?.documentCode) return null
+    const otherStudents = rawPractices.filter(p =>
+      p.studentId !== reassignPractice.studentId &&
+      (p.student.generatedDocs || []).some(
+        d => d.documentCode === validDocx.documentCode && (d.status ?? 'VALID') === 'VALID'
+      )
+    ).length
+    return { documentCode: validDocx.documentCode, otherStudents }
+  }, [reassignPractice, rawPractices])
+
+  const handleConfirmReassign = async (company: { id: string; name: string }) => {
+    if (!reassignPractice) return
+    const practiceId = reassignPractice.id
+    const oldCompanyId = reassignPractice.companyId || (reassignPractice.company as any)?.id
+    const studentName = `${reassignPractice.student.firstName} ${reassignPractice.student.lastName}`
+
+    setIsReassigning(true)
+    try {
+      const res = await api.patch(`/practices/${practiceId}`, { companyId: company.id })
+      const reassignment = res.data?.reassignment
+      const invalidatedIds: string[] = reassignment?.invalidatedDocumentIds || []
+
+      rememberRecentCompany(company.id)
+      setReassignPractice(null)
+      setRecentlyInvalidatedDocIds(new Set(invalidatedIds))
+      await queryClient.invalidateQueries({ queryKey: ['practices-all'] })
+
+      const undo = async () => {
+        try {
+          if (oldCompanyId) await api.patch(`/practices/${practiceId}`, { companyId: oldCompanyId })
+          if (invalidatedIds.length > 0) await api.post('/practices/restore-documents', { documentIds: invalidatedIds })
+          setRecentlyInvalidatedDocIds(new Set())
+          queryClient.invalidateQueries({ queryKey: ['practices-all'] })
+          toast.success('Reasignación deshecha: todo volvió a su estado anterior')
+        } catch {
+          toast.error('No se pudo deshacer la reasignación')
+        }
+      }
+
+      toast.success(
+        invalidatedIds.length > 0
+          ? `${studentName} movido a ${company.name}. Se invalidó la solicitud ${reassignment.invalidatedCodes?.[0] || ''} del grupo anterior.`
+          : `${studentName} movido a ${company.name}.`,
+        { duration: 10000, action: { label: 'Deshacer', onClick: undo } }
+      )
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.response?.data?.message || 'Error al reasignar la empresa')
+    } finally {
+      setIsReassigning(false)
+    }
+  }
+
+  const handleGenerateCertificates = async (autoSendToSignature = false) => {
+    setShowConfirmCerts(false)
     try {
       const templatesRes = await api.get('/document-templates')
       const defaultTemplate = templatesRes.data.find((t: any) => t.content?.isDefault === true || t.name === 'Certificado de Prácticas Oficial')
-      
+
       if (!defaultTemplate) {
         toast.error('No se encontró una plantilla predeterminada. Por favor márcala en Documentos.')
-        setIsGenerating(false)
         return
       }
 
-      const selectedPractices = rawPractices.filter((p: any) => selectedIds.has(p.id) && p.status === 'COMPLETED')
+      const selectedPractices = certEligibility.eligible
       if (selectedPractices.length === 0) {
-        toast.error('No hay estudiantes con estado "Finalizado" seleccionados.')
-        setIsGenerating(false)
+        toast.error('No hay estudiantes elegibles seleccionados.')
         return
       }
 
-      await api.post('/generated-documents/generate-batch', {
+      // Initialize progress states
+      setGenerationTotal(selectedPractices.length)
+      setGenerationCurrent(0)
+      setGenerationProgress(0)
+      setGenerationCurrentName('')
+      setGenerationResults([])
+      setIsGenerationFinished(false)
+      setIsProgressModalOpen(true)
+      setIsGenerating(true)
+
+      // Generación masiva REAL en el servidor (cola BullMQ con workers
+      // concurrentes y reintentos). La UI solo consulta el progreso.
+      const { data: batch } = await api.post('/generated-documents/generate-batch', {
         templateId: defaultTemplate.id,
         studentIds: selectedPractices.map((p: any) => p.studentId)
       })
-      toast.success(`Se están procesando ${selectedPractices.length} certificados en segundo plano`, {
-        action: {
-          label: 'Ver certificados',
-          onClick: () => router.push('/certificates')
-        }
+
+      setGenerationCurrentName('Procesando en el servidor...')
+
+      // Polling del progreso cada 1.2s hasta que el lote termine
+      const finalStats: { completed: number; failed: number } = await new Promise((resolve, reject) => {
+        let attempts = 0
+        const interval = setInterval(async () => {
+          try {
+            const { data: p } = await api.get(`/generated-documents/batch/${batch.batchId}/progress`)
+            setGenerationTotal(p.total)
+            setGenerationCurrent(p.completed + p.failed)
+            setGenerationProgress(p.progress)
+            if (p.status !== 'PROCESSING') {
+              clearInterval(interval)
+              resolve({ completed: p.completed, failed: p.failed })
+            }
+          } catch (e) {
+            attempts++
+            if (attempts > 5) { clearInterval(interval); reject(e) }
+          }
+        }, 1200)
       })
+
+      setGenerationResults(
+        selectedPractices.slice(0, finalStats.completed + finalStats.failed).map((p: any, i: number) => ({
+          studentName: `${p.student.firstName} ${p.student.lastName}`,
+          success: i < finalStats.completed
+        }))
+      )
+      setIsGenerationFinished(true)
+      if (finalStats.failed > 0) {
+        toast.warning(`Generación completada: ${finalStats.completed} certificados listos, ${finalStats.failed} con error (reintentados 3 veces).`)
+      } else {
+        toast.success(`¡Generación completada! ${finalStats.completed} certificados listos.`)
+      }
+
+      // Palomita activa: el lote entra solo al circuito Decano → Director
+      if (autoSendToSignature && finalStats.completed > 0) {
+        try {
+          setGenerationCurrentName('Enviando a firma...')
+          const { data: docs } = await api.get('/generated-documents')
+          const studentIdSet = new Set(selectedPractices.map((p: any) => p.studentId))
+          const freshIds = (docs || [])
+            .filter((d: any) =>
+              d.documentType === 'CERTIFICADO' &&
+              d.status === 'VALID' &&
+              studentIdSet.has(d.studentId) &&
+              (!d.signatureStatus || d.signatureStatus === 'NONE')
+            )
+            .map((d: any) => d.id)
+
+          if (freshIds.length > 0) {
+            const { data: batch } = await api.post('/signatures/batches', { documentIds: freshIds })
+            toast.success(`Lote ${batch.code} enviado al circuito de firma (${freshIds.length} documentos)`, {
+              action: { label: 'Ver circuito', onClick: () => router.push('/certificates') },
+              duration: 8000,
+            })
+          }
+        } catch (e: any) {
+          toast.error(e.response?.data?.message || 'Certificados generados, pero falló el envío automático a firma. Envíalos desde Certificados.')
+        }
+      }
+
       setSelectedIds(new Set())
+      queryClient.invalidateQueries({ queryKey: ['practices-all'] })
     } catch (err: any) {
       console.error(err)
-      toast.error('Error en la generación de certificados.')
+      toast.error(err.response?.data?.message || 'Error al iniciar la generación de certificados.')
+      setIsProgressModalOpen(false)
     } finally {
       setIsGenerating(false)
     }
   }
-
   const handleGenerateSolicitud = async (groupItems: Practice[]) => {
     if (!groupItems || groupItems.length === 0) return
 
@@ -201,6 +427,12 @@ export default function PracticesPage() {
       if (!confirm) return
     }
 
+    const missingPhones = groupItems.filter(p => !p.student.phone)
+    if (missingPhones.length > 0) {
+      toast.error(`Error: Faltan números de celular en ${missingPhones.length} estudiante(s) seleccionado(s). Por favor complétalos.`)
+      return
+    }
+
     setIsGenerating(true)
     try {
       const templatesRes = await api.get('/document-templates')
@@ -211,30 +443,44 @@ export default function PracticesPage() {
         return
       }
       const defaultDocxTemplate = docxTemplates[0]
+      const studentIds = groupItems.map((p: any) => p.studentId)
+
+      // Verificar si ya existen
+      const checkRes = await api.post('/generated-documents/check-solicitud', { studentIds })
+      let overwrite = false
+      if (checkRes.data?.exists) {
+        const confirmOverwrite = window.confirm("Ya existe una solicitud grupal generada para estos estudiantes. ¿Deseas regenerarla invalidando la versión anterior?")
+        if (!confirmOverwrite) {
+          setIsGenerating(false)
+          return
+        }
+        overwrite = true
+      }
 
       const response = await api.post('/generated-documents/generate-solicitud', {
         templateId: defaultDocxTemplate.id,
-        studentIds: groupItems.map((p: any) => p.studentId)
+        studentIds,
+        overwrite
       })
       
       toast.success(`¡Generación exitosa! Revisa la carpeta de descargas o el sistema.`)
       
-      if (response.data?.fileUrl) {
-        const fullUrl = process.env.NEXT_PUBLIC_API_URL 
-          ? process.env.NEXT_PUBLIC_API_URL.replace('/api/v1', '') + response.data.fileUrl
-          : 'http://localhost:3001' + response.data.fileUrl;
-        
-        // Create an invisible anchor element to trigger download without opening a new tab
+      // Invalidar consultas para refrescar la lista de prácticas y actualizar íconos inmediatamente
+      queryClient.invalidateQueries({ queryKey: ['practices-all'] })
+      queryClient.invalidateQueries({ queryKey: ['generated-documents'] })
+
+      if (response.data?.downloadUrl) {
+        // URL prefirmada devuelta por el backend (el bucket es privado)
         const a = document.createElement('a');
-        a.href = fullUrl;
-        a.download = response.data.fileUrl.split('/').pop() || 'documento';
+        a.href = response.data.downloadUrl;
+        a.download = (response.data.fileUrl || 'documento').split('/').pop() || 'documento';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      toast.error('Error en la generación del Oficio.')
+      toast.error(error.response?.data?.message || 'Error en la generación del Oficio.')
     } finally {
       setIsGenerating(false)
     }
@@ -290,10 +536,35 @@ export default function PracticesPage() {
     <RoleGate allowedRoles={['ADMIN', 'COORDINATOR']}>
       <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8] pt-6 pb-12 px-4 lg:px-8">
         
+        {/* Tabs: Asignados / Sin Asignar */}
+        <div className="flex items-center gap-6 mb-6 border-b border-gray-200 w-full max-w-[1600px] mx-auto">
+          <button
+            onClick={() => { setActiveTab('assigned'); setSelectedIds(new Set()); }}
+            className={`pb-3 text-[15px] font-semibold transition-colors relative ${activeTab === 'assigned' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Estudiantes Asignados
+            {activeTab === 'assigned' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />}
+          </button>
+          <button
+            onClick={() => { setActiveTab('unassigned'); setSelectedIds(new Set()); setGroupBy('none'); }}
+            className={`pb-3 text-[15px] font-semibold transition-colors relative ${activeTab === 'unassigned' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Estudiantes Sin Asignar
+            {activeTab === 'unassigned' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />}
+          </button>
+        </div>
+
         {/* Top Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-end gap-4 mb-6 w-full max-w-[1600px] mx-auto">
           <div className="flex items-center gap-2">
-            {/* Top actions removed as per user request, functionality moved elsewhere */}
+            {activeTab === 'unassigned' && selectedIds.size > 0 && (
+              <Button 
+                onClick={() => toast.info('La interfaz de vinculación a Empresa estará disponible en la próxima actualización.')}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Vincular a Empresa ({selectedIds.size})
+              </Button>
+            )}
           </div>
         </div>
 
@@ -306,122 +577,135 @@ export default function PracticesPage() {
           {/* Left Column: Entity List + Filters */}
           <div className="w-full xl:flex-1 flex flex-col gap-6 min-w-0">
             
-            {/* Filter Chips Bar (Moved inside left column) */}
-            <div className="flex flex-wrap items-center gap-3 w-full">
-              
-              {/* Chip: Periodo */}
-              <div className="relative group z-[60]">
-                <div className={`flex flex-col justify-center rounded-[12px] border px-3.5 py-1.5 cursor-pointer shadow-sm transition-colors min-w-[120px] ${filterPeriod ? 'bg-[#f0f9ff] border-[#bae6fd]' : 'bg-white border-[#eef2f7] hover:bg-[#f8fafc]'}`}>
-                  <span className={`text-[11px] font-medium ${filterPeriod ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`}>Periodo</span>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className={`text-[13px] font-semibold ${filterPeriod ? 'text-[#0369a1]' : 'text-[#374151]'}`}>{filterPeriod || 'Todos'}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 ${filterPeriod ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`} />
-                  </div>
-                </div>
-                {/* Dropdown Menu */}
-                <div className="absolute left-0 top-[calc(100%+8px)] w-[160px] bg-white rounded-[12px] border border-[#eef2f7] shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-1.5">
-                   <div onClick={() => setFilterPeriod(null)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">Todos</div>
-                   {periods.map(p => (
-                     <div key={p as string} onClick={() => setFilterPeriod(p as string)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">{p as string}</div>
-                   ))}
-                </div>
-              </div>
+            {/* Filter Chips Bar */}
+            {activeTab === 'assigned' && (
+              <div className="flex flex-wrap items-center gap-3 w-full">
+                <FilterChip 
+                  label="Periodo" 
+                  value={filterPeriod} 
+                  onChange={setFilterPeriod}
+                  options={[
+                    { value: null, label: 'Todos' },
+                    ...periods.map(p => ({ value: p as string, label: p as string }))
+                  ]} 
+                />
+                
+                <FilterChip 
+                  label="Estado" 
+                  value={filterStatus} 
+                  onChange={setFilterStatus}
+                  options={[
+                    { value: null, label: 'Todos' },
+                    { value: 'PENDING', label: 'Pendiente' },
+                    { value: 'IN_PROGRESS', label: 'En Curso' },
+                    { value: 'DELAYED', label: 'En Atrasado' },
+                    { value: 'COMPLETED', label: 'Finalizado' },
+                    { value: 'CANCELED', label: 'Cancelado' },
+                  ]} 
+                />
+                
+                <FilterChip 
+                  label="Facultad" 
+                  className="hidden md:block"
+                  value={filterFaculty} 
+                  onChange={setFilterFaculty}
+                  options={[
+                    { value: null, label: 'Todas' },
+                    ...faculties.map(f => ({ value: f as string, label: f as string === 'Ciencias de la Vida y Tecnología' ? 'FCVT' : f as string }))
+                  ]} 
+                />
+                
+                <FilterChip 
+                  label="Programa" 
+                  className="hidden xl:block"
+                  value={filterProgram} 
+                  onChange={setFilterProgram}
+                  options={[
+                    { value: null, label: 'Todos' },
+                    ...programs.map(p => ({ value: p as string, label: p as string }))
+                  ]} 
+                />
 
-              {/* Chip: Estado */}
-              <div className="relative group z-[60]">
-                <div className={`flex flex-col justify-center rounded-[12px] border px-3.5 py-1.5 cursor-pointer shadow-sm transition-colors min-w-[120px] ${filterStatus ? 'bg-[#f0f9ff] border-[#bae6fd]' : 'bg-white border-[#eef2f7] hover:bg-[#f8fafc]'}`}>
-                  <span className={`text-[11px] font-medium ${filterStatus ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`}>Estado</span>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className={`text-[13px] font-semibold ${filterStatus ? 'text-[#0369a1]' : 'text-[#374151]'}`}>{
-                      filterStatus === 'COMPLETED' ? 'Finalizado' : filterStatus === 'PENDING' ? 'Pendiente' : filterStatus === 'DELAYED' ? 'En Atrasado' : filterStatus === 'IN_PROGRESS' ? 'En Curso' : 'Todos'
-                    }</span>
-                    <ChevronDown className={`w-3.5 h-3.5 ${filterStatus ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`} />
-                  </div>
-                </div>
-                {/* Dropdown Menu */}
-                <div className="absolute left-0 top-[calc(100%+8px)] w-[160px] bg-white rounded-[12px] border border-[#eef2f7] shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-1.5">
-                   <div onClick={() => setFilterStatus(null)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">Todos</div>
-                   <div onClick={() => setFilterStatus('PENDING')} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">Pendiente</div>
-                   <div onClick={() => setFilterStatus('IN_PROGRESS')} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">En Curso</div>
-                   <div onClick={() => setFilterStatus('DELAYED')} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">En Atrasado</div>
-                   <div onClick={() => setFilterStatus('COMPLETED')} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">Finalizado</div>
-                </div>
-              </div>
+                <div className="flex-1" />
 
-              {/* Chip: Facultad */}
-              <div className="relative group hidden md:block z-[60]">
-                <div className={`flex flex-col justify-center rounded-[12px] border px-3.5 py-1.5 cursor-pointer shadow-sm transition-colors min-w-[140px] max-w-[200px] ${filterFaculty ? 'bg-[#f0f9ff] border-[#bae6fd]' : 'bg-white border-[#eef2f7] hover:bg-[#f8fafc]'}`}>
-                  <span className={`text-[11px] font-medium ${filterFaculty ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`}>Facultad</span>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className={`text-[13px] font-semibold truncate ${filterFaculty ? 'text-[#0369a1]' : 'text-[#374151]'}`}>{filterFaculty ? 'FCVT' : 'Todas'}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${filterFaculty ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`} />
-                  </div>
-                </div>
-                <div className="absolute left-0 top-[calc(100%+8px)] min-w-[200px] bg-white rounded-[12px] border border-[#eef2f7] shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-1.5">
-                   <div onClick={() => setFilterFaculty(null)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">Todas</div>
-                   {faculties.map(f => (
-                     <div key={f as string} onClick={() => setFilterFaculty(f as string)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">{f as string}</div>
-                   ))}
+                <div className="flex items-center gap-2 bg-white rounded-lg p-1 border shadow-soft shrink-0">
+                  <span className="text-[12px] font-medium text-gray-500 pl-2 pr-1">Agrupar por:</span>
+                  {(['none', 'company', 'tutor', 'level'] as const).map(option => (
+                    <button
+                      key={option}
+                      onClick={() => setGroupBy(option)}
+                      className={`px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors ${
+                        groupBy === option 
+                          ? 'bg-blue-50 text-blue-700' 
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {option === 'none' ? 'No' : option === 'company' ? 'Empresa' : option === 'tutor' ? 'Tutor' : 'Nivel'}
+                    </button>
+                  ))}
                 </div>
               </div>
+            )}
 
-              {/* Chip: Carrera */}
-              <div className="relative group hidden lg:block z-[60]">
-                <div className={`flex flex-col justify-center rounded-[12px] border px-3.5 py-1.5 cursor-pointer shadow-sm transition-colors min-w-[140px] max-w-[200px] ${filterProgram ? 'bg-[#f0f9ff] border-[#bae6fd]' : 'bg-white border-[#eef2f7] hover:bg-[#f8fafc]'}`}>
-                  <span className={`text-[11px] font-medium ${filterProgram ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`}>Carrera</span>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className={`text-[13px] font-semibold truncate ${filterProgram ? 'text-[#0369a1]' : 'text-[#374151]'}`}>{filterProgram ? 'TI' : 'Todas'}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${filterProgram ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`} />
-                  </div>
-                </div>
-                <div className="absolute left-0 top-[calc(100%+8px)] min-w-[200px] bg-white rounded-[12px] border border-[#eef2f7] shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-1.5">
-                   <div onClick={() => setFilterProgram(null)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">Todas</div>
-                   {programs.map(p => (
-                     <div key={p as string} onClick={() => setFilterProgram(p as string)} className="px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer text-[13px] font-medium text-[#374151]">{p as string}</div>
-                   ))}
-                </div>
-              </div>
-              
-              <div className="w-[1px] h-[24px] bg-[#e5e7eb] mx-1" />
-              
-              {/* Agrupar */}
-              <div 
-                onClick={() => setGroupBy(groupBy === 'company' ? 'none' : 'company')}
-                className={`hidden sm:flex flex-col justify-center rounded-[12px] border px-3.5 py-1.5 cursor-pointer shadow-sm transition-colors min-w-[120px]
-                ${groupBy === 'company' ? 'bg-[#f0f9ff] border-[#bae6fd]' : 'bg-white border-[#eef2f7] hover:bg-[#f8fafc]'}`}
-              >
-                <span className={`text-[11px] font-medium ${groupBy === 'company' ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`}>Agrupar por</span>
-                <div className="flex items-center justify-between gap-2 mt-0.5">
-                  <span className={`text-[13px] font-semibold ${groupBy === 'company' ? 'text-[#0369a1]' : 'text-[#374151]'}`}>Empresa</span>
-                  <ChevronDown className={`w-3.5 h-3.5 ${groupBy === 'company' ? 'text-[#0284c7]' : 'text-[#9ca3af]'}`} />
-                </div>
-              </div>
-
-              {/* Filtros Dropdown Button */}
-              <div className="relative group">
-                <button className="flex items-center gap-2 h-[48px] px-4 bg-white rounded-[12px] border border-[#eef2f7] text-[13px] font-semibold text-[#374151] hover:bg-[#f8fafc] transition-colors shadow-sm">
-                  <Filter className="w-4 h-4 text-[#6b7280]" />
-                  Filtros
+            {/* Barra de acciones flotante: acompaña la selección durante todo
+                el scroll, así no hay que volver arriba para actuar. */}
+            <FloatingActionBar
+              count={selectedIds.size}
+              label={`estudiante${selectedIds.size > 1 ? 's' : ''} seleccionado${selectedIds.size > 1 ? 's' : ''}`}
+              blockedReason={certEligibility.blockedReason}
+              onClear={() => setSelectedIds(new Set())}
+            >
+              {certEligibility.blockedReason ? (
+                <button
+                  onClick={handleDeselectBlockers}
+                  className="h-[34px] px-3.5 rounded-[10px] bg-amber-500 hover:bg-amber-600 text-white text-[12.5px] font-semibold transition-colors whitespace-nowrap"
+                >
+                  Quitar los {certEligibility.noSolicitud.length + certEligibility.notCompleted.length} bloqueantes
                 </button>
-                {/* Responsive missing filters */}
-                <div className="absolute left-0 top-full mt-2 w-[220px] bg-white rounded-[16px] border border-[#eef2f7] shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-2 lg:hidden">
-                   <div onClick={() => setFilterFaculty(filterFaculty ? null : 'Ciencias de la Vida y Tecnología')} className="md:hidden flex flex-col px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer mb-1">
-                     <span className="text-[11px] font-medium text-[#9ca3af]">Facultad</span>
-                     <span className={`text-[13px] font-semibold ${filterFaculty ? 'text-[#0369a1]' : 'text-[#374151]'}`}>{filterFaculty ? 'FCVT' : 'Todas'}</span>
-                   </div>
-                   <div onClick={() => setFilterProgram(filterProgram ? null : 'Tecnologías de la Información')} className="lg:hidden flex flex-col px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer">
-                     <span className="text-[11px] font-medium text-[#9ca3af]">Carrera</span>
-                     <span className={`text-[13px] font-semibold ${filterProgram ? 'text-[#0369a1]' : 'text-[#374151]'}`}>{filterProgram ? 'TI' : 'Todas'}</span>
-                   </div>
-                </div>
-              </div>
-            </div>
+              ) : (
+                <button
+                  onClick={() => setShowConfirmCerts(true)}
+                  disabled={isGenerating || certEligibility.eligible.length === 0}
+                  className="h-[34px] px-4 flex items-center gap-2 rounded-[10px] bg-white hover:bg-slate-100 text-[#111827] text-[12.5px] font-bold transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  <FileText className="w-4 h-4 text-rose-500" />
+                  Emitir {certEligibility.eligible.length} certificado{certEligibility.eligible.length > 1 ? 's' : ''}
+                </button>
+              )}
+            </FloatingActionBar>
 
             {/* Entity List */}
             {isLoading ? (
-              <div className="flex justify-center p-12 text-[#6b7280] animate-pulse font-medium">Cargando base de datos...</div>
+              <div className="flex flex-col gap-3 mt-2">
+                {[1,2,3,4,5].map(i => (
+                  <Skeleton key={i} className="h-16 w-full rounded-[16px] bg-white border border-[#eef2f7]" />
+                ))}
+              </div>
             ) : error ? (
-              <div className="text-[#ef4444] p-8 text-center font-medium">Error cargando datos.</div>
+              <div className="mt-4">
+                <EmptyState 
+                  icon={XCircle} 
+                  title="Error cargando datos" 
+                  description="Ocurrió un problema al intentar conectarse al servidor." 
+                  actionLabel="Reintentar"
+                  onAction={() => queryClient.invalidateQueries({ queryKey: ['practices-all'] })}
+                />
+              </div>
+            ) : filteredPractices.length === 0 ? (
+              <div className="mt-4">
+                <EmptyState 
+                  icon={FolderSearch} 
+                  title="No hay resultados" 
+                  description="No se encontraron prácticas que coincidan con los filtros actuales o la búsqueda." 
+                  actionLabel="Limpiar Filtros"
+                  onAction={() => {
+                    setFilterPeriod(null)
+                    setFilterStatus(null)
+                    setFilterFaculty(null)
+                    setFilterProgram(null)
+                  }}
+                />
+              </div>
             ) : (
               <EntityList 
                 groups={groups} 
@@ -434,6 +718,10 @@ export default function PracticesPage() {
                 activePracticeId={activePracticeId}
                 isGrouped={groupBy !== 'none'}
                 onUpdateStatus={handleUpdateStatus}
+                onEditPhone={handleEditPhone}
+                onReassign={activeTab === 'assigned' ? setReassignPractice : undefined}
+                recentlyInvalidatedDocIds={recentlyInvalidatedDocIds}
+                onDocumentClick={handleDocumentClick}
               />
             )}
           </div>
@@ -448,15 +736,118 @@ export default function PracticesPage() {
               className="sticky top-[96px] float-left -ml-[16px] w-[8px] h-[calc(100vh-120px)] cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 rounded-full transition-colors z-[80]"
               onMouseDown={handleMouseDown}
             />
-            <RightDetailPanel 
+            <RightDetailPanel
               selectedCount={selectedCount}
               selectedPractice={activePractice}
               onClearSelection={() => setActivePracticeId(null)}
               onGenerateCertificate={() => handleGenerateCertificates()}
+              onReassign={activeTab === 'assigned' ? setReassignPractice : undefined}
             />
           </div>
           
         </div>
+        
+        {/* Indicador de Progreso Circular Flotante (Bottom-Right, No Intrusivo, Pequeño) */}
+        {isProgressModalOpen && (
+          <div className="fixed bottom-6 right-6 z-[200] bg-white rounded-xl shadow-xl border border-slate-100 p-3.5 animate-in slide-in-from-bottom-5 duration-300">
+            {!isGenerationFinished ? (
+              <div className="flex items-center gap-3 w-[260px]">
+                {/* Progreso Circular SVG Pequeño */}
+                <div className="relative flex items-center justify-center w-10 h-10 shrink-0">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      className="text-slate-100"
+                      strokeWidth="3.5"
+                      stroke="currentColor"
+                      fill="transparent"
+                      r="16"
+                      cx="20"
+                      cy="20"
+                    />
+                    <circle
+                      className="text-blue-600 transition-all duration-300"
+                      strokeWidth="3.5"
+                      strokeDasharray={2 * Math.PI * 16}
+                      strokeDashoffset={2 * Math.PI * 16 - (generationProgress / 100) * (2 * Math.PI * 16)}
+                      strokeLinecap="round"
+                      stroke="currentColor"
+                      fill="transparent"
+                      r="16"
+                      cx="20"
+                      cy="20"
+                    />
+                  </svg>
+                  <div className="absolute flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-[#111827] leading-none">{generationProgress}%</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col min-w-0 flex-1">
+                  <h4 className="text-[12px] font-bold text-[#111827] leading-tight">Generando Certificados</h4>
+                  <span className="text-[10px] text-[#475569] mt-0.5 truncate animate-pulse font-medium">
+                    {generationCurrentName || 'Preparando...'}
+                  </span>
+                  <span className="text-[9px] text-[#9ca3af] font-medium mt-0.5">
+                    Procesando {generationCurrent} de {generationTotal}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 w-[280px]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[12px] font-bold text-[#111827] leading-tight">¡Completado!</span>
+                    <span className="text-[10px] text-slate-500 leading-tight mt-0.5">{generationTotal} listos</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => {
+                      setIsProgressModalOpen(false)
+                      router.push('/certificates')
+                    }}
+                    className="h-[28px] px-2.5 bg-[#111827] hover:bg-[#1f2937] text-white text-[10px] font-bold rounded-lg transition-colors flex items-center justify-center"
+                  >
+                    Historial
+                  </button>
+                  <button
+                    onClick={() => setIsProgressModalOpen(false)}
+                    className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Modal de reasignación de empresa (command palette) */}
+        {reassignPractice && (
+          <ReassignCompanyModal
+            practice={reassignPractice}
+            impact={reassignImpact}
+            isSubmitting={isReassigning}
+            onClose={() => setReassignPractice(null)}
+            onConfirm={handleConfirmReassign}
+          />
+        )}
+
+        {/* Confirmación de certificados + palomita de envío automático a firma */}
+        <ConfirmCertificatesModal
+          open={showConfirmCerts}
+          count={certEligibility.eligible.length}
+          onClose={() => setShowConfirmCerts(false)}
+          onConfirm={handleGenerateCertificates}
+        />
       </div>
     </RoleGate>
   )

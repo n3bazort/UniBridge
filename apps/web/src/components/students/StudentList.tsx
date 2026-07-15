@@ -5,6 +5,7 @@ export interface Student {
   dni: string
   firstName: string
   lastName: string
+  phone?: string
   user?: {
     email: string
   }
