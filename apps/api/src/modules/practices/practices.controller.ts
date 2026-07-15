@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Re
 import { PracticesService } from './practices.service';
 import { CreatePracticeDto } from './dto/create-practice.dto';
 import { UpdatePracticeDto } from './dto/update-practice.dto';
+import { BulkImportPracticesDto } from './dto/bulk-import-practices.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -26,10 +27,11 @@ export class PracticesController {
   @Post('bulk-import')
   @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Importar múltiples prácticas desde Excel' })
-  bulkImport(@Body() body: { programName: string, students: any[] }, @Req() req: any) {
+  bulkImport(@Body() body: BulkImportPracticesDto, @Req() req: any) {
     const facultyId = req.user?.facultyId;
     return this.practicesService.bulkImport(body.programName, body.students, facultyId);
   }
+
 
   @Get('dashboard-stats')
   @Roles(Role.ADMIN, Role.COORDINATOR)
@@ -58,6 +60,13 @@ export class PracticesController {
   @ApiOperation({ summary: 'Actualizar estado de práctica' })
   update(@Param('id') id: string, @Body() updatePracticeDto: UpdatePracticeDto) {
     return this.practicesService.update(id, updatePracticeDto);
+  }
+
+  @Post('restore-documents')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Deshacer invalidación de solicitudes tras una reasignación de empresa' })
+  restoreDocuments(@Body() body: { documentIds: string[] }) {
+    return this.practicesService.restoreDocuments(body.documentIds || []);
   }
 
   @Delete(':id')

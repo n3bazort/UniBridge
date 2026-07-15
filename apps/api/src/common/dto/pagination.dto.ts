@@ -27,8 +27,12 @@ export class PaginationDto {
   @IsString()
   sortBy?: string;
 
-  @ApiPropertyOptional({ enum: ['asc', 'desc'], default: 'desc' })
+  @ApiPropertyOptional({ enum: ['asc', 'desc'], default: 'asc' })
   @IsOptional()
-  @IsIn(['asc', 'desc'])
-  sortOrder?: 'asc' | 'desc' = 'desc';
+  @IsString()
+  sortOrder?: 'asc' | 'desc' = 'asc';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  unassignedOnly?: string | boolean;
 }

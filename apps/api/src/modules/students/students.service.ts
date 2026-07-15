@@ -1,5 +1,6 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { OpenSearchService } from '../opensearch/opensearch.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -7,7 +8,10 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class StudentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private openSearchService: OpenSearchService
+  ) {}
 
   async create(createStudentDto: CreateStudentDto) {
     const existing = await this.prisma.student.findUnique({
@@ -30,12 +34,31 @@ export class StudentsService {
     const skip = (page - 1) * limit;
     
     const where: Prisma.StudentWhereInput = {};
+    
+    // Si hay búsqueda, intentamos usar OpenSearch
     if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { dni: { contains: search, mode: 'insensitive' } }
-      ];
+      const osResults = await this.openSearchService.searchStudents(search);
+      
+      if (osResults !== null) {
+        // OpenSearch está habilitado y respondió
+        const studentIds = osResults.map((hit: any) => hit.id);
+        where.id = { in: studentIds.length > 0 ? studentIds : ['no-results'] };
+      } else {
+        // Fallback a Prisma (OpenSearch deshabilitado)
+        where.OR = [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { dni: { contains: search, mode: 'insensitive' } }
+        ];
+      }
+    }
+
+    if (paginationDto.unassignedOnly === 'true' || paginationDto.unassignedOnly === true) {
+      where.practices = {
+        none: {
+          status: { in: ['PENDING', 'IN_PROGRESS', 'COMPLETED'] }
+        }
+      };
     }
 
     const [data, total] = await Promise.all([

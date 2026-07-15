@@ -4,6 +4,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -12,12 +13,15 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ auth: { limit: 10, ttl: 900000 } }) // Máx 10 intentos por 15 minutos — anti brute-force
   @ApiOperation({ summary: 'Iniciar sesión (Login)' })
   @ApiResponse({ status: 200, description: 'Login exitoso retornando Access y Refresh Tokens' })
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
+  @ApiResponse({ status: 429, description: 'Demasiados intentos — espera 15 minutos' })
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
+
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)

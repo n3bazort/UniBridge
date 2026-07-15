@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ExcelImportProcessor } from './excel-import.processor';
-import { DocumentGenerationProcessor } from './document-generation.processor';
 
+// El procesador de 'document-generation' vive en GeneratedDocumentsModule
+// (necesita GeneratedDocumentsService y ponerlo aquí crearía dependencia circular).
 @Module({
   imports: [
     BullModule.registerQueue(
@@ -10,7 +11,7 @@ import { DocumentGenerationProcessor } from './document-generation.processor';
       { name: 'document-generation' },
     ),
   ],
-  providers: [ExcelImportProcessor, DocumentGenerationProcessor],
+  providers: [ExcelImportProcessor],
   exports: [BullModule],
 })
 export class QueuesModule {}

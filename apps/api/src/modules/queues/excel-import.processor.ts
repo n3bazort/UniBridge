@@ -3,7 +3,9 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import * as ExcelJS from 'exceljs';
 import { unlink } from 'fs/promises';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { OpenSearchService } from '../opensearch/opensearch.service';
 
 interface ExcelJobData {
   importId: string;
@@ -21,7 +23,10 @@ interface RowError {
 export class ExcelImportProcessor extends WorkerHost {
   private readonly logger = new Logger(ExcelImportProcessor.name);
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly openSearchService: OpenSearchService
+  ) {
     super();
   }
 
@@ -45,12 +50,19 @@ export class ExcelImportProcessor extends WorkerHost {
       await workbook.xlsx.readFile(filePath);
       const worksheet = workbook.worksheets[0];
 
-      // 2. Procesar fila por fila (saltando la cabecera en fila 1)
-      worksheet.eachRow({ includeEmpty: false }, async (row, rowNumber) => {
+      // Recolectar todas las filas primero (eachRow es síncrono, no se puede usar con await)
+      const rows: ExcelJS.Row[] = [];
+      worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
         if (rowNumber === 1) return; // Saltar cabecera
+        rows.push(row);
+      });
+
+      // 2. Procesar fila por fila de forma secuencial y correctamente asíncrona
+      for (const row of rows) {
+        const rowNumber = row.number;
         processedRows++;
 
-        // Extraer columnas del Excel: A=dni, B=firstName, C=lastName, D=email, E=programId
+        // Extraer columnas: A=dni, B=firstName, C=lastName, D=email, E=programId
         const dni = row.getCell(1).text?.trim();
         const firstName = row.getCell(2).text?.trim();
         const lastName = row.getCell(3).text?.trim();
@@ -63,23 +75,24 @@ export class ExcelImportProcessor extends WorkerHost {
             row: rowNumber,
             reason: `Faltan campos obligatorios (dni, firstName, lastName, email, programId).`,
           });
-          return;
+          continue;
         }
 
         try {
-          // 4. Crear o actualizar usuario (upsert por email)
+          // 4. Crear o actualizar usuario (upsert por email) — password hasheado
+          const hashedPassword = await bcrypt.hash(`temporal-${dni}`, 10);
           const user = await this.prisma.user.upsert({
             where: { email },
             update: {},
             create: {
               email,
-              password: `temp-${dni}`, // Password temporal → debe cambiarse
+              password: hashedPassword,
               role: 'STUDENT',
             },
           });
 
           // 5. Crear o actualizar perfil del estudiante (upsert por dni)
-          await this.prisma.student.upsert({
+          const student = await this.prisma.student.upsert({
             where: { dni },
             update: { firstName, lastName },
             create: {
@@ -92,6 +105,20 @@ export class ExcelImportProcessor extends WorkerHost {
             },
           });
 
+          // 6. Indexar en OpenSearch (falla silenciosamente para no bloquear el import)
+          try {
+            await this.openSearchService.indexStudent({
+              id: student.id,
+              firstName: student.firstName,
+              lastName: student.lastName,
+              dni: student.dni,
+              programName: programId,
+              academicPeriod: '2024-1',
+            });
+          } catch (osError) {
+            this.logger.warn(`Error indexando estudiante ${student.id} en OpenSearch: ${osError}`);
+          }
+
           successRows++;
         } catch (rowError) {
           this.logger.warn(`[Job ${job.id}] Error en fila ${rowNumber}: ${rowError}`);
@@ -100,13 +127,16 @@ export class ExcelImportProcessor extends WorkerHost {
             reason: `Error al insertar: ${(rowError as Error).message}`,
           });
         }
-      });
 
-      // 6. Marcar como COMPLETADO con resumen de errores
+        // Reportar progreso al worker de BullMQ
+        await job.updateProgress(Math.round((processedRows / rows.length) * 100));
+      }
+
+      // 7. Marcar como COMPLETADO
       await this.prisma.excelImport.update({
         where: { id: importId },
         data: {
-          status: errorLogs.length > 0 ? 'COMPLETED' : 'COMPLETED',
+          status: 'COMPLETED',
           errorLogs: errorLogs.length > 0 ? (errorLogs as any) : undefined,
         },
       });
@@ -115,7 +145,7 @@ export class ExcelImportProcessor extends WorkerHost {
         `[Job ${job.id}] Finalizado. Procesadas: ${processedRows}, Exitosas: ${successRows}, Errores: ${errorLogs.length}`,
       );
     } catch (globalError) {
-      // 7. Error crítico: marcar como FAILED
+      // 8. Error crítico: marcar como FAILED
       this.logger.error(`[Job ${job.id}] Error crítico: ${globalError}`);
       await this.prisma.excelImport.update({
         where: { id: importId },
@@ -125,7 +155,7 @@ export class ExcelImportProcessor extends WorkerHost {
         },
       });
     } finally {
-      // 8. Eliminar archivo temporal del disco
+      // 9. Eliminar archivo temporal del disco
       try {
         await unlink(filePath);
         this.logger.log(`[Job ${job.id}] Archivo temporal eliminado: ${filePath}`);

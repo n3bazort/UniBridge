@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Req, Patch } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Query, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Req, Patch, ForbiddenException } from '@nestjs/common';
 import { DocumentTemplatesService } from './document-templates.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -7,7 +7,7 @@ import { Role } from '@prisma/client';
 import { CreatePdfTemplateDto } from './dto/create-pdf-template.dto';
 import { CreateDocxTemplateDto } from './dto/create-docx-template.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { diskStorage, memoryStorage } from 'multer';
 import { extname } from 'path';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 
@@ -29,22 +29,22 @@ export class DocumentTemplatesController {
   @Post('pdf/:id') // Using POST to act as PUT or better yet @Put('pdf/:id')
   @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Actualizar template PDF existente' })
-  updatePdf(@Param('id') id: string, @Body() body: CreatePdfTemplateDto) {
+  async updatePdf(@Param('id') id: string, @Body() body: CreatePdfTemplateDto, @Req() req: any) {
+    const template = await this.service.findOne(id);
+    const isDefault = template.name === 'Certificado de Prácticas Oficial' || (template.content as any)?.isDefault === true;
+    if (isDefault && req.user?.role === Role.COORDINATOR) {
+      throw new ForbiddenException('La plantilla predeterminada solo puede ser modificada por el Administrador.');
+    }
     return this.service.updatePdfTemplate(id, body.name, body.content);
   }
 
   @Post('docx')
   @Roles(Role.ADMIN, Role.COORDINATOR)
-  @ApiOperation({ summary: 'Subir archivo template DOCX físico' })
+  @ApiOperation({ summary: 'Subir archivo template DOCX (se almacena en MinIO)' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads/templates',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + extname(file.originalname));
-      }
-    }),
+    storage: memoryStorage(),
+    limits: { fileSize: 20 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
       if (extname(file.originalname).toLowerCase() === '.docx') {
         return cb(null, true);
@@ -59,32 +59,35 @@ export class DocumentTemplatesController {
   ) {
     if (!file) throw new BadRequestException('Archivo requerido');
     const facultyId = req.user?.facultyId || body.facultyId;
-    return this.service.createDocxTemplate(body.name, file.path, facultyId);
+    return this.service.createDocxTemplate(body.name, file.buffer, file.originalname, facultyId);
   }
 
   @Post('upload-image')
   @Roles(Role.ADMIN, Role.COORDINATOR)
-  @ApiOperation({ summary: 'Subir imagen de fondo para templates PDF' })
+  @ApiOperation({ summary: 'Subir imagen de fondo para templates PDF (se almacena en MinIO)' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('image', {
-    storage: diskStorage({
-      destination: './uploads/images',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, 'bg-' + uniqueSuffix + extname(file.originalname));
-      }
-    }),
+    storage: memoryStorage(),
+    limits: { fileSize: 8 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+      if (file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
         cb(null, true);
       } else {
-        cb(new BadRequestException('Solo se permiten imágenes (JPG, PNG, GIF)'), false);
+        cb(new BadRequestException('Solo se permiten imágenes (JPG, PNG, GIF, WEBP)'), false);
       }
     }
   }))
-  uploadImage(@UploadedFile() file: Express.Multer.File) {
+  async uploadImage(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('Imagen requerida');
-    return { url: `/uploads/images/${file.filename}` };
+    // Devuelve la key durable (para guardar) y una URL prefirmada (para vista previa)
+    return this.service.uploadBackgroundImage(file.buffer, file.originalname, file.mimetype);
+  }
+
+  @Get('bg-url')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'URL prefirmada de una imagen de fondo almacenada en MinIO' })
+  getBackgroundUrl(@Query('key') key: string) {
+    return this.service.getBackgroundUrl(key);
   }
 
   @Get()
@@ -103,13 +106,23 @@ export class DocumentTemplatesController {
   @Patch(':id/rename')
   @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Renombrar una plantilla' })
-  rename(@Param('id') id: string, @Body() body: { name: string }) {
+  async rename(@Param('id') id: string, @Body() body: { name: string }, @Req() req: any) {
+    const template = await this.service.findOne(id);
+    const isDefault = template.name === 'Certificado de Prácticas Oficial' || (template.content as any)?.isDefault === true;
+    if (isDefault && req.user?.role === Role.COORDINATOR) {
+      throw new ForbiddenException('La plantilla predeterminada solo puede ser modificada por el Administrador.');
+    }
     return this.service.rename(id, body.name);
   }
 
   @Delete(':id')
   @Roles(Role.ADMIN, Role.COORDINATOR)
-  remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const template = await this.service.findOne(id);
+    const isDefault = template.name === 'Certificado de Prácticas Oficial' || (template.content as any)?.isDefault === true;
+    if (isDefault && req.user?.role === Role.COORDINATOR) {
+      throw new ForbiddenException('La plantilla predeterminada solo puede ser eliminada por el Administrador.');
+    }
     return this.service.remove(id);
   }
 }

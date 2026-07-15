@@ -1,4 +1,4 @@
-import { IsUUID, IsNotEmpty, IsArray } from 'class-validator';
+import { IsUUID, IsNotEmpty, IsArray, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class GenerateSolicitudDto {
@@ -12,4 +12,8 @@ export class GenerateSolicitudDto {
   @IsUUID('all', { each: true })
   @IsNotEmpty()
   studentIds!: string[];
+
+  @ApiProperty({ required: false, example: true })
+  @IsOptional()
+  overwrite?: boolean;
 }

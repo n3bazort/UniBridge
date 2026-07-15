@@ -11,6 +11,7 @@ enum Role {
   ADMIN
   COORDINATOR
   STUDENT
+  SIGNER
 }
 
 model User {
@@ -24,10 +25,13 @@ model User {
 
   coordinator        Coordinator?
   studentProfile     Student?
+  signerProfile      SignerProfile?
   refreshTokens      RefreshToken[]
   auditLogs          AuditLog[]
   excelImports       ExcelImport[]
   generatedDocuments GeneratedDocument[]
+  signatureBatches   SignatureBatch[]
+  generationBatches  GenerationBatch[]
 
   @@map("users")
 }
@@ -86,6 +90,7 @@ model Student {
   dni         String   @unique
   firstName   String
   lastName    String
+  phone       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
@@ -122,6 +127,7 @@ enum PracticeStatus {
   COMPLETED
   REJECTED
   DELAYED
+  CANCELED
 }
 
 model Practice {
@@ -144,8 +150,8 @@ model Practice {
   student         Student  @relation(fields: [studentId], references: [id])
   company         Company  @relation(fields: [companyId], references: [id])
   faculty         Faculty  @relation(fields: [facultyId], references: [id])
+  period          AcademicPeriod? @relation(fields: [academicPeriod], references: [code])
 
-  @@unique([studentId, academicPeriod])
   @@map("practices")
 }
 
@@ -165,20 +171,162 @@ model DocumentTemplate {
   @@map("document_templates")
 }
 
+enum DocumentStatus {
+  VALID
+  INVALIDATED
+  SUPERSEDED
+}
+
 model GeneratedDocument {
   id            String   @id @default(uuid()) @db.Uuid
   templateId    String   @db.Uuid
   studentId     String   @db.Uuid
   generatedById String?  @db.Uuid
-  fileUrl       String
+  fileUrl       String   // objectKey en MinIO (no URL absoluta)
+  documentCode  String?
+  documentType  String?
+  status        DocumentStatus @default(VALID)
+  invalidatedAt DateTime?
+  invalidReason String?
+  version       Int      @default(1)
+  replacedById  String?  @db.Uuid
   createdAt     DateTime @default(now())
   deletedAt     DateTime?
+
+  // ── Flujo de firma digital ──
+  signatureStatus SignatureStatus @default(NONE)
+  signedFileKey   String?         // objectKey del PDF con ambas firmas
+  signedChecksum  String?         // SHA-256 del archivo firmado final
+  signedAt        DateTime?
 
   template      DocumentTemplate @relation(fields: [templateId], references: [id])
   student       Student          @relation(fields: [studentId], references: [id])
   generatedBy   User?            @relation(fields: [generatedById], references: [id])
+  replacedBy    GeneratedDocument? @relation("DocumentReplacement", fields: [replacedById], references: [id])
+  replaces      GeneratedDocument[] @relation("DocumentReplacement")
+  signatureItems SignatureBatchItem[]
 
   @@map("generated_documents")
+}
+
+// ═══════════════ FIRMA DIGITAL (FirmaEC) ═══════════════
+
+enum SignatureStatus {
+  NONE            // no requiere firma / no enviado
+  IN_SIGNING      // dentro de un lote de firma en curso
+  PARTIALLY_SIGNED// firmado por la primera autoridad
+  SIGNED          // firmado por ambas autoridades y publicado
+  REJECTED        // rechazado por un firmante
+}
+
+enum SignerRole {
+  DEAN      // Decano: firma primero
+  DIRECTOR  // Director: firma sobre el PDF ya firmado por el decano
+}
+
+// Invitación para que una autoridad se auto-registre como firmante
+// mediante un link con token de un solo uso (o creación directa por el admin).
+model SignerInvitation {
+  id          String     @id @default(uuid()) @db.Uuid
+  token       String     @unique
+  signerRole  SignerRole
+  email       String?    // si el admin la fija, el registro exige este correo
+  fullName    String?    // pre-llenado opcional
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdById String     @db.Uuid
+  createdAt   DateTime   @default(now())
+
+  @@map("signer_invitations")
+}
+
+// Vincula a un usuario con rol SIGNER con la autoridad que representa
+model SignerProfile {
+  id         String     @id @default(uuid()) @db.Uuid
+  userId     String     @unique @db.Uuid
+  signerRole SignerRole
+  fullName   String
+  title      String?    // ej. "Decano de la Facultad de Ciencias de la Vida"
+  createdAt  DateTime   @default(now())
+
+  user       User @relation(fields: [userId], references: [id])
+
+  @@map("signer_profiles")
+}
+
+enum SignatureBatchStatus {
+  PENDING_DEAN     // esperando firma del decano
+  PENDING_DIRECTOR // esperando firma del director
+  COMPLETED        // ambas firmas subidas y publicadas
+  CANCELLED
+}
+
+model SignatureBatch {
+  id          String               @id @default(uuid()) @db.Uuid
+  code        String               @unique // ej. LOTE-2026-1-00001
+  name        String?
+  status      SignatureBatchStatus @default(PENDING_DEAN)
+  createdById String               @db.Uuid
+  deanSignedAt     DateTime?
+  directorSignedAt DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  createdBy   User                 @relation(fields: [createdById], references: [id])
+  items       SignatureBatchItem[]
+
+  @@map("signature_batches")
+}
+
+enum SignatureItemStatus {
+  PENDING        // sin firmas
+  SIGNED_BY_DEAN // primera firma subida y verificada
+  SIGNED         // ambas firmas subidas y verificadas
+  REJECTED
+}
+
+model SignatureBatchItem {
+  id             String              @id @default(uuid()) @db.Uuid
+  batchId        String              @db.Uuid
+  documentId     String              @db.Uuid
+  status         SignatureItemStatus @default(PENDING)
+  deanFileKey    String?             // objectKey del PDF firmado por el decano
+  deanChecksum   String?
+  finalFileKey   String?             // objectKey del PDF con ambas firmas
+  finalChecksum  String?
+  rejectReason   String?
+  updatedAt      DateTime            @updatedAt
+  createdAt      DateTime            @default(now())
+
+  batch          SignatureBatch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  document       GeneratedDocument @relation(fields: [documentId], references: [id])
+
+  @@unique([batchId, documentId])
+  @@map("signature_batch_items")
+}
+
+// ═══════════════ GENERACIÓN MASIVA (BullMQ) ═══════════════
+
+enum GenerationBatchStatus {
+  PROCESSING
+  COMPLETED
+  COMPLETED_WITH_ERRORS
+}
+
+model GenerationBatch {
+  id          String                @id @default(uuid()) @db.Uuid
+  templateId  String                @db.Uuid
+  total       Int
+  completed   Int                   @default(0)
+  failed      Int                   @default(0)
+  status      GenerationBatchStatus @default(PROCESSING)
+  createdById String?               @db.Uuid
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  createdBy   User? @relation(fields: [createdById], references: [id])
+
+  @@map("generation_batches")
 }
 
 enum ImportStatus {
@@ -231,4 +379,33 @@ model AuditLog {
   user       User?    @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
+}
+
+model AcademicPeriod {
+  id            String   @id @default(uuid()) @db.Uuid
+  code          String   @unique
+  name          String
+  startDate     DateTime
+  endDate       DateTime
+  isActive      Boolean  @default(false)
+  
+  deanName      String? 
+  directorName  String? 
+
+  practices     Practice[]
+  sequences     DocumentSequence[]
+
+  @@map("academic_periods")
+}
+
+model DocumentSequence {
+  id          String   @id @default(uuid()) @db.Uuid
+  type        String   
+  periodCode  String   
+  lastNumber  Int      @default(0)
+  
+  period      AcademicPeriod @relation(fields: [periodCode], references: [code])
+
+  @@unique([type, periodCode])
+  @@map("document_sequences")
 }

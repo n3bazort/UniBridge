@@ -7,15 +7,25 @@ import * as fs from 'fs';
 export class DocxDriver {
   private readonly logger = new Logger(DocxDriver.name);
 
-  async generateDocx(templatePath: string, data: Record<string, any>, outputPath: string): Promise<string> {
-    this.logger.log(`Iniciando generación de DOCX. Template: ${templatePath}`);
-    
-    // Resolve path: Multer saves relative to cwd (apps/api when running via turbo)
-    const resolvedPath = require('path').resolve(templatePath);
-    this.logger.log(`Ruta resuelta del template: ${resolvedPath}`);
-    
-    const content = fs.readFileSync(resolvedPath, 'binary');
-    
+  /**
+   * Genera un DOCX a partir de la plantilla.
+   * @param templateSource Buffer con el contenido del template (recomendado, viene
+   *                       de MinIO) o, por compatibilidad con plantillas antiguas,
+   *                       una ruta del filesystem local.
+   */
+  async generateDocx(templateSource: Buffer | string, data: Record<string, any>, outputPath: string): Promise<string> {
+    let content: Buffer | string;
+
+    if (Buffer.isBuffer(templateSource)) {
+      this.logger.log(`Iniciando generación de DOCX desde buffer (${templateSource.length} bytes)`);
+      content = templateSource;
+    } else {
+      // Compatibilidad: plantillas antiguas guardadas como ruta local (Multer)
+      const resolvedPath = require('path').resolve(templateSource);
+      this.logger.log(`Iniciando generación de DOCX desde ruta legacy: ${resolvedPath}`);
+      content = fs.readFileSync(resolvedPath, 'binary');
+    }
+
     const zip = new PizZip(content);
     const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
@@ -35,7 +45,7 @@ export class DocxDriver {
 
     fs.writeFileSync(outputPath, buf);
     this.logger.log(`DOCX generado exitosamente en ${outputPath}`);
-    
+
     return outputPath;
   }
 }

@@ -1,4 +1,4 @@
-import { IsString, IsUUID } from 'class-validator';
+import { IsString, IsUUID, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateStudentDto {
@@ -25,4 +25,9 @@ export class CreateStudentDto {
   @ApiProperty({ example: 'Pérez López' })
   @IsString()
   lastName!: string;
+
+  @ApiProperty({ example: '0991234567', required: false })
+  @IsString()
+  @IsOptional()
+  phone?: string;
 }
