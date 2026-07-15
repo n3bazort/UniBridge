@@ -81,30 +81,45 @@ export default function DocumentsPage() {
     }
   }
 
+  /**
+   * El backend garantiza atómicamente que solo exista UNA predeterminada por
+   * tipo (PDF/DOCX): marca esta y desmarca todas las demás en una transacción.
+   */
   const handleMakeDefault = async (template: DocumentTemplate, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!templates) return
-    
     try {
-      // Find current default and remove its default status
-      const currentDefault = templates.find(t => t.content?.isDefault === true || t.name === DEFAULT_TEMPLATE_NAME)
-      if (currentDefault && currentDefault.id !== template.id) {
-        await api.post(`/document-templates/pdf/${currentDefault.id}`, {
-          name: currentDefault.name, // Keep its original name
-          content: { ...currentDefault.content, isDefault: false }
-        })
-      }
-      
-      // Set new default
-      await api.post(`/document-templates/pdf/${template.id}`, {
-        name: template.name, // Keep its original name
-        content: { ...template.content, isDefault: true }
-      })
-      
+      await api.patch(`/document-templates/${template.id}/set-default`)
       queryClient.invalidateQueries({ queryKey: ['document-templates'] })
     } catch (error) {
       console.error('Error updating default template:', error)
       alert('Error al actualizar la plantilla predeterminada')
+    }
+  }
+
+  // ── Numeración del oficio DOCX ──
+  const [codeModal, setCodeModal] = useState<{ show: boolean, template: DocumentTemplate | null }>({ show: false, template: null })
+  const [codePrefix, setCodePrefix] = useState('')
+  const [codeSuffix, setCodeSuffix] = useState('')
+
+  const openCodeModal = (template: DocumentTemplate) => {
+    const c = typeof template.content === 'object' && template.content !== null ? template.content : {}
+    setCodePrefix(c.codePrefix || '')
+    setCodeSuffix(c.codeSuffix || '')
+    setCodeModal({ show: true, template })
+  }
+
+  const saveCodeConfig = async () => {
+    if (!codeModal.template) return
+    try {
+      await api.patch(`/document-templates/${codeModal.template.id}/docx-config`, {
+        codePrefix,
+        codeSuffix,
+      })
+      queryClient.invalidateQueries({ queryKey: ['document-templates'] })
+      setCodeModal({ show: false, template: null })
+    } catch (error) {
+      console.error('Error guardando numeración:', error)
+      alert('Error al guardar la numeración')
     }
   }
 
@@ -194,7 +209,8 @@ export default function DocumentsPage() {
 
               {/* Tarjetas de Diseños Guardados */}
               {pdfTemplates.map((template) => {
-                const isDefault = template.content?.isDefault === true || template.name === DEFAULT_TEMPLATE_NAME;
+                // Única fuente de verdad: el flag isDefault (el backend garantiza que sea uno solo)
+                const isDefault = template.content?.isDefault === true;
                 return (
                   <TemplateCard 
                     key={template.id} 
@@ -269,8 +285,16 @@ export default function DocumentsPage() {
                     />
                   </div>
                 )}
-              {docxTemplates.map((template) => (
-                <div key={template.id} className="group flex flex-col p-4 rounded-[16px] border border-[#eef2f7] bg-white shadow-sm hover:shadow-soft transition-all">
+              {docxTemplates.map((template) => {
+                const isDocxDefault = typeof template.content === 'object' && template.content?.isDefault === true
+                const cfg = typeof template.content === 'object' && template.content !== null ? template.content : {}
+                return (
+                <div key={template.id} className={`group relative flex flex-col p-4 rounded-[16px] border bg-white shadow-sm hover:shadow-soft transition-all ${isDocxDefault ? 'border-emerald-500 ring-4 ring-emerald-500/10' : 'border-[#eef2f7]'}`}>
+                  {isDocxDefault && (
+                    <span className="absolute -top-2.5 right-3 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm uppercase tracking-wide">
+                      ✓ Predeterminado
+                    </span>
+                  )}
                   <div className="w-full h-32 rounded-[12px] bg-[#f8fafc] border border-[#eef2f7] flex items-center justify-center mb-3">
                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#3b82f6]">
                       <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
@@ -286,7 +310,16 @@ export default function DocumentsPage() {
                         {template.name}
                       </h3>
                       <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
+                        <button
+                          onClick={(e) => handleMakeDefault(template, e)}
+                          className={`flex items-center justify-center w-7 h-7 rounded-[8px] transition-colors ${isDocxDefault ? 'text-emerald-600 bg-emerald-50' : 'text-[#9ca3af] hover:text-emerald-600 hover:bg-emerald-50'}`}
+                          title={isDocxDefault ? 'Plantilla predeterminada' : 'Establecer como predeterminada'}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={isDocxDefault ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                          </svg>
+                        </button>
+                        <button
                           onClick={(e) => {
                             e.stopPropagation()
                             handleRenameClick(template.id, template.name)
@@ -299,7 +332,7 @@ export default function DocumentsPage() {
                             <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                           </svg>
                         </button>
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.stopPropagation()
                             handleDelete(template.id)
@@ -318,9 +351,22 @@ export default function DocumentsPage() {
                     <span className="text-[12px] font-medium text-[#9ca3af]">
                       Creado el {new Date(template.createdAt).toLocaleDateString('es-ES')}
                     </span>
+                    {/* Numeración del oficio: prefijo + {{oficioId}} + sufijo */}
+                    <button
+                      onClick={() => openCodeModal(template)}
+                      className="mt-2 flex items-center gap-1.5 text-left text-[11.5px] font-mono text-slate-500 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded-[8px] px-2.5 py-1.5 transition-colors truncate"
+                      title="Editar numeración del oficio"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                      </svg>
+                      <span className="truncate">Oficio No. {cfg.codePrefix || ''}<span className="text-blue-600 font-bold">N°único</span>{cfg.codeSuffix || ''}</span>
+                    </button>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
             )}
           </div>
@@ -395,6 +441,68 @@ export default function DocumentsPage() {
                     className="px-4 py-2 text-[14px] font-medium text-white bg-[#111827] hover:bg-[#1f2937] rounded-[10px] transition-colors shadow-soft"
                   >
                     Guardar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal de Numeración del Oficio */}
+          {codeModal.show && codeModal.template && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4" onClick={() => setCodeModal({ show: false, template: null })}>
+              <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[520px] p-6 border border-[#eef2f7]" onClick={e => e.stopPropagation()}>
+                <h3 className="text-[18px] font-bold text-[#111827] mb-1">Numeración del oficio</h3>
+                <p className="text-[13px] text-[#6b7280] mb-5">
+                  Personaliza el texto alrededor del número. El <span className="font-semibold text-blue-700">número único</span> lo
+                  asigna el sistema en secuencia y <span className="font-semibold">no se puede quitar</span>: es lo que garantiza que
+                  ningún oficio se repita.
+                </p>
+
+                {/* Editor: prefijo + variable fija + sufijo */}
+                <div className="flex items-center gap-1.5 flex-wrap bg-[#f9fafb] border border-[#eef2f7] rounded-[12px] p-3 mb-4">
+                  <span className="text-[13px] font-semibold text-slate-500 shrink-0">Oficio No.</span>
+                  <input
+                    type="text"
+                    value={codePrefix}
+                    onChange={(e) => setCodePrefix(e.target.value)}
+                    placeholder="prefijo…"
+                    className="flex-1 min-w-[110px] px-2.5 py-1.5 bg-white border border-[#e5e7eb] rounded-[8px] text-[13px] font-mono text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
+                  />
+                  <span
+                    className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-[12px] font-mono font-bold rounded-[8px] cursor-not-allowed select-none"
+                    title="Número secuencial único asignado por el sistema. No se puede quitar."
+                  >
+                    🔒 OFIC-2026-1-00014
+                  </span>
+                  <input
+                    type="text"
+                    value={codeSuffix}
+                    onChange={(e) => setCodeSuffix(e.target.value)}
+                    placeholder="sufijo…"
+                    className="w-[90px] px-2.5 py-1.5 bg-white border border-[#e5e7eb] rounded-[8px] text-[13px] font-mono text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
+                  />
+                </div>
+
+                {/* Vista previa */}
+                <div className="flex items-center gap-2 mb-6 px-3 py-2.5 bg-emerald-50 border border-emerald-100 rounded-[10px]">
+                  <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide shrink-0">Así se imprime:</span>
+                  <span className="text-[13px] font-mono font-semibold text-[#111827] truncate">
+                    Oficio No. {codePrefix}OFIC-2026-1-00014{codeSuffix}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setCodeModal({ show: false, template: null })}
+                    className="px-4 py-2 text-[14px] font-medium text-[#374151] bg-white hover:bg-[#f8fafc] border border-[#eef2f7] rounded-[10px] transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={saveCodeConfig}
+                    className="px-4 py-2 text-[14px] font-medium text-white bg-[#111827] hover:bg-[#1f2937] rounded-[10px] transition-colors shadow-soft"
+                  >
+                    Guardar numeración
                   </button>
                 </div>
               </div>

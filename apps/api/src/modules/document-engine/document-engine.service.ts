@@ -58,9 +58,14 @@ export class DocumentEngineService {
       mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       // Las plantillas DOCX viven en MinIO (key "templates/..."); las antiguas
       // pueden seguir siendo rutas del filesystem local (compatibilidad).
-      const source = typeof templateContent === 'string' && templateContent.startsWith('templates/')
-        ? await this.minioService.getObjectBuffer(templateContent)
-        : (templateContent as string);
+      // El content puede ser un string (key/ruta) o un objeto { path, ... }
+      // con la configuración de numeración.
+      const docxPath: string = typeof templateContent === 'string'
+        ? templateContent
+        : templateContent?.path || '';
+      const source = docxPath.startsWith('templates/')
+        ? await this.minioService.getObjectBuffer(docxPath)
+        : docxPath;
       await this.docxDriver.generateDocx(source, data, outputPath);
     } else {
       throw new BadRequestException('Tipo de documento no soportado');

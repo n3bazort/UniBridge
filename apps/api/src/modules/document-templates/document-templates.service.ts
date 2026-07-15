@@ -95,6 +95,62 @@ export class DocumentTemplatesService {
     });
   }
 
+  /**
+   * El content de una plantilla DOCX puede ser un string (key de MinIO,
+   * formato original) o un objeto { path, isDefault?, codePrefix?, codeSuffix? }
+   * (formato nuevo con configuración). Este helper normaliza ambos.
+   */
+  static docxContent(content: any): { path: string; isDefault?: boolean; codePrefix?: string; codeSuffix?: string } {
+    if (typeof content === 'string') return { path: content };
+    return content || { path: '' };
+  }
+
+  /**
+   * Marca una plantilla como predeterminada de su tipo y DESMARCA todas las
+   * demás del mismo tipo en la misma transacción: nunca puede haber dos.
+   */
+  async setDefault(id: string) {
+    const target = await this.prisma.documentTemplate.findUnique({ where: { id } });
+    if (!target) throw new NotFoundException('Template no encontrado');
+
+    const sameType = await this.prisma.documentTemplate.findMany({ where: { type: target.type } });
+
+    await this.prisma.$transaction(
+      sameType.map((t) => {
+        const isTarget = t.id === id;
+        let content: any;
+        if (t.type === 'DOCX') {
+          content = { ...DocumentTemplatesService.docxContent(t.content), isDefault: isTarget };
+        } else {
+          content = { ...(t.content as any), isDefault: isTarget };
+        }
+        return this.prisma.documentTemplate.update({ where: { id: t.id }, data: { content } });
+      }),
+    );
+
+    return { id, type: target.type, message: `"${target.name}" es ahora la plantilla predeterminada de ${target.type}` };
+  }
+
+  /**
+   * Configura la numeración del oficio DOCX: prefijo y sufijo editables
+   * alrededor del número secuencial {{oficioId}}, que es inamovible porque
+   * garantiza la unicidad del documento.
+   */
+  async updateDocxConfig(id: string, config: { codePrefix?: string; codeSuffix?: string }) {
+    const template = await this.prisma.documentTemplate.findUnique({ where: { id } });
+    if (!template) throw new NotFoundException('Template no encontrado');
+    if (template.type !== 'DOCX') throw new BadRequestException('Solo aplica a plantillas DOCX');
+
+    const current = DocumentTemplatesService.docxContent(template.content);
+    const content = {
+      ...current,
+      codePrefix: config.codePrefix ?? current.codePrefix ?? '',
+      codeSuffix: config.codeSuffix ?? current.codeSuffix ?? '',
+    };
+    await this.prisma.documentTemplate.update({ where: { id }, data: { content } });
+    return { id, codePrefix: content.codePrefix, codeSuffix: content.codeSuffix };
+  }
+
   async findAll() {
     return this.prisma.documentTemplate.findMany({
       orderBy: { createdAt: 'desc' }
@@ -128,16 +184,17 @@ export class DocumentTemplatesService {
     });
 
     // 2. Si es una plantilla DOCX, eliminar el archivo físico
-    if (template.type === 'DOCX' && typeof template.content === 'string') {
-      if (template.content.startsWith('templates/')) {
+    if (template.type === 'DOCX') {
+      const docxPath = DocumentTemplatesService.docxContent(template.content).path;
+      if (docxPath.startsWith('templates/')) {
         // Plantilla en MinIO
-        await this.minio.removeObject(template.content);
-      } else {
+        await this.minio.removeObject(docxPath);
+      } else if (docxPath) {
         // Compatibilidad: plantilla antigua en el filesystem local
         try {
           const fs = require('fs');
           const path = require('path');
-          const resolvedPath = path.resolve(template.content);
+          const resolvedPath = path.resolve(docxPath);
           if (fs.existsSync(resolvedPath)) {
             fs.unlinkSync(resolvedPath);
           }

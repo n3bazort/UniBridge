@@ -432,9 +432,18 @@ export class GeneratedDocumentsService {
 
     const oficioId = await this.generateSequence('SOLICITUD', academicPeriodCode);
 
+    // Código oficial del oficio: [prefijo editable] + numeración única + [sufijo editable].
+    // El prefijo/sufijo se configuran por plantilla (Documentos → Numeración);
+    // {{oficioId}} es inamovible porque garantiza la unicidad.
+    const docxCfg = typeof template.content === 'object' && template.content !== null
+      ? (template.content as any)
+      : {};
+    const oficioCode = `${docxCfg.codePrefix ?? ''}${oficioId}${docxCfg.codeSuffix ?? ''}`;
+
     const dataToInject = {
       oficioId: oficioId,
-      documentCode: oficioId,
+      oficioCode,
+      documentCode: oficioCode,
       currentDate: new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }),
       companyContactName: company.contactName || 'Responsable',
       companyRecipientName: company.recipientName || 'Director(a)',
@@ -478,7 +487,7 @@ export class GeneratedDocumentsService {
         templateId,
         studentId,
         fileUrl: storedKey,
-        documentCode: oficioId,
+        documentCode: oficioCode,
         documentType: 'SOLICITUD',
         status: 'VALID' as const,
         generatedById,
@@ -488,7 +497,7 @@ export class GeneratedDocumentsService {
     // URL prefirmada para descarga inmediata desde la UI (el bucket es privado)
     const downloadUrl = await this.minio.getPresignedUrl(storedKey, 900, storedKey.split('/').pop());
 
-    return { fileUrl: storedKey, downloadUrl, documentCode: oficioId, message: 'Oficio generado correctamente' };
+    return { fileUrl: storedKey, downloadUrl, documentCode: oficioCode, message: 'Oficio generado correctamente' };
   }
 
   async invalidate(id: string, reason: string) {

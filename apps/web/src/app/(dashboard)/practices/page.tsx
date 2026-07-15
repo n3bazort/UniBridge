@@ -311,7 +311,10 @@ export default function PracticesPage() {
     setShowConfirmCerts(false)
     try {
       const templatesRes = await api.get('/document-templates')
-      const defaultTemplate = templatesRes.data.find((t: any) => t.content?.isDefault === true || t.name === 'Certificado de Prácticas Oficial')
+      // La predeterminada manda; el nombre oficial queda solo como respaldo legado
+      const pdfTemplates = templatesRes.data.filter((t: any) => t.type === 'PDF')
+      const defaultTemplate = pdfTemplates.find((t: any) => t.content?.isDefault === true)
+        || pdfTemplates.find((t: any) => t.name === 'Certificado de Prácticas Oficial')
 
       if (!defaultTemplate) {
         toast.error('No se encontró una plantilla predeterminada. Por favor márcala en Documentos.')
@@ -442,7 +445,9 @@ export default function PracticesPage() {
         setIsGenerating(false)
         return
       }
-      const defaultDocxTemplate = docxTemplates[0]
+      // Se usa la plantilla DOCX marcada como predeterminada; si no hay, la primera
+      const defaultDocxTemplate = docxTemplates.find((t: any) => typeof t.content === 'object' && t.content?.isDefault === true)
+        || docxTemplates[0]
       const studentIds = groupItems.map((p: any) => p.studentId)
 
       // Verificar si ya existen
