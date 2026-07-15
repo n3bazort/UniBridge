@@ -1,0 +1,34 @@
+databases:
+  - name: unibridge-db
+    databaseName: unibridge
+    user: unibridge_admin
+    plan: free
+
+services:
+  - type: web
+    name: unibridge-api
+    env: node
+    plan: free
+    buildCommand: npm install && npx prisma generate --schema=packages/db/prisma/schema.prisma && npm run build --workspace=@ppp/api
+    startCommand: npm run start --workspace=@ppp/api
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: unibridge-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DISABLE_OPENSEARCH
+        value: "true"
+      - key: DISABLE_MINIO
+        value: "true"
+
+  - type: web
+    name: unibridge-web
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build --workspace=web
+    startCommand: npm run start --workspace=web
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: "https://unibridge-api.onrender.com/api/v1"
