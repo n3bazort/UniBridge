@@ -189,35 +189,26 @@ export default function PracticesPage() {
     setActivePracticeId(p.id)
   }
 
-  // ── Elegibilidad de la selección para emitir certificados ──
-  // Requisitos: práctica finalizada + solicitud (oficio) vigente vinculada.
-  // Si UNO solo falla, la acción se bloquea hasta que lo quiten de la selección.
+  // ── Elegibilidad para emitir certificados ──
+  // La selección es POR EMPRESA (checkbox del grupo). Los estudiantes del
+  // grupo que no cumplen los requisitos (práctica finalizada + solicitud
+  // vigente) se OMITEN automáticamente — sin pasos extra para el usuario.
   const hasValidSolicitud = (p: Practice) =>
     (p.student.generatedDocs || []).some(d => d.template.type === 'DOCX' && (d.status ?? 'VALID') === 'VALID')
 
   const certEligibility = useMemo(() => {
     const selected = rawPractices.filter(p => selectedIds.has(p.id))
-    const notCompleted = selected.filter(p => p.status !== 'COMPLETED')
-    const noSolicitud = selected.filter(p => p.status === 'COMPLETED' && !hasValidSolicitud(p))
     const eligible = selected.filter(p => p.status === 'COMPLETED' && hasValidSolicitud(p))
+    const omitted = selected.length - eligible.length
+    const companies = new Set(selected.map(p => p.company?.name || 'Sin empresa')).size
 
-    let blockedReason: string | null = null
-    if (noSolicitud.length > 0) {
-      const names = noSolicitud.slice(0, 2).map(p => p.student.firstName).join(', ')
-      blockedReason = `${noSolicitud.length} sin solicitud vigente (${names}${noSolicitud.length > 2 ? '…' : ''}). Genera la solicitud grupal o quítalos.`
-    } else if (notCompleted.length > 0) {
-      blockedReason = `${notCompleted.length} sin finalizar. Solo se certifican prácticas terminadas.`
-    }
+    // Solo bloquea cuando NADIE de la selección cumple los requisitos
+    const blockedReason = selected.length > 0 && eligible.length === 0
+      ? 'Ninguno cumple los requisitos: práctica finalizada + solicitud vigente.'
+      : null
 
-    return { selected, eligible, notCompleted, noSolicitud, blockedReason }
+    return { selected, eligible, omitted, companies, blockedReason }
   }, [rawPractices, selectedIds])
-
-  /** Quita de la selección a los que bloquean la emisión, en un click. */
-  const handleDeselectBlockers = () => {
-    const blockers = new Set([...certEligibility.noSolicitud, ...certEligibility.notCompleted].map(p => p.id))
-    setSelectedIds(new Set([...selectedIds].filter(id => !blockers.has(id))))
-    toast.success(`${blockers.size} estudiante(s) quitados de la selección`)
-  }
 
   /** El ícono de documento lleva a su ficha en Certificados (no abre el archivo). */
   const handleDocumentClick = (docId: string) => {
@@ -655,27 +646,30 @@ export default function PracticesPage() {
             {/* Barra de acciones flotante: acompaña la selección durante todo
                 el scroll, así no hay que volver arriba para actuar. */}
             <FloatingActionBar
-              count={selectedIds.size}
-              label={`estudiante${selectedIds.size > 1 ? 's' : ''} seleccionado${selectedIds.size > 1 ? 's' : ''}`}
+              count={certEligibility.companies}
+              label={`empresa${certEligibility.companies > 1 ? 's' : ''} · ${certEligibility.eligible.length} certificable${certEligibility.eligible.length !== 1 ? 's' : ''}`}
               blockedReason={certEligibility.blockedReason}
               onClear={() => setSelectedIds(new Set())}
             >
-              {certEligibility.blockedReason ? (
-                <button
-                  onClick={handleDeselectBlockers}
-                  className="h-[34px] px-3.5 rounded-[10px] bg-amber-500 hover:bg-amber-600 text-white text-[12.5px] font-semibold transition-colors whitespace-nowrap"
-                >
-                  Quitar los {certEligibility.noSolicitud.length + certEligibility.notCompleted.length} bloqueantes
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowConfirmCerts(true)}
-                  disabled={isGenerating || certEligibility.eligible.length === 0}
-                  className="h-[34px] px-4 flex items-center gap-2 rounded-[10px] bg-white hover:bg-slate-100 text-[#111827] text-[12.5px] font-bold transition-colors disabled:opacity-50 whitespace-nowrap"
-                >
-                  <FileText className="w-4 h-4 text-rose-500" />
-                  Emitir {certEligibility.eligible.length} certificado{certEligibility.eligible.length > 1 ? 's' : ''}
-                </button>
+              {!certEligibility.blockedReason && (
+                <>
+                  {certEligibility.omitted > 0 && (
+                    <span
+                      className="text-[11.5px] font-medium text-amber-300 whitespace-nowrap"
+                      title="Estudiantes sin práctica finalizada o sin solicitud vigente: no entran en la emisión"
+                    >
+                      {certEligibility.omitted} se omite{certEligibility.omitted > 1 ? 'n' : ''}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setShowConfirmCerts(true)}
+                    disabled={isGenerating || certEligibility.eligible.length === 0}
+                    className="h-[34px] px-4 flex items-center gap-2 rounded-[10px] bg-white hover:bg-slate-100 text-[#111827] text-[12.5px] font-bold transition-colors disabled:opacity-50 whitespace-nowrap"
+                  >
+                    <FileText className="w-4 h-4 text-rose-500" />
+                    Emitir {certEligibility.eligible.length} certificado{certEligibility.eligible.length > 1 ? 's' : ''}
+                  </button>
+                </>
               )}
             </FloatingActionBar>
 

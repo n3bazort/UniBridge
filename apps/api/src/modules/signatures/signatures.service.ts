@@ -247,6 +247,20 @@ export class SignaturesService {
               signedAt: new Date(),
             },
           });
+
+          // El firmado final (ambas firmas) REEMPLAZA a las versiones
+          // anteriores: se elimina la intermedia del decano. El original sin
+          // firmar se conserva como respaldo del expediente.
+          const staleKeys = [...new Set(items.map((i) => i.deanFileKey).filter(Boolean))] as string[];
+          for (const staleKey of staleKeys) {
+            if (staleKey === objectKey) continue;
+            try {
+              await this.minio.removeObject(staleKey);
+              this.logger.log(`Versión intermedia eliminada: ${staleKey}`);
+            } catch (e) {
+              this.logger.warn(`No se pudo eliminar la versión intermedia ${staleKey}: ${e?.message}`);
+            }
+          }
         }
 
         results.push({ file: file.originalname, ok: true, documentCode });

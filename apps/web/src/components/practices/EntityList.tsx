@@ -50,7 +50,8 @@ export interface Group {
 interface EntityListProps {
   groups: Group[]
   selectedIds: Set<string>
-  onToggleSelection: (id: string) => void
+  /** Conservado por compatibilidad; la selección ahora es solo por grupo (empresa) */
+  onToggleSelection?: (id: string) => void
   onToggleAll: (groupId: string, items: Practice[]) => void
   onGenerateSolicitud?: (items: Practice[]) => void
   isGenerating?: boolean
@@ -256,26 +257,17 @@ export function EntityList({
                         className={cn(
                           "relative flex items-center h-[72px] px-[18px] bg-white rounded-[16px] border cursor-pointer group transition-colors",
                           isActive ? "border-blue-300 ring-1 ring-blue-100 bg-blue-50/20" : "border-transparent",
+                          // La selección es por EMPRESA (checkbox del grupo). La fila solo
+                          // señala si este estudiante quedará fuera de la emisión.
                           isSelected && blocksCertificate && "border-amber-200 bg-amber-50/30"
                         )}
+                        title={isSelected && blocksCertificate ? 'Se omitirá: necesita práctica finalizada y solicitud vigente' : undefined}
                       >
-                        {/* Checkbox */}
-                        <div
-                          className="w-[40px] flex items-center justify-center shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onToggleSelection(practice.id)
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            readOnly
-                            className={cn(
-                              "w-5 h-5 rounded border-slate-300 focus:ring-blue-500 cursor-pointer",
-                              isSelected && blocksCertificate ? "text-amber-500" : "text-blue-600"
-                            )}
-                          />
+                        {/* Indicador de selección del grupo */}
+                        <div className="w-[14px] shrink-0 mr-2 flex items-center justify-center">
+                          {isSelected && (
+                            <span className={cn("w-1.5 h-8 rounded-full", blocksCertificate ? "bg-amber-300" : "bg-blue-500")} />
+                          )}
                         </div>
 
                         {/* Avatar */}
