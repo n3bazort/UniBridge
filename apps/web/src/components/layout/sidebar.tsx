@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, Briefcase, Building2, FileText, Settings, LogOut, Upload, BookOpen, Files, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, Users, Briefcase, Building2, FileText, Settings, LogOut, Upload, BookOpen, Files, BarChart3, ChevronLeft, ChevronRight, GraduationCap, PenLine, UserCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/stores/auth-store'
+import { useAuthStore } from '@/store/auth-store'
 import { useAuth } from '@/hooks/use-auth'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
@@ -12,12 +12,16 @@ import { useSidebarStore } from '@/store/sidebar'
 
 const navItems = [
   { name: 'Dashboard', href: '/overview', icon: LayoutDashboard, roles: ['ADMIN', 'COORDINATOR'] },
+  { name: 'Mi Práctica', href: '/student-dashboard', icon: Briefcase, roles: ['STUDENT'] },
   { name: 'Prácticas', href: '/practices', icon: Briefcase, roles: ['ADMIN', 'COORDINATOR'] },
-  { name: 'Estudiantes', href: '/students', icon: Users, roles: ['ADMIN', 'COORDINATOR'] },
+  { name: 'Estudiantes', href: '/students', icon: GraduationCap, roles: ['ADMIN', 'COORDINATOR'] },
   { name: 'Empresas', href: '/companies', icon: Building2, roles: ['ADMIN', 'COORDINATOR'] },
   { name: 'Documentos', href: '/documents', icon: Files, roles: ['ADMIN', 'COORDINATOR'] },
-  { name: 'Reportes', href: '/reports', icon: BarChart3, roles: ['ADMIN', 'COORDINATOR'] },
-  { name: 'Configuración', href: '/settings', icon: Settings, roles: ['ADMIN'] },
+  { name: 'Certificados', href: '/certificates', icon: FileText, roles: ['ADMIN', 'COORDINATOR'] },
+  { name: 'Importaciones', href: '/imports', icon: Upload, roles: ['ADMIN', 'COORDINATOR'] },
+  { name: 'Firmantes', href: '/signers', icon: UserCheck, roles: ['ADMIN'] },
+  { name: 'Firma de Documentos', href: '/signer-dashboard', icon: PenLine, roles: ['SIGNER'] },
+  { name: 'Configuraciones', href: '/settings', icon: Settings, roles: ['ADMIN', 'COORDINATOR'] },
 ]
 
 export function Sidebar() {
@@ -25,6 +29,24 @@ export function Sidebar() {
   const user = useAuthStore((state) => state.user)
   const { logout } = useAuth()
   const { isCollapsed, toggleSidebar } = useSidebarStore()
+
+  const userName = user?.firstName && user?.lastName 
+    ? `${user.firstName} ${user.lastName}` 
+    : (user?.email ? user.email.split('@')[0] : 'Usuario');
+  
+  const userRole = user?.role === 'ADMIN' 
+    ? 'Administrador' 
+    : user?.role === 'COORDINATOR' 
+      ? 'Coordinador' 
+      : user?.role === 'STUDENT'
+        ? 'Estudiante'
+        : user?.role === 'SIGNER'
+          ? 'Firmante'
+          : 'Usuario';
+  
+  const avatarSeed = user?.firstName && user?.lastName 
+    ? `${user.firstName}${user.lastName}` 
+    : (user?.email || 'Maria');
 
   // Use all items for development if user is not fully populated, or filter
   const filteredNav = navItems.filter(item => 
@@ -39,12 +61,17 @@ export function Sidebar() {
       <div className={cn("flex h-12 items-center mb-4", isCollapsed ? "justify-center px-0" : "px-4")}>
         <Link href="/" className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#2563eb] text-white shadow-soft">
-            <BookOpen className="h-4 w-4" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]">
+              <path d="M3 20V6m18 14V6" />
+              <path d="M2 13Q3.5 8 4 6Q12 16 20 6Q20.5 8 22 13" strokeWidth="1.6" />
+              <path d="M2 17h20" />
+              <path d="M8 11.5v5.5m8-5.5v5.5m-4 0v-3.5" strokeWidth="1.2" />
+            </svg>
           </div>
           {!isCollapsed && (
             <div className="flex flex-col overflow-hidden">
-              <span className="text-[14px] font-semibold text-[#111827] leading-tight truncate">Prácticas</span>
-              <span className="text-[12px] font-medium text-[#6b7280] leading-tight truncate">Universidad</span>
+              <span className="text-[14px] font-semibold text-[#111827] leading-tight truncate">UniBridge</span>
+              <span className="text-[12px] font-medium text-[#6b7280] leading-tight truncate">Plataforma PPP</span>
             </div>
           )}
         </Link>
@@ -84,11 +111,11 @@ export function Sidebar() {
       <div className="mt-auto pt-4 flex flex-col gap-2">
         <div className={cn("flex items-center", isCollapsed ? "justify-center px-0" : "justify-between px-2")}>
           <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
-             <img src="https://api.dicebear.com/9.x/notionists/svg?seed=Maria" alt="Avatar" className="w-9 h-9 rounded-full bg-white shadow-soft shrink-0" />
+             <img src={`https://api.dicebear.com/9.x/notionists/svg?seed=${avatarSeed}`} alt="Avatar" className="w-9 h-9 rounded-full bg-white shadow-soft shrink-0" />
              {!isCollapsed && (
                <div className="flex flex-col overflow-hidden">
-                  <span className="text-[13px] font-medium text-[#111827] leading-tight truncate">María Fernanda</span>
-                  <span className="text-[12px] text-[#6b7280] leading-tight truncate">Coordinadora</span>
+                  <span className="text-[13px] font-medium text-[#111827] leading-tight truncate">{userName}</span>
+                  <span className="text-[12px] text-[#6b7280] leading-tight truncate">{userRole}</span>
                </div>
              )}
           </div>

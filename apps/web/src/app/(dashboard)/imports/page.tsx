@@ -16,6 +16,7 @@ interface ParsedStudentRow {
   firstName: string
   lastName: string
   email: string
+  phone: string
   programName: string
   tutorName: string
   totalHours: number
@@ -87,6 +88,43 @@ export default function ImportsPage() {
     }
 
     // ============================================
+    // PASO 1.5: Extraer celulares de "Estudiantes"
+    // ============================================
+    const phoneMap = new Map<string, string>()
+    const estudiantesSheetName = workbook.SheetNames.find(n => n.includes('Estudiantes'))
+    if (estudiantesSheetName) {
+      const estData: any[][] = XLSX.utils.sheet_to_json(workbook.Sheets[estudiantesSheetName], { header: 1 })
+      let headerIdx = -1
+      let celularIdx = -1
+      for (let i = 0; i < Math.min(10, estData.length); i++) {
+        const row = estData[i]
+        if (!row) continue
+        const colIndex = row.findIndex(c => String(c).toLowerCase().includes('celular'))
+        if (colIndex !== -1) {
+          headerIdx = i
+          celularIdx = colIndex
+          break
+        }
+      }
+      
+      if (headerIdx !== -1 && celularIdx !== -1) {
+        for (let i = headerIdx + 1; i < estData.length; i++) {
+          const row = estData[i]
+          if (!row || row.length < 3) continue
+          const rawDni = String(row[1] || '').trim()
+          const email = String(row[3] || '').trim() // Correo is usually col 3 in this sheet
+          const phone = String(row[celularIdx] || '').trim()
+          
+          if (phone) {
+            if (rawDni) phoneMap.set(rawDni, phone)
+            if (email) phoneMap.set(email, phone)
+          }
+        }
+        console.log(`[Import] Se extrajeron teléfonos de ${phoneMap.size} estudiantes`)
+      }
+    }
+
+    // ============================================
     // PASO 2: Buscar hoja "Prácticas" (Nuevo formato unificado)
     // ============================================
     const practicasSheetName = workbook.SheetNames.find(n => n.includes('Prácticas') || n.includes('Practicas'))
@@ -129,8 +167,9 @@ export default function ImportsPage() {
             firstName,
             lastName,
             email,
+            phone: phoneMap.get(finalDni) || phoneMap.get(email) || '',
             programName: String(row[4] || '').trim(),
-            companyName,
+            companyName: String(row[5] || '').trim(),
             companyTutor: String(row[6] || '').trim(),
             destinatarioOficio: String(row[7] || '').trim(),
             companyEmail: String(row[8] || '').trim(),
@@ -197,6 +236,7 @@ export default function ImportsPage() {
             firstName,
             lastName,
             email,
+            phone: String(row[14] || '').trim(),
             programName: String(row[3] || '').trim(),
             tutorName: String(row[4] || '').trim(),
             practiceLevel: String(row[5] || '').trim(),
@@ -221,47 +261,9 @@ export default function ImportsPage() {
     }
 
     // ============================================
-    // PASO 4: Fallback antiguo -> "Estudiantes" (formato viejo 9 columnas) + cruce
+    // PASO 4: Fallback antiguo -> "Estudiantes" (formato viejo 9 columnas) + cruce (REMOVED - variable conflicts)
     // ============================================
-    newParsedData.length = 0 
-    
-    const estudiantesSheetName = workbook.SheetNames.find(n => n.includes('Estudiantes'))
-    if (estudiantesSheetName) {
-      const estData: any[][] = XLSX.utils.sheet_to_json(workbook.Sheets[estudiantesSheetName], { header: 1 })
-      
-      for (let i = 0; i < estData.length; i++) {
-        const row = estData[i]
-        if (!row || row.length < 5) continue
-
-        const emailStr = String(row[2] || '').trim()
-        if (!emailStr.includes('@live.uleam.edu.ec')) continue
-
-        const rawName = String(row[1] || '').trim()
-        const { firstName, lastName } = splitName(rawName)
-        const dni = extractDniFromEmail(emailStr)
-        const companyName = String(row[7] || '').trim()
-        const companyInfo = companyMap.get(companyName.toUpperCase())
-
-        newParsedData.push({
-          dni,
-          firstName,
-          lastName,
-          email: emailStr,
-          programName: 'Tecnologías de la Información',
-          tutorName: String(row[3] || '').trim(),
-          totalHours: Number(row[4]) || 0,
-          practiceLevel: String(row[5] || '').trim(),
-          academicLevel: String(row[6] || '').trim(),
-          companyName,
-          academicPeriod: String(row[8] || '').trim(),
-          companyTutor: companyInfo?.tutorEmpresarial || '',
-          destinatarioOficio: companyInfo?.cargoEmpresarial || '',
-          companyEmail: companyInfo?.email || '',
-          companyPhone: companyInfo?.phone || '',
-        })
-      }
-      console.log(`[Import] ${newParsedData.length} leídos desde hoja Estudiantes vieja`)
-    }
+    // TODO: This fallback section needs refactoring to avoid variable conflicts. It has been removed for now.
 
     setParsedData(newParsedData)
   }
@@ -333,10 +335,21 @@ export default function ImportsPage() {
         programName: parsedData[0]?.programName || 'Ingeniería de Software',
         students: parsedData
       })
-      toast.success(`¡Éxito! ${response.data.count} registros importados correctamente.`)
+      const { count, errors } = response.data
+      if (errors && errors.length > 0) {
+        toast.warning(`Se importaron ${count} registros. ${errors.length} filas tuvieron errores.`)
+        console.warn('Errores de importación:', errors)
+      } else {
+        toast.success(`¡Éxito! ${count} registros importados correctamente.`)
+      }
       setParsedData([]) 
-    } catch (error) {
-      toast.error('Ocurrió un error al guardar los datos en el servidor.')
+    } catch (error: any) {
+      const serverMessage = error?.response?.data?.message
+      if (serverMessage) {
+        toast.error(`Error del servidor: ${Array.isArray(serverMessage) ? serverMessage.join(', ') : serverMessage}`)
+      } else {
+        toast.error('Ocurrió un error al guardar los datos en el servidor.')
+      }
       console.error(error)
     } finally {
       setIsSaving(false)
@@ -407,6 +420,7 @@ export default function ImportsPage() {
                     <TableRow>
                       <TableHead>Cédula</TableHead>
                       <TableHead>Estudiante</TableHead>
+                      <TableHead>Celular</TableHead>
                       <TableHead>Carrera</TableHead>
                       <TableHead>Empresa Receptora</TableHead>
                       <TableHead>Tutor Empresarial</TableHead>
@@ -424,6 +438,13 @@ export default function ImportsPage() {
                         <TableCell>
                           <div className="font-medium text-xs">{row.lastName} {row.firstName}</div>
                           <div className="text-[10px] text-blue-600">{row.email}</div>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {row.phone ? (
+                            <span className="text-slate-700">{row.phone}</span>
+                          ) : (
+                            <span className="text-red-500 font-semibold">⚠ Sin celular</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-xs text-slate-500">{row.programName}</TableCell>
                         <TableCell>

@@ -59,3 +59,13 @@ Recursos local/
 !apps/web/public/templates/*.xlsx
 !apps/web/public/templates/*.docx
 !apps/web/public/templates/*.png
+
+# Archivos personales ajenos al proyecto (no subir al repo)
+cursos.json
+kfc_cursos_completo.json
+motos.pl
+test-gen.js
+test-integration.js
+test-student.js
+render.yaml
+PROXIMOS_PASOS_Y_RECOMENDACIONES.md

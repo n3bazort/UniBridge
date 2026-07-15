@@ -3,7 +3,7 @@ async function main() {
   const login = await fetch('http://localhost:3001/api/v1/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@uleam.edu.ec', password: 'Admin123!' })
+    body: JSON.stringify({ email: 'admin@uleam.edu.ec', password: '@adminadmin007' })
   });
   const token = (await login.json()).access_token;
 

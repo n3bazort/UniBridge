@@ -1,0 +1,128 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────────────────────────
+# Producción. Los secretos NO viven en este archivo: se leen de un
+# archivo .env junto a este compose (ver .env.production.example).
+# Docker Compose carga .env automáticamente.
+# Las variables marcadas con :? hacen fallar el arranque si faltan,
+# para que nunca se despliegue con secretos vacíos o de ejemplo.
+# ─────────────────────────────────────────────────────────────────
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: ppp_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ppp_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el archivo .env}
+      POSTGRES_DB: ${POSTGRES_DB:-ppp_db}
+    ports:
+      - '5432:5432'
+    volumes:
+      - ppp_pgdata:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: ppp_redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - ppp_redisdata:/data
+    restart: always
+
+  minio:
+    image: minio/minio:latest
+    container_name: ppp_minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?Define MINIO_ACCESS_KEY en el archivo .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?Define MINIO_SECRET_KEY en el archivo .env}
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - ppp_miniodata:/data
+    command: server /data --console-address ":9001"
+    restart: always
+
+  opensearch-node:
+    image: opensearchproject/opensearch:latest
+    container_name: ppp_opensearch
+    environment:
+      - cluster.name=ppp-cluster
+      - node.name=ppp-node
+      - discovery.type=single-node
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD:?Define OPENSEARCH_PASSWORD en el archivo .env}
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - '9200:9200'
+      - '9600:9600'
+    volumes:
+      - ppp_osdata:/usr/share/opensearch/data
+    restart: always
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:latest
+    container_name: ppp_os_dashboards
+    ports:
+      - '5601:5601'
+    environment:
+      - OPENSEARCH_HOSTS=["https://opensearch-node:9200"]
+    depends_on:
+      - opensearch-node
+    restart: always
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: ppp_api
+    ports:
+      - '4000:4000'
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      # Conexión a Base de Datos
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-ppp_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-ppp_db}?schema=public
+      # Conexión a Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Conexión a MinIO
+      - DISABLE_MINIO=false
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_USE_SSL=false
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      # Conexión a OpenSearch
+      - DISABLE_OPENSEARCH=${DISABLE_OPENSEARCH:-false}
+      - OPENSEARCH_URL=https://opensearch-node:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
+      - OPENSEARCH_INDEX_PREFIX=ppp_
+      # Seguridad (obligatorios: el API valida su presencia al arrancar)
+      - JWT_SECRET=${JWT_SECRET:?Define JWT_SECRET en el archivo .env}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:?Define JWT_REFRESH_SECRET en el archivo .env}
+      # Frontend (CORS y links de invitación de firmantes)
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    depends_on:
+      - db
+      - redis
+      - minio
+      - opensearch-node
+    restart: always
+
+volumes:
+  ppp_pgdata:
+  ppp_redisdata:
+  ppp_miniodata:
+  ppp_osdata:

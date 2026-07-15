@@ -6,8 +6,8 @@ import { Providers } from "@/components/providers";
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"] });
 
 export const metadata: Metadata = {
-  title: "PPP System",
-  description: "Sistema de Prácticas Preprofesionales ULEAM",
+  title: "UniBridge - Sistema PPP",
+  description: "UniBridge - Sistema de Gestión de Prácticas Preprofesionales",
 };
 
 export default function RootLayout({

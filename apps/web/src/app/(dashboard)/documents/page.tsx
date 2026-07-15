@@ -5,8 +5,12 @@ import { Stage, Layer, Text as KonvaText, Image as KonvaImage } from 'react-konv
 import useImage from 'use-image'
 import { api } from '@/lib/axios'
 import { RoleGate } from '@/components/shared/role-gate'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/store/auth-store'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
+import { FileText } from 'lucide-react'
 
 interface DocumentTemplate {
   id: string
@@ -165,7 +169,9 @@ export default function DocumentsPage() {
             </div>
             
             {isLoading ? (
-              <div className="flex justify-center p-12 text-[#6b7280] animate-pulse font-medium">Cargando diseños...</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {[1,2,3,4].map(i => <Skeleton key={i} className="min-h-[220px] rounded-[16px] bg-white border border-[#eef2f7]" />)}
+              </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 
@@ -248,12 +254,21 @@ export default function DocumentsPage() {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {docxTemplates.length === 0 && !isLoading && (
-                <div className="col-span-full flex items-center justify-center py-12 rounded-[16px] border border-dashed border-[#d1d5db] bg-white/50 text-[#6b7280] font-medium text-[14px]">
-                  Aún no hay plantillas DOCX. Haz clic en "Subir Plantilla DOCX".
-                </div>
-              )}
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mt-4">
+                {[1,2,3,4].map(i => <Skeleton key={i} className="min-h-[120px] rounded-[16px] bg-white border border-[#eef2f7]" />)}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {docxTemplates.length === 0 && (
+                  <div className="col-span-full mt-2">
+                    <EmptyState 
+                      icon={FileText} 
+                      title="No hay plantillas DOCX" 
+                      description="Sube una plantilla de Microsoft Word (.docx) para generar oficios de solicitud de prácticas."
+                    />
+                  </div>
+                )}
               {docxTemplates.map((template) => (
                 <div key={template.id} className="group flex flex-col p-4 rounded-[16px] border border-[#eef2f7] bg-white shadow-sm hover:shadow-soft transition-all">
                   <div className="w-full h-32 rounded-[12px] bg-[#f8fafc] border border-[#eef2f7] flex items-center justify-center mb-3">
@@ -307,6 +322,7 @@ export default function DocumentsPage() {
                 </div>
               ))}
             </div>
+            )}
           </div>
 
         {/* Modal de Confirmación de Borrado */}
@@ -406,6 +422,7 @@ function TemplateCard({
   onMakeDefault: (e: React.MouseEvent) => void;
   onRename: (id: string, name: string, e: React.MouseEvent) => void;
 }) {
+  const user = useAuthStore((state) => state.user)
   // Generar miniatura del JSON del diseño
   const content = template.content as any
   const elementCount = content?.schemas?.[0]?.length || content?.elements?.length || 0
@@ -460,18 +477,20 @@ function TemplateCard({
           </svg>
         </button>
 
-        <button
-          onClick={(e) => onRename(template.id, template.name, e)}
-          className="flex items-center justify-center w-7 h-7 bg-white text-[#9ca3af] rounded-[8px] opacity-0 group-hover:opacity-100 hover:bg-[#eff6ff] hover:text-[#3b82f6] transition-all border border-[#eef2f7]"
-          title="Renombrar plantilla"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-            <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-          </svg>
-        </button>
+        {(!isDefault || user?.role === 'ADMIN') && (
+          <button
+            onClick={(e) => onRename(template.id, template.name, e)}
+            className="flex items-center justify-center w-7 h-7 bg-white text-[#9ca3af] rounded-[8px] opacity-0 group-hover:opacity-100 hover:bg-[#eff6ff] hover:text-[#3b82f6] transition-all border border-[#eef2f7]"
+            title="Renombrar plantilla"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+        )}
         
-        {!isDefault && (
+        {(!isDefault || user?.role === 'ADMIN') && (
           <button
             onClick={(e) => onDelete(template.id, e)}
             className="flex items-center justify-center w-7 h-7 bg-white text-[#9ca3af] rounded-[8px] opacity-0 group-hover:opacity-100 hover:bg-[#fef2f2] hover:text-[#ef4444] transition-all border border-[#eef2f7]"
@@ -490,8 +509,20 @@ function TemplateCard({
 
 function MiniTemplatePreview({ template }: { template: DocumentTemplate }) {
   const content = template.content as any;
-  const bgUrl = content?.background ?? null;
-  const [bgImage] = useImage(bgUrl);
+  const rawBg = content?.background ? String(content.background) : '';
+  // Si el fondo vive en MinIO, resolvemos su URL prefirmada; los antiguos
+  // (/uploads, http, /templates) y los "blob:" corruptos se manejan aparte.
+  const [resolvedBg, setResolvedBg] = useState<string | null>(
+    rawBg && !rawBg.startsWith('templates/backgrounds/') && !rawBg.startsWith('blob:') ? rawBg : null
+  );
+  useEffect(() => {
+    if (rawBg.startsWith('templates/backgrounds/')) {
+      api.get('/document-templates/bg-url', { params: { key: rawBg } })
+        .then((r) => setResolvedBg(r.data?.url || null))
+        .catch(() => setResolvedBg(null));
+    }
+  }, [rawBg]);
+  const [bgImage] = useImage(resolvedBg || '');
   // Aumentar la escala para que se vea mucho más grande
   const scale = 0.16;
   const width = content?.width || 1123;
