@@ -48,6 +48,16 @@ export class SignaturesService {
     });
     if (docs.length === 0) throw new NotFoundException('No se encontraron documentos válidos');
 
+    // Solo los CERTIFICADOS pasan por el circuito de firma. La solicitud es un
+    // oficio que la Comisión envía a la empresa: no lleva firma digital de las
+    // autoridades ni entra a este flujo.
+    const notCertificates = docs.filter((d) => d.documentType !== 'CERTIFICADO');
+    if (notCertificates.length > 0) {
+      throw new BadRequestException(
+        `Solo los certificados se envían a firma. ${notCertificates.length} documento(s) seleccionado(s) son solicitudes y no requieren firma digital.`,
+      );
+    }
+
     const alreadyInSigning = docs.filter((d) => d.signatureStatus === 'IN_SIGNING' || d.signatureStatus === 'PARTIALLY_SIGNED');
     if (alreadyInSigning.length > 0) {
       throw new BadRequestException(

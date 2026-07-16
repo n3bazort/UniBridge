@@ -89,6 +89,10 @@ const BATCH_ITEM_BADGE: Record<SignatureBatchItem['status'], { label: string; cl
 function docState(doc: GeneratedDocument): { label: string; cls: string; dot: string } {
   if (doc.status === 'INVALIDATED') return { label: 'Invalidado', cls: 'text-red-700 bg-red-50 border-red-100', dot: 'bg-red-500' }
   if (doc.status === 'SUPERSEDED') return { label: 'Reemplazado', cls: 'text-slate-500 bg-slate-100 border-slate-200', dot: 'bg-slate-400' }
+  // La solicitud no entra al circuito de firma: su único estado útil es vigente
+  if (doc.documentType !== 'CERTIFICADO') {
+    return { label: 'Vigente', cls: 'text-emerald-700 bg-emerald-50 border-emerald-100', dot: 'bg-emerald-500' }
+  }
   switch (doc.signatureStatus) {
     case 'IN_SIGNING': return { label: 'Esperando Decano', cls: 'text-amber-700 bg-amber-50 border-amber-100', dot: 'bg-amber-500' }
     case 'PARTIALLY_SIGNED': return { label: 'Esperando Director', cls: 'text-blue-700 bg-blue-50 border-blue-100', dot: 'bg-blue-500' }
@@ -237,8 +241,10 @@ function CertificatesPageInner() {
     }
   }
 
+  // Los KPIs miden el circuito de firma, así que solo cuentan CERTIFICADOS:
+  // incluir solicitudes inflaba "sin enviar" con documentos que nunca se firman.
   const kpis = useMemo(() => {
-    const valid = documents.filter(d => d.status === 'VALID')
+    const valid = documents.filter(d => d.status === 'VALID' && d.documentType === 'CERTIFICADO')
     return {
       notSent: valid.filter(d => !d.signatureStatus || d.signatureStatus === 'NONE').length,
       awaitingDean: valid.filter(d => d.signatureStatus === 'IN_SIGNING').length,
@@ -261,10 +267,13 @@ function CertificatesPageInner() {
 
       if (!matchesSearch) return false
 
+      // Los filtros de firma solo aplican a certificados: una solicitud nunca
+      // está "sin enviar a firma" porque no pasa por ese circuito.
+      const isCert = doc.documentType === 'CERTIFICADO'
       switch (filterState) {
-        case 'READY': return doc.status === 'VALID' && (!doc.signatureStatus || doc.signatureStatus === 'NONE')
-        case 'IN_SIGNATURE': return doc.status === 'VALID' && (doc.signatureStatus === 'IN_SIGNING' || doc.signatureStatus === 'PARTIALLY_SIGNED')
-        case 'SIGNED': return doc.status === 'VALID' && doc.signatureStatus === 'SIGNED'
+        case 'READY': return isCert && doc.status === 'VALID' && (!doc.signatureStatus || doc.signatureStatus === 'NONE')
+        case 'IN_SIGNATURE': return isCert && doc.status === 'VALID' && (doc.signatureStatus === 'IN_SIGNING' || doc.signatureStatus === 'PARTIALLY_SIGNED')
+        case 'SIGNED': return isCert && doc.status === 'VALID' && doc.signatureStatus === 'SIGNED'
         case 'ARCHIVED': return doc.status !== 'VALID'
         default: return true
       }
@@ -287,8 +296,16 @@ function CertificatesPageInner() {
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]))
   }, [filteredDocuments])
 
-  const selectableInGroup = (docs: GeneratedDocument[]) =>
-    docs.filter(d => d.status === 'VALID' && (!d.signatureStatus || d.signatureStatus === 'NONE' || d.signatureStatus === 'REJECTED'))
+  /**
+   * Solo los CERTIFICADOS entran al circuito de firma: la solicitud es un
+   * oficio dirigido a la empresa, no lleva firma digital de las autoridades.
+   */
+  const isSignable = (d: GeneratedDocument) =>
+    d.documentType === 'CERTIFICADO' &&
+    d.status === 'VALID' &&
+    (!d.signatureStatus || d.signatureStatus === 'NONE' || d.signatureStatus === 'REJECTED')
+
+  const selectableInGroup = (docs: GeneratedDocument[]) => docs.filter(isSignable)
 
   const toggleGroup = (docs: GeneratedDocument[]) => {
     const selectable = selectableInGroup(docs)
@@ -336,7 +353,8 @@ function CertificatesPageInner() {
   const renderDocRow = (doc: GeneratedDocument) => {
     const state = docState(doc)
     const isPdf = doc.template?.type === 'PDF'
-    const selectable = doc.status === 'VALID' && (!doc.signatureStatus || doc.signatureStatus === 'NONE' || doc.signatureStatus === 'REJECTED')
+    const isSolicitud = doc.documentType !== 'CERTIFICADO'
+    const selectable = isSignable(doc)
     const isHighlighted = highlightId === doc.id
 
     return (
@@ -355,14 +373,19 @@ function CertificatesPageInner() {
           isHighlighted && 'ring-2 ring-blue-400 ring-inset rounded-[10px]'
         )}
       >
-        <input
-          type="checkbox"
-          checked={selectedIds.has(doc.id)}
-          disabled={!selectable}
-          onChange={() => toggleSelected(doc.id)}
-          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-25 cursor-pointer shrink-0"
-          title={selectable ? 'Seleccionar para enviar a firma' : 'Ya está en el circuito de firma'}
-        />
+        {/* Las solicitudes no se firman: en su fila el checkbox ni aparece */}
+        {isSolicitud ? (
+          <span className="w-4 shrink-0" />
+        ) : (
+          <input
+            type="checkbox"
+            checked={selectedIds.has(doc.id)}
+            disabled={!selectable}
+            onChange={() => toggleSelected(doc.id)}
+            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-25 cursor-pointer shrink-0"
+            title={selectable ? 'Seleccionar para enviar a firma' : 'Ya está en el circuito de firma'}
+          />
+        )}
 
         {/* Identidad del documento: tipo + código + estudiante en un bloque */}
         <div className={cn('w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0', isPdf ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-blue-500')}>

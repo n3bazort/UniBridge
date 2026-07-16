@@ -17,7 +17,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <QueryClientProvider client={queryClient}>
         {children}
-        <Toaster richColors position="top-right" duration={2500} />
+        {/* 6s: da tiempo real a leer el mensaje completo (códigos de lote,
+            nombres de estudiantes) antes de que desaparezca */}
+        <Toaster richColors position="top-right" duration={6000} closeButton />
       </QueryClientProvider>
     </NextThemesProvider>
   )
