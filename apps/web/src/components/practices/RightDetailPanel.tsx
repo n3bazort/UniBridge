@@ -38,8 +38,14 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
       name: docName,
       type: d.template?.type || 'PDF',
       id: d.id,
+      documentCode: d.documentCode,
       signatureStatus: d.signatureStatus,
       status: d.status,
+      // Trazabilidad de la anulación: sin el motivo y el autor, un documento
+      // invalidado no se puede justificar ante una auditoría.
+      invalidReason: d.invalidReason,
+      invalidatedAt: d.invalidatedAt,
+      invalidatedByEmail: d.invalidatedBy?.email,
       isReal: true
     }
   })
@@ -295,14 +301,37 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
                             }
                           }
                         }}
-                        className="flex items-center gap-3 p-3 rounded-[12px] bg-[#f8fafc] border border-[#eef2f7] cursor-pointer hover:border-amber-300 hover:bg-amber-50 transition-colors"
+                        className="flex items-start gap-3 p-3 rounded-[12px] bg-[#f8fafc] border border-[#eef2f7] cursor-pointer hover:border-amber-300 hover:bg-amber-50 transition-colors"
+                        title="Abrir esta versión anulada"
                       >
-                        <div className="w-[36px] h-[36px] rounded-lg bg-white border border-[#eef2f7] flex items-center justify-center shrink-0">
-                          <FileText className="w-5 h-5 text-gray-400" />
+                        <div className="w-[32px] h-[32px] rounded-lg bg-white border border-[#eef2f7] flex items-center justify-center shrink-0 mt-0.5">
+                          <FileText className="w-4 h-4 text-gray-400" />
                         </div>
-                        <div className="flex flex-col flex-1">
-                          <span className="text-[12px] font-medium text-[#374151]">{doc.name}</span>
-                          <span className="text-[11px] text-[#9ca3af]">Invalidado • {doc.type}</span>
+                        <div className="flex flex-col flex-1 min-w-0 gap-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[12px] font-medium text-[#374151]">{doc.name}</span>
+                            {doc.documentCode && (
+                              <span className="text-[10px] font-mono text-[#9ca3af]">{doc.documentCode}</span>
+                            )}
+                          </div>
+                          <span className="text-[10.5px] font-semibold text-amber-600 uppercase tracking-wide">
+                            {doc.status === 'INVALIDATED' ? 'Invalidado' : 'Reemplazado'}
+                            {doc.invalidatedAt && (
+                              <span className="font-normal normal-case tracking-normal text-[#9ca3af]">
+                                {' · '}{new Date(doc.invalidatedAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </span>
+                            )}
+                          </span>
+                          {doc.invalidReason && (
+                            <span className="text-[11px] text-[#6b7280] leading-snug">
+                              {doc.invalidReason}
+                            </span>
+                          )}
+                          {doc.invalidatedByEmail && (
+                            <span className="text-[10.5px] text-[#9ca3af]">
+                              Por {doc.invalidatedByEmail}
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}

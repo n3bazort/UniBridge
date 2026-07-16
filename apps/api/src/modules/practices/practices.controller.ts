@@ -58,8 +58,8 @@ export class PracticesController {
   @Patch(':id')
   @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Actualizar estado de práctica' })
-  update(@Param('id') id: string, @Body() updatePracticeDto: UpdatePracticeDto) {
-    return this.practicesService.update(id, updatePracticeDto);
+  update(@Param('id') id: string, @Body() updatePracticeDto: UpdatePracticeDto, @Req() req: any) {
+    return this.practicesService.update(id, updatePracticeDto, req.user?.id);
   }
 
   @Post('restore-documents')

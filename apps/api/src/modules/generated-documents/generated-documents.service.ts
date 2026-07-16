@@ -367,7 +367,12 @@ export class GeneratedDocumentsService {
   async findByStudent(studentId: string) {
     return this.prisma.generatedDocument.findMany({
       where: { studentId },
-      include: { template: true },
+      include: {
+        template: true,
+        // El historial debe explicar por qué y quién anuló cada versión
+        invalidatedBy: { select: { email: true } },
+        generatedBy: { select: { email: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -533,15 +538,25 @@ export class GeneratedDocumentsService {
     return { fileUrl: storedKey, downloadUrl, documentCode: oficioCode, message: 'Oficio generado correctamente' };
   }
 
-  async invalidate(id: string, reason: string) {
-    return this.prisma.generatedDocument.update({
+  /**
+   * Invalida un documento dejando rastro de por qué y de quién lo hizo: sin
+   * eso, un documento anulado no se puede defender ante una auditoría.
+   */
+  async invalidate(id: string, reason: string, invalidatedById?: string) {
+    const doc = await this.prisma.generatedDocument.update({
       where: { id },
       data: {
         status: 'INVALIDATED',
         invalidatedAt: new Date(),
         invalidReason: reason,
+        invalidatedById,
       },
+      select: { id: true, studentId: true },
     });
+
+    // Invalidar la solicitud puede devolver la práctica a "Pendiente"
+    await this.practices.recalculateForStudents([doc.studentId]).catch((): void => undefined);
+    return doc;
   }
 
   async regenerate(id: string, generatedById?: string) {

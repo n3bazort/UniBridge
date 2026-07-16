@@ -461,14 +461,15 @@ export default function PracticesPage() {
       return
     }
 
-    if (!company.contactName) {
-      const confirm = window.confirm("Falta información de contacto de la empresa. ¿Deseas continuar?")
-      if (!confirm) return
-    }
+    // El teléfono y correo de la empresa NO se imprimen en el oficio: sirven
+    // para que los estudiantes la contacten por fuera. Si faltan, no se avisa.
+    // El nombre del contacto sí aparece, pero la plantilla ya cae en un
+    // genérico ("Responsable"), así que tampoco justifica frenar la emisión.
 
+    // El celular del estudiante SÍ va impreso en la tabla del oficio.
     const missingPhones = groupItems.filter(p => !p.student.phone)
     if (missingPhones.length > 0) {
-      toast.error(`Error: Faltan números de celular en ${missingPhones.length} estudiante(s) seleccionado(s). Por favor complétalos.`)
+      toast.error(`Faltan celulares de ${missingPhones.length} estudiante(s): ese dato se imprime en la tabla del oficio. Complétalos con el ícono rojo de su fila.`)
       return
     }
 

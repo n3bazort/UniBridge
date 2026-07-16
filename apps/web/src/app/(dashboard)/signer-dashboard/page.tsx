@@ -54,9 +54,9 @@ export default function SignerDashboardPage() {
   })
 
   const uploadMutation = useMutation({
-    mutationFn: async ({ batchId, files }: { batchId: string; files: FileList }) => {
+    mutationFn: async ({ batchId, files }: { batchId: string; files: File[] }) => {
       const formData = new FormData()
-      Array.from(files).forEach((f) => formData.append('files', f))
+      files.forEach((f) => formData.append('files', f))
       const res = await api.post(`/signatures/batches/${batchId}/upload`, formData)
       return res.data
     },
@@ -100,7 +100,8 @@ export default function SignerDashboardPage() {
 
   const onFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length && activeBatchId) {
-      uploadMutation.mutate({ batchId: activeBatchId, files: e.target.files })
+      const filesArray = Array.from(e.target.files)
+      uploadMutation.mutate({ batchId: activeBatchId, files: filesArray })
     }
     e.target.value = ''
   }

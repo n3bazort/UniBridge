@@ -91,8 +91,8 @@ export class GeneratedDocumentsController {
   @Patch(':id/invalidate')
   @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Invalida un documento generado' })
-  invalidate(@Param('id') id: string, @Body('reason') reason: string) {
-    return this.service.invalidate(id, reason);
+  invalidate(@Param('id') id: string, @Body('reason') reason: string, @Req() req: any) {
+    return this.service.invalidate(id, reason, req.user?.id);
   }
 
   @Post(':id/regenerate')

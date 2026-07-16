@@ -30,6 +30,7 @@ model User {
   auditLogs          AuditLog[]
   excelImports       ExcelImport[]
   generatedDocuments GeneratedDocument[]
+  invalidatedDocuments GeneratedDocument[] @relation("DocumentInvalidation")
   signatureBatches   SignatureBatch[]
   generationBatches  GenerationBatch[]
 
@@ -190,6 +191,7 @@ model GeneratedDocument {
   status        DocumentStatus @default(VALID)
   invalidatedAt DateTime?
   invalidReason String?
+  invalidatedById String? @db.Uuid  // quién lo invalidó (trazabilidad)
   version       Int      @default(1)
   replacedById  String?  @db.Uuid
   createdAt     DateTime @default(now())
@@ -204,6 +206,7 @@ model GeneratedDocument {
   template      DocumentTemplate @relation(fields: [templateId], references: [id])
   student       Student          @relation(fields: [studentId], references: [id])
   generatedBy   User?            @relation(fields: [generatedById], references: [id])
+  invalidatedBy User?            @relation("DocumentInvalidation", fields: [invalidatedById], references: [id])
   replacedBy    GeneratedDocument? @relation("DocumentReplacement", fields: [replacedById], references: [id])
   replaces      GeneratedDocument[] @relation("DocumentReplacement")
   signatureItems SignatureBatchItem[]

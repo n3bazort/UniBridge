@@ -195,7 +195,7 @@ export class PracticesService {
     return { total: practices.length, updated: updates.length, changes };
   }
 
-  async update(id: string, updatePracticeDto: UpdatePracticeDto) {
+  async update(id: string, updatePracticeDto: UpdatePracticeDto, actorId?: string) {
     const practice = await this.prisma.practice.findUnique({
       where: { id },
       include: { student: true, company: true },
@@ -229,6 +229,7 @@ export class PracticesService {
         `${practice.student.firstName} ${practice.student.lastName}`,
         practice.company?.name || 'Sin empresa',
         updatePracticeDto.companyId!,
+        actorId,
       );
     }
 
@@ -258,6 +259,7 @@ export class PracticesService {
     studentName: string,
     oldCompanyName: string,
     newCompanyId: string,
+    actorId?: string,
   ) {
     // Candado 1: certificado de culminación vigente — moverlo lo volvería falso
     const validCert = await this.prisma.generatedDocument.findFirst({
@@ -304,6 +306,7 @@ export class PracticesService {
       data: {
         status: 'SUPERSEDED',
         invalidatedAt: new Date(),
+        invalidatedById: actorId,
         invalidReason: `Reasignación de empresa: ${studentName} pasó de ${oldCompanyName} a ${newCompany.name}. El oficio grupal quedó desactualizado.`,
       },
     });
@@ -322,7 +325,7 @@ export class PracticesService {
   async restoreDocuments(documentIds: string[]) {
     const result = await this.prisma.generatedDocument.updateMany({
       where: { id: { in: documentIds }, status: 'SUPERSEDED' },
-      data: { status: 'VALID', invalidatedAt: null, invalidReason: null },
+      data: { status: 'VALID', invalidatedAt: null, invalidReason: null, invalidatedById: null },
     });
     return { restored: result.count };
   }
