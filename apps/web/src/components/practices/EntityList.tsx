@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, ChevronRight, MoreHorizontal, Building2, CheckSquare, Printer, AlertCircle, FileText, ArrowLeftRight, Loader2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, MoreHorizontal, Building2, CheckSquare, Printer, AlertCircle, FileText, ArrowLeftRight, Loader2, Check } from 'lucide-react'
 import { api } from '@/lib/axios'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -78,6 +78,38 @@ function getDocxState(docs: GeneratedDoc[]) {
   return { state: 'none' as const, doc: undefined }
 }
 
+/** Estado efectivo del certificado (PDF) de un estudiante. */
+function getPdfState(docs: GeneratedDoc[]) {
+  const pdf = docs.filter(d => d.template.type === 'PDF')
+  const valid = pdf.find(d => (d.status ?? 'VALID') === 'VALID')
+  if (valid) return { state: 'valid' as const, doc: valid }
+  const stale = pdf.find(d => d.status === 'SUPERSEDED' || d.status === 'INVALIDATED')
+  if (stale) return { state: 'stale' as const, doc: stale }
+  return { state: 'none' as const, doc: undefined }
+}
+
+type SolicitudAction =
+  | { kind: 'none' }                        // nada que hacer: no se ofrece botón
+  | { kind: 'create' }                      // nadie la tiene aún
+  | { kind: 'update'; missing: number }     // el grupo creció: faltan estudiantes en el oficio
+  | { kind: 'regenerate' }                  // quedó invalidada (p.ej. reasignación)
+
+/**
+ * Qué acción de solicitud tiene sentido ofrecer para una empresa.
+ * Solo se ofrece cuando hay algo real que hacer: si todos los estudiantes
+ * ya están cubiertos por un oficio vigente, no se muestra nada.
+ */
+function getSolicitudAction(items: Practice[]): SolicitudAction {
+  const states = items.map(p => getDocxState(p.student.generatedDocs || []).state)
+  const validCount = states.filter(s => s === 'valid').length
+  const staleCount = states.filter(s => s === 'stale').length
+
+  if (validCount === items.length) return { kind: 'none' }        // todos cubiertos
+  if (validCount > 0) return { kind: 'update', missing: items.length - validCount }
+  if (staleCount > 0) return { kind: 'regenerate' }               // invalidada, ninguna vigente
+  return { kind: 'create' }
+}
+
 export function EntityList({ 
   groups, 
   selectedIds, 
@@ -142,18 +174,10 @@ export function EntityList({
         const groupSelectedCount = group.items.filter(p => selectedIds.has(p.id)).length
         const allGroupSelected = groupSelectedCount === group.items.length && group.items.length > 0
 
-        // Grupo con solicitud desactualizada: algún estudiante tiene su oficio
-        // invalidado (p.ej. por reasignación de empresa) y ninguno vigente.
-        const hasStaleSolicitud = isGrouped && group.items.some(
-          p => getDocxState(p.student.generatedDocs || []).state === 'stale'
-        )
-        const groupHasSolicitud = group.items.some(
-          p => getDocxState(p.student.generatedDocs || []).state === 'valid'
-        )
-        // Estudiantes del grupo sin solicitud vigente: no pueden certificarse
-        const missingSolicitudCount = group.items.filter(
-          p => getDocxState(p.student.generatedDocs || []).state !== 'valid'
-        ).length
+        // Solo se ofrece la acción de solicitud si hay algo real que hacer:
+        // si el grupo entero ya tiene un oficio vigente, no se muestra nada.
+        const solicitudAction = getSolicitudAction(group.items)
+        const needsAttention = solicitudAction.kind === 'regenerate' || solicitudAction.kind === 'update'
 
         return (
           <div key={gIdx} className="flex flex-col gap-[12px]">
@@ -191,18 +215,32 @@ export function EntityList({
                 <div className="flex items-baseline gap-2.5 min-w-0">
                   <h3 className="text-[15px] font-semibold text-[#111827] truncate">{group.name}</h3>
                   <span className="text-[13px] text-[#9ca3af] shrink-0">{group.count}</span>
-                  {hasStaleSolicitud && (
+                  {solicitudAction.kind === 'regenerate' && (
                     <span className="flex items-center gap-1 text-amber-600 text-[12px] font-medium shrink-0">
                       <AlertCircle className="w-3.5 h-3.5" />
-                      desactualizada
+                      solicitud desactualizada
+                    </span>
+                  )}
+                  {solicitudAction.kind === 'update' && (
+                    <span className="flex items-center gap-1 text-amber-600 text-[12px] font-medium shrink-0">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {solicitudAction.missing} sin incluir en el oficio
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Acción progresiva: discreta en reposo, sólida al seleccionar la
-                  empresa. La solicitud es siempre del grupo completo. */}
-              {onGenerateSolicitud && (
+              {/* Solo se ofrece la acción si hay algo que hacer. Si el grupo ya
+                  tiene su oficio vigente, se informa y no se invita a rehacerlo. */}
+              {onGenerateSolicitud && solicitudAction.kind === 'none' ? (
+                <span
+                  className="flex items-center gap-1.5 text-[12px] font-medium text-emerald-600 shrink-0 pr-1"
+                  title="Todos los estudiantes de esta empresa ya están incluidos en un oficio vigente"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  Solicitud vigente
+                </span>
+              ) : onGenerateSolicitud ? (
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -213,24 +251,34 @@ export function EntityList({
                     "h-8 flex items-center gap-1.5 rounded-lg text-[12.5px] font-medium transition-all disabled:opacity-50 shrink-0",
                     allGroupSelected
                       // Seleccionada: acción principal, sólida y evidente
-                      ? hasStaleSolicitud
+                      ? needsAttention
                         ? "px-3.5 bg-amber-500 hover:bg-amber-600 text-white shadow-soft shadow-amber-500/20"
                         : "px-3.5 bg-[#111827] hover:bg-[#1f2937] text-white shadow-soft"
                       // En reposo: apenas un apunte, sin competir por la atención
-                      : hasStaleSolicitud
+                      : needsAttention
                         ? "px-2.5 text-amber-600 hover:bg-amber-50"
                         : "px-2.5 text-[#9ca3af] hover:text-[#111827] hover:bg-slate-100 opacity-0 group-hover/header:opacity-100"
                   )}
-                  title={`Genera un único oficio para los ${group.count} estudiantes de ${group.name}`}
+                  title={
+                    solicitudAction.kind === 'update'
+                      ? `El oficio actual no incluye a ${solicitudAction.missing} estudiante(s). Se rehará con el grupo completo.`
+                      : solicitudAction.kind === 'regenerate'
+                        ? 'La solicitud quedó invalidada. Se generará una nueva para el grupo.'
+                        : `Genera un único oficio para los ${group.count} estudiantes de ${group.name}`
+                  }
                 >
                   {isGenerating ? 'Generando…' : (
                     <>
                       <Printer className="w-3.5 h-3.5" />
-                      {hasStaleSolicitud || groupHasSolicitud ? 'Regenerar solicitud' : 'Generar solicitud'}
+                      {solicitudAction.kind === 'update'
+                        ? `Actualizar oficio · incluir ${solicitudAction.missing}`
+                        : solicitudAction.kind === 'regenerate'
+                          ? 'Regenerar solicitud'
+                          : 'Generar solicitud'}
                     </>
                   )}
                 </button>
-              )}
+              ) : null}
             </div>
 
             {/* Student Cards */}

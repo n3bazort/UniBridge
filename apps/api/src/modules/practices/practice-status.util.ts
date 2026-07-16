@@ -71,6 +71,16 @@ export function canIssueCertificate(
     return { ok: false, missing };
   }
 
+  // Ya tiene certificado vigente: no se emite un duplicado. Para rehacerlo
+  // hay que invalidar el actual primero (deja rastro de por qué se reemplazó).
+  const hasValidCertificate = docs.some(
+    (d) => d.documentType === 'CERTIFICADO' && d.status === 'VALID',
+  );
+  if (hasValidCertificate) {
+    missing.push('ya tiene un certificado vigente (invalídalo si necesitas reemplazarlo)');
+    return { ok: false, missing };
+  }
+
   const hasValidSolicitud = docs.some(
     (d) => d.documentType === 'SOLICITUD' && d.status === 'VALID',
   );

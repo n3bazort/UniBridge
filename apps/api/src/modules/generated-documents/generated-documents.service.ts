@@ -191,23 +191,39 @@ export class GeneratedDocumentsService {
       await this.getAuthoritiesOrFail(code);
     }
 
-    // Requisito institucional: cada certificado necesita una solicitud
-    // vigente vinculada. Se valida ANTES de encolar para fallar de inmediato
-    // con la lista exacta de estudiantes que no cumplen.
-    const withSolicitud = await this.prisma.generatedDocument.findMany({
-      where: { studentId: { in: studentIds }, documentType: 'SOLICITUD', status: 'VALID' },
-      select: { studentId: true },
+    // Requisitos por estudiante, validados ANTES de encolar para fallar de
+    // inmediato en vez de dejar que cada job muera dentro de la cola.
+    const relevantDocs = await this.prisma.generatedDocument.findMany({
+      where: { studentId: { in: studentIds }, status: 'VALID' },
+      select: { studentId: true, documentType: true },
     });
-    const okIds = new Set(withSolicitud.map((d) => d.studentId));
-    const missingIds = studentIds.filter((id) => !okIds.has(id));
-    if (missingIds.length > 0) {
-      const missingStudents = await this.prisma.student.findMany({
-        where: { id: { in: missingIds } },
+    const withSolicitud = new Set(
+      relevantDocs.filter((d) => d.documentType === 'SOLICITUD').map((d) => d.studentId),
+    );
+    const withCertificate = new Set(
+      relevantDocs.filter((d) => d.documentType === 'CERTIFICADO').map((d) => d.studentId),
+    );
+
+    const describe = async (ids: string[]) => {
+      const students = await this.prisma.student.findMany({
+        where: { id: { in: ids } },
         select: { firstName: true, lastName: true },
       });
-      const names = missingStudents.map((s) => `${s.firstName} ${s.lastName}`).join(', ');
+      return students.map((s) => `${s.firstName} ${s.lastName}`).join(', ');
+    };
+
+    // Ya tienen certificado vigente: no se emiten duplicados
+    const duplicateIds = studentIds.filter((id) => withCertificate.has(id));
+    if (duplicateIds.length > 0) {
       throw new BadRequestException(
-        `No se pueden generar los certificados: ${missingIds.length} estudiante(s) sin solicitud de prácticas vigente (${names}). Genera primero la solicitud grupal de su empresa o quítalos de la selección.`,
+        `${duplicateIds.length} estudiante(s) ya tienen un certificado vigente (${await describe(duplicateIds)}). Invalida el actual si necesitas reemplazarlo.`,
+      );
+    }
+
+    const missingIds = studentIds.filter((id) => !withSolicitud.has(id));
+    if (missingIds.length > 0) {
+      throw new BadRequestException(
+        `No se pueden generar los certificados: ${missingIds.length} estudiante(s) sin solicitud de prácticas vigente (${await describe(missingIds)}). Genera primero la solicitud grupal de su empresa.`,
       );
     }
 

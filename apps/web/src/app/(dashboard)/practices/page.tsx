@@ -225,24 +225,34 @@ export default function PracticesPage() {
   }
 
   // ── Elegibilidad para emitir certificados ──
-  // La selección es POR EMPRESA (checkbox del grupo). Los estudiantes del
-  // grupo que no cumplen los requisitos (práctica finalizada + solicitud
-  // vigente) se OMITEN automáticamente — sin pasos extra para el usuario.
+  // La selección es POR EMPRESA (checkbox del grupo). Solo se emite a quien
+  // realmente lo necesita: tiene solicitud vigente y AÚN NO tiene certificado.
+  // Los demás se omiten solos, sin pasos extra para el usuario.
   const hasValidSolicitud = (p: Practice) =>
     (p.student.generatedDocs || []).some(d => d.template.type === 'DOCX' && (d.status ?? 'VALID') === 'VALID')
 
+  const hasValidCertificate = (p: Practice) =>
+    (p.student.generatedDocs || []).some(d => d.template.type === 'PDF' && (d.status ?? 'VALID') === 'VALID')
+
   const certEligibility = useMemo(() => {
     const selected = rawPractices.filter(p => selectedIds.has(p.id))
-    const eligible = selected.filter(p => p.status === 'COMPLETED' && hasValidSolicitud(p))
-    const omitted = selected.length - eligible.length
+    // Ya tiene certificado vigente: no hay nada que emitir
+    const alreadyCertified = selected.filter(p => hasValidCertificate(p))
+    const eligible = selected.filter(p =>
+      hasValidSolicitud(p) && !hasValidCertificate(p) && p.status !== 'CANCELED' && p.status !== 'REJECTED'
+    )
+    const omitted = selected.length - eligible.length - alreadyCertified.length
     const companies = new Set(selected.map(p => p.company?.name || 'Sin empresa')).size
 
-    // Solo bloquea cuando NADIE de la selección cumple los requisitos
-    const blockedReason = selected.length > 0 && eligible.length === 0
-      ? 'Ninguno cumple los requisitos: práctica finalizada + solicitud vigente.'
-      : null
+    // Nada que emitir: o ya están todos certificados, o ninguno tiene solicitud
+    let blockedReason: string | null = null
+    if (selected.length > 0 && eligible.length === 0) {
+      blockedReason = alreadyCertified.length === selected.length
+        ? 'Todos ya tienen su certificado emitido.'
+        : 'Ninguno puede certificarse aún: falta su solicitud vigente.'
+    }
 
-    return { selected, eligible, omitted, companies, blockedReason }
+    return { selected, eligible, alreadyCertified, omitted, companies, blockedReason }
   }, [rawPractices, selectedIds])
 
   /** El ícono de documento lleva a su ficha en Certificados (no abre el archivo). */
@@ -688,12 +698,20 @@ export default function PracticesPage() {
             >
               {!certEligibility.blockedReason && (
                 <>
+                  {certEligibility.alreadyCertified.length > 0 && (
+                    <span
+                      className="text-[11.5px] font-medium text-emerald-300 whitespace-nowrap"
+                      title="Ya tienen su certificado emitido: no se vuelve a generar"
+                    >
+                      {certEligibility.alreadyCertified.length} ya certificado{certEligibility.alreadyCertified.length > 1 ? 's' : ''}
+                    </span>
+                  )}
                   {certEligibility.omitted > 0 && (
                     <span
                       className="text-[11.5px] font-medium text-amber-300 whitespace-nowrap"
-                      title="Estudiantes sin práctica finalizada o sin solicitud vigente: no entran en la emisión"
+                      title="Aún no tienen solicitud vigente: no entran en la emisión"
                     >
-                      {certEligibility.omitted} se omite{certEligibility.omitted > 1 ? 'n' : ''}
+                      {certEligibility.omitted} sin solicitud
                     </span>
                   )}
                   <button
