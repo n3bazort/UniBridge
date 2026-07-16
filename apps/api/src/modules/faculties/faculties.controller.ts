@@ -49,4 +49,11 @@ export class FacultiesController {
   remove(@Param('id') id: string) {
     return this.facultiesService.remove(id);
   }
+
+  @Patch(':id/abbreviation')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Actualizar abreviatura' })
+  updateAbbreviation(@Param('id') id: string, @Body() body: { abbreviation: string }) {
+    return this.facultiesService.updateAbbreviation(id, body.abbreviation);
+  }
 }

@@ -157,52 +157,51 @@ export function EntityList({
 
         return (
           <div key={gIdx} className="flex flex-col gap-[12px]">
-            {/* Group Header */}
-            <div 
-              className="flex items-center justify-between px-[20px] py-[16px] bg-white rounded-[16px] border border-transparent shadow-soft cursor-pointer hover:bg-slate-50 transition-colors group/header"
+            {/* Cabecera de empresa: seleccionarla es lo que habilita la acción */}
+            <div
+              className={cn(
+                "flex items-center justify-between px-[20px] py-[14px] bg-white rounded-[16px] border shadow-soft cursor-pointer transition-colors group/header",
+                allGroupSelected ? "border-[#111827]/15 bg-[#111827]/[0.02]" : "border-transparent hover:bg-slate-50"
+              )}
               onClick={() => toggleGroup(group.name)}
             >
-              <div className="flex items-center gap-4">
-                <div 
-                  className="flex items-center justify-center w-[36px] h-[36px] shrink-0"
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div
+                  className="flex items-center justify-center w-[24px] h-[36px] shrink-0"
                   onClick={(e) => {
                     e.stopPropagation()
                     onToggleAll(group.name, group.items)
                   }}
                 >
-                  <input 
+                  <input
                     type="checkbox"
                     checked={allGroupSelected}
                     readOnly
-                    className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    className="w-[18px] h-[18px] rounded border-slate-300 text-[#111827] focus:ring-[#111827]/20 cursor-pointer"
                   />
                 </div>
-                
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 shrink-0">
-                  {isGrouped ? <Building2 className="w-5 h-5" /> : (isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />)}
+
+                <div className={cn(
+                  "flex items-center justify-center w-8 h-8 rounded-lg shrink-0 transition-colors",
+                  allGroupSelected ? "bg-[#111827] text-white" : "bg-slate-100 text-slate-500"
+                )}>
+                  {isGrouped ? <Building2 className="w-4 h-4" /> : (isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}
                 </div>
-                
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                  <h3 className="text-[16px] font-semibold text-[#111827]">{group.name}</h3>
-                  <span className="text-[14px] font-medium text-[#6b7280]">{group.count} registros</span>
-                  {!isGrouped && (
-                    <>
-                      <div className="hidden sm:block w-1 h-1 rounded-full bg-[#e5e7eb]" />
-                      <span className="hidden sm:block text-[14px] font-medium text-[#6b7280]">{group.hours} horas</span>
-                    </>
-                  )}
+
+                <div className="flex items-baseline gap-2.5 min-w-0">
+                  <h3 className="text-[15px] font-semibold text-[#111827] truncate">{group.name}</h3>
+                  <span className="text-[13px] text-[#9ca3af] shrink-0">{group.count}</span>
                   {hasStaleSolicitud && (
-                    <span className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-[12px] font-semibold px-2.5 py-1 rounded-full">
+                    <span className="flex items-center gap-1 text-amber-600 text-[12px] font-medium shrink-0">
                       <AlertCircle className="w-3.5 h-3.5" />
-                      Solicitud desactualizada
+                      desactualizada
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* La solicitud es SIEMPRE del grupo completo: el oficio lista a
-                  todo el equipo de la empresa, así que no existe la variante
-                  individual (ni la tentación de seleccionar unos pocos). */}
+              {/* Acción progresiva: discreta en reposo, sólida al seleccionar la
+                  empresa. La solicitud es siempre del grupo completo. */}
               {onGenerateSolicitud && (
                 <button
                   onClick={(e) => {
@@ -211,19 +210,23 @@ export function EntityList({
                   }}
                   disabled={isGenerating}
                   className={cn(
-                    "h-8 px-4 flex items-center gap-2 rounded-lg text-white text-[13px] font-medium shadow-soft disabled:opacity-50 shrink-0",
-                    hasStaleSolicitud
-                      ? "bg-amber-500 hover:bg-amber-600 shadow-amber-500/20"
-                      : groupHasSolicitud
-                        ? "bg-white !text-slate-600 border border-slate-200 hover:bg-slate-50 shadow-none"
-                        : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
+                    "h-8 flex items-center gap-1.5 rounded-lg text-[12.5px] font-medium transition-all disabled:opacity-50 shrink-0",
+                    allGroupSelected
+                      // Seleccionada: acción principal, sólida y evidente
+                      ? hasStaleSolicitud
+                        ? "px-3.5 bg-amber-500 hover:bg-amber-600 text-white shadow-soft shadow-amber-500/20"
+                        : "px-3.5 bg-[#111827] hover:bg-[#1f2937] text-white shadow-soft"
+                      // En reposo: apenas un apunte, sin competir por la atención
+                      : hasStaleSolicitud
+                        ? "px-2.5 text-amber-600 hover:bg-amber-50"
+                        : "px-2.5 text-[#9ca3af] hover:text-[#111827] hover:bg-slate-100 opacity-0 group-hover/header:opacity-100"
                   )}
                   title={`Genera un único oficio para los ${group.count} estudiantes de ${group.name}`}
                 >
-                  {isGenerating ? 'Generando...' : (
+                  {isGenerating ? 'Generando…' : (
                     <>
-                      <Printer className="w-4 h-4" />
-                      {hasStaleSolicitud ? 'Regenerar Solicitud' : groupHasSolicitud ? 'Regenerar' : `Solicitud Grupal (${group.count})`}
+                      <Printer className="w-3.5 h-3.5" />
+                      {hasStaleSolicitud || groupHasSolicitud ? 'Regenerar solicitud' : 'Generar solicitud'}
                     </>
                   )}
                 </button>
@@ -255,36 +258,27 @@ export function EntityList({
                         whileHover={{ y: -1, boxShadow: "0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.03)" }}
                         transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
                         className={cn(
-                          "relative flex items-center h-[72px] px-[18px] bg-white rounded-[16px] border cursor-pointer group transition-colors",
-                          isActive ? "border-blue-300 ring-1 ring-blue-100 bg-blue-50/20" : "border-transparent",
+                          "relative flex items-center h-[60px] px-[16px] bg-white rounded-[14px] border cursor-pointer group transition-colors",
+                          isActive ? "border-[#111827]/20 ring-1 ring-[#111827]/5 bg-slate-50/50" : "border-transparent",
                           // La selección es por EMPRESA (checkbox del grupo). La fila solo
                           // señala si este estudiante quedará fuera de la emisión.
-                          isSelected && blocksCertificate && "border-amber-200 bg-amber-50/30"
+                          isSelected && blocksCertificate && "bg-amber-50/40"
                         )}
-                        title={isSelected && blocksCertificate ? 'Se omitirá: necesita práctica finalizada y solicitud vigente' : undefined}
+                        title={isSelected && blocksCertificate ? 'Se omitirá al emitir certificados: aún no tiene solicitud vigente' : undefined}
                       >
                         {/* Indicador de selección del grupo */}
-                        <div className="w-[14px] shrink-0 mr-2 flex items-center justify-center">
+                        <div className="w-[10px] shrink-0 mr-2.5 flex items-center justify-center">
                           {isSelected && (
-                            <span className={cn("w-1.5 h-8 rounded-full", blocksCertificate ? "bg-amber-300" : "bg-blue-500")} />
+                            <span className={cn("w-[3px] h-7 rounded-full", blocksCertificate ? "bg-amber-400" : "bg-[#111827]")} />
                           )}
                         </div>
 
-                        {/* Avatar */}
-                        <div className="flex items-center shrink-0 mr-4">
-                          <img 
-                            src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${practice.student.firstName}${practice.student.lastName}`} 
-                            alt="Avatar" 
-                            className="w-[36px] h-[36px] rounded-full bg-[#f8fafc] border border-slate-100" 
-                          />
-                        </div>
-
-                        {/* Name & Role */}
+                        {/* Nombre + datos secundarios en una sola línea discreta */}
                         <div className="flex flex-col flex-1 min-w-[180px] truncate pr-4">
-                          <span className="text-[14px] font-semibold text-[#111827] truncate flex items-center gap-2">
+                          <span className="text-[13.5px] font-semibold text-[#111827] truncate flex items-center gap-1.5">
                             {practice.student.firstName} {practice.student.lastName}
                             {!practice.student.phone && (
-                              <div 
+                              <span
                                 className="relative flex items-center"
                                 onMouseEnter={(e) => {
                                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -293,15 +287,24 @@ export function EntityList({
                                 }}
                                 onMouseLeave={() => setHoveredPhoneAlert(null)}
                               >
-                                <AlertCircle className="w-4 h-4 text-red-500 cursor-pointer" onClick={(e) => {
+                                <AlertCircle className="w-3.5 h-3.5 text-red-500 cursor-pointer shrink-0" onClick={(e) => {
                                   e.stopPropagation()
                                   setEditingPhoneStudentId({ id: practice.studentId, phone: '' })
                                 }} />
-                              </div>
+                              </span>
                             )}
                           </span>
-                          <span className="text-[13px] font-medium text-[#6b7280] truncate">
-                            {practice.academicLevel?.replace(' Nivel', '') || 'Carrera no disp.'}
+                          {/* Contexto en una línea: nivel · horas · tutor */}
+                          <span className="text-[12px] text-[#9ca3af] truncate">
+                            {practice.academicLevel?.replace(' Nivel', '') || '—'}
+                            <span className="mx-1.5 text-[#e5e7eb]">·</span>
+                            {practice.totalHours || 0} h
+                            {practice.tutorName && (
+                              <span className="hidden lg:inline">
+                                <span className="mx-1.5 text-[#e5e7eb]">·</span>
+                                {practice.tutorName}
+                              </span>
+                            )}
                           </span>
                         </div>
 
@@ -376,51 +379,47 @@ export function EntityList({
                               e.stopPropagation()
                               onReassign(practice)
                             }}
-                            className="w-[28px] h-[28px] mr-2 rounded-[8px] flex items-center justify-center shrink-0 bg-slate-50 text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-indigo-50 hover:text-indigo-500 transition-all"
+                            className="w-[26px] h-[26px] mr-2 rounded-[7px] flex items-center justify-center shrink-0 text-[#d1d5db] opacity-0 group-hover:opacity-100 hover:bg-slate-100 hover:text-[#111827] transition-all"
                             title="Reasignar a otra empresa"
                           >
                             <ArrowLeftRight className="w-4 h-4" />
                           </button>
                         )}
 
-                        {/* Tutor */}
-                        <div className="flex flex-col w-[200px] hidden lg:flex shrink-0 truncate pr-4">
-                          <span className="text-[14px] font-medium text-[#374151] truncate">
-                            {practice.tutorName || 'Sin tutor'}
-                          </span>
-                          <span className="text-[13px] font-medium text-[#9ca3af] truncate">
-                            Tutor Institucional
-                          </span>
-                        </div>
-
-                        {/* Hours */}
-                        <div className="flex items-center justify-end w-[60px] shrink-0 mr-4">
-                          <span className="text-[13px] font-medium text-[#374151]">
-                            {practice.totalHours || 0} h
-                          </span>
-                        </div>
-
-                        {/* Status Badge */}
-                        <div className="flex items-center justify-center w-[110px] shrink-0">
+                        {/* Estado: punto de color + texto, sin la píldora que gritaba */}
+                        <div className="flex items-center gap-2 w-[100px] shrink-0">
                           <span className={cn(
-                            "flex items-center h-[28px] px-[10px] rounded-full text-[12px] font-medium",
-                            practice.status === 'COMPLETED' ? "bg-[#ecfdf3] text-[#027a48]" : 
-                            practice.status === 'IN_PROGRESS' ? "bg-[#eff6ff] text-[#1d4ed8]" : 
-                            practice.status === 'DELAYED' ? "bg-[#fff1f2] text-[#be123c]" :
-                            practice.status === 'CANCELED' ? "bg-gray-100 text-gray-600" :
-                            "bg-[#fffaeb] text-[#b54708]"
+                            "w-1.5 h-1.5 rounded-full shrink-0",
+                            practice.status === 'COMPLETED' ? "bg-emerald-500" :
+                            practice.status === 'IN_PROGRESS' ? "bg-blue-500" :
+                            practice.status === 'DELAYED' ? "bg-rose-500" :
+                            practice.status === 'CANCELED' || practice.status === 'REJECTED' ? "bg-slate-300" :
+                            "bg-amber-400"
+                          )} />
+                          <span className={cn(
+                            "text-[12px] font-medium truncate",
+                            practice.status === 'COMPLETED' ? "text-emerald-700" :
+                            practice.status === 'IN_PROGRESS' ? "text-blue-700" :
+                            practice.status === 'DELAYED' ? "text-rose-700" :
+                            practice.status === 'CANCELED' || practice.status === 'REJECTED' ? "text-slate-400" :
+                            "text-amber-700"
                           )}>
-                            {practice.status === 'COMPLETED' ? 'Finalizado' : practice.status === 'IN_PROGRESS' ? 'En curso' : practice.status === 'DELAYED' ? 'En Atrasado' : practice.status === 'CANCELED' ? 'Cancelado' : 'Pendiente'}
+                            {practice.status === 'COMPLETED' ? 'Finalizado'
+                              : practice.status === 'IN_PROGRESS' ? 'En curso'
+                              : practice.status === 'DELAYED' ? 'Atrasado'
+                              : practice.status === 'CANCELED' ? 'Cancelado'
+                              : practice.status === 'REJECTED' ? 'Rechazado'
+                              : 'Pendiente'}
                           </span>
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center justify-end w-[40px] shrink-0 ml-2">
-                          <button 
-                            className="p-1.5 text-[#9ca3af] hover:text-[#111827] transition-colors rounded-md hover:bg-[#f3f4f6]"
+                        <div className="flex items-center justify-end w-[32px] shrink-0 ml-1">
+                          <button
+                            className="p-1.5 text-[#d1d5db] hover:text-[#111827] transition-colors rounded-md hover:bg-[#f3f4f6] opacity-0 group-hover:opacity-100"
                             onClick={(e) => handleContextMenu(e, practice)}
                           >
-                            <MoreHorizontal className="w-5 h-5" />
+                            <MoreHorizontal className="w-4 h-4" />
                           </button>
                         </div>
                       </motion.div>

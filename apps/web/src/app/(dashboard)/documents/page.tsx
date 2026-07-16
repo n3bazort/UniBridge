@@ -98,12 +98,12 @@ export default function DocumentsPage() {
 
   // ── Numeración del oficio DOCX ──
   const [codeModal, setCodeModal] = useState<{ show: boolean, template: DocumentTemplate | null }>({ show: false, template: null })
-  const [codePrefix, setCodePrefix] = useState('')
+  const [docTypeAbbr, setDocTypeAbbr] = useState('')
   const [codeSuffix, setCodeSuffix] = useState('')
 
   const openCodeModal = (template: DocumentTemplate) => {
     const c = typeof template.content === 'object' && template.content !== null ? template.content : {}
-    setCodePrefix(c.codePrefix || '')
+    setDocTypeAbbr(c.docTypeAbbr || 'SPP')
     setCodeSuffix(c.codeSuffix || '')
     setCodeModal({ show: true, template })
   }
@@ -112,7 +112,7 @@ export default function DocumentsPage() {
     if (!codeModal.template) return
     try {
       await api.patch(`/document-templates/${codeModal.template.id}/docx-config`, {
-        codePrefix,
+        docTypeAbbr,
         codeSuffix,
       })
       queryClient.invalidateQueries({ queryKey: ['document-templates'] })
@@ -361,7 +361,7 @@ export default function DocumentsPage() {
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                         <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                       </svg>
-                      <span className="truncate">Oficio No. {cfg.codePrefix || ''}<span className="text-blue-600 font-bold">N°único</span>{cfg.codeSuffix || ''}</span>
+                      <span className="truncate">Oficio No. <span className="text-blue-600 font-bold">N°único</span>-{`{{carrera}}`}-{cfg.docTypeAbbr || 'SPP'}-{`{{periodo}}`}{cfg.codeSuffix ? `-${cfg.codeSuffix}` : ''}</span>
                     </button>
                   </div>
                 </div>
@@ -459,36 +459,57 @@ export default function DocumentsPage() {
                 </p>
 
                 {/* Editor: prefijo + variable fija + sufijo */}
-                <div className="flex items-center gap-1.5 flex-wrap bg-[#f9fafb] border border-[#eef2f7] rounded-[12px] p-3 mb-4">
-                  <span className="text-[13px] font-semibold text-slate-500 shrink-0">Oficio No.</span>
-                  <input
-                    type="text"
-                    value={codePrefix}
-                    onChange={(e) => setCodePrefix(e.target.value)}
-                    placeholder="prefijo…"
-                    className="flex-1 min-w-[110px] px-2.5 py-1.5 bg-white border border-[#e5e7eb] rounded-[8px] text-[13px] font-mono text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
-                  />
+                <div className="flex items-center gap-1 flex-wrap bg-[#f9fafb] border border-[#eef2f7] rounded-[12px] p-3 mb-4">
+                  <span className="text-[13px] font-semibold text-slate-500 shrink-0 mr-1">Oficio No.</span>
+                  
                   <span
                     className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-[12px] font-mono font-bold rounded-[8px] cursor-not-allowed select-none"
                     title="Número secuencial único asignado por el sistema. No se puede quitar."
                   >
-                    🔒 OFIC-2026-1-00014
+                    🔒 00014
                   </span>
+                  <span className="text-slate-400 font-mono">-</span>
+                  <span
+                    className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white text-[12px] font-mono font-bold rounded-[8px] cursor-not-allowed select-none"
+                    title="Abreviatura de la carrera del estudiante."
+                  >
+                    🔒 {'{{carrera}}'}
+                  </span>
+                  <span className="text-slate-400 font-mono">-</span>
+                  <input
+                    type="text"
+                    value={docTypeAbbr}
+                    onChange={(e) => setDocTypeAbbr(e.target.value.toUpperCase())}
+                    placeholder="SPP"
+                    className="w-[50px] px-2 py-1.5 bg-white border border-[#e5e7eb] rounded-[8px] text-[13px] font-mono text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 text-center uppercase"
+                  />
+                  <span className="text-slate-400 font-mono">-</span>
+                  <span
+                    className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-amber-600 text-white text-[12px] font-mono font-bold rounded-[8px] cursor-not-allowed select-none"
+                    title="Periodo académico actual."
+                  >
+                    🔒 2024-1
+                  </span>
+                  <span className="text-slate-400 font-mono">-</span>
                   <input
                     type="text"
                     value={codeSuffix}
-                    onChange={(e) => setCodeSuffix(e.target.value)}
-                    placeholder="sufijo…"
-                    className="w-[90px] px-2.5 py-1.5 bg-white border border-[#e5e7eb] rounded-[8px] text-[13px] font-mono text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
+                    onChange={(e) => setCodeSuffix(e.target.value.toUpperCase())}
+                    placeholder="OF"
+                    className="w-[50px] px-2 py-1.5 bg-white border border-[#e5e7eb] rounded-[8px] text-[13px] font-mono text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 text-center uppercase"
                   />
                 </div>
 
                 {/* Vista previa */}
-                <div className="flex items-center gap-2 mb-6 px-3 py-2.5 bg-emerald-50 border border-emerald-100 rounded-[10px]">
+                <div className="flex items-center gap-2 mb-4 px-3 py-2.5 bg-emerald-50 border border-emerald-100 rounded-[10px]">
                   <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide shrink-0">Así se imprime:</span>
                   <span className="text-[13px] font-mono font-semibold text-[#111827] truncate">
-                    Oficio No. {codePrefix}OFIC-2026-1-00014{codeSuffix}
+                    Oficio No. 00014-FCVT-{docTypeAbbr || 'SPP'}-2024-1{codeSuffix ? `-${codeSuffix}` : ''}
                   </span>
+                </div>
+                
+                <div className="mb-6 px-3 py-2 text-[12px] text-slate-500 bg-slate-50 rounded-lg">
+                  <span className="font-semibold text-slate-700">ℹ️ Nota:</span> La abreviatura de la carrera (ej: FCVT) se toma automáticamente del programa del estudiante. Configúrala en Gestión de Carreras.
                 </div>
 
                 <div className="flex items-center justify-end gap-3">

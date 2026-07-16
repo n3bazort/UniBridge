@@ -112,8 +112,8 @@ export class DocumentTemplatesController {
 
   @Patch(':id/docx-config')
   @Roles(Role.ADMIN, Role.COORDINATOR)
-  @ApiOperation({ summary: 'Configurar numeración del oficio: prefijo y sufijo alrededor de {{oficioId}}' })
-  updateDocxConfig(@Param('id') id: string, @Body() body: { codePrefix?: string; codeSuffix?: string }) {
+  @ApiOperation({ summary: 'Configurar numeración del oficio' })
+  updateDocxConfig(@Param('id') id: string, @Body() body: { docTypeAbbr?: string; codeSuffix?: string; codePrefix?: string }) {
     return this.service.updateDocxConfig(id, body);
   }
 

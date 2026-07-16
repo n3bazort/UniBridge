@@ -4,6 +4,8 @@ import { Queue } from 'bullmq';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { DocumentEngineService } from '../document-engine/document-engine.service';
 import { MinioService } from '../minio/minio.service';
+import { PracticesService } from '../practices/practices.service';
+import { canIssueCertificate } from '../practices/practice-status.util';
 
 export interface DocumentGenerationJob {
   batchId: string;
@@ -18,13 +20,17 @@ export class GeneratedDocumentsService {
     private prisma: PrismaService,
     private documentEngine: DocumentEngineService,
     private minio: MinioService,
+    private practices: PracticesService,
     @InjectQueue('document-generation') private documentQueue: Queue<DocumentGenerationJob>,
   ) {}
 
-  async generateSequence(type: string, periodCode: string, overrideCode?: string): Promise<string> {
-    if (overrideCode) return overrideCode;
-
-    // Check if period exists, if not use a fallback or create it
+  async generateDocumentCode(
+    type: string,
+    periodCode: string,
+    programAbbr: string,
+    docTypeAbbr: string,
+    suffix: string,
+  ): Promise<string> {
     let period = await this.prisma.academicPeriod.findUnique({ where: { code: periodCode } });
     if (!period) {
       period = await this.prisma.academicPeriod.create({
@@ -40,9 +46,10 @@ export class GeneratedDocumentsService {
       create: { type, periodCode, lastNumber: 1 },
     });
 
-    const prefix = type === 'CERTIFICADO' ? 'CERT' : type === 'LOTE' ? 'LOTE' : 'OFIC';
-    // 5 dígitos: soporta hasta 99.999 documentos por periodo sin romper el formato
-    return `${prefix}-${periodCode}-${String(sequence.lastNumber).padStart(5, '0')}`;
+    const num = String(sequence.lastNumber).padStart(5, '0');
+    const parts = [num, programAbbr, docTypeAbbr, periodCode];
+    if (suffix) parts.push(suffix);
+    return parts.filter(Boolean).join('-');
   }
 
   /**
@@ -97,15 +104,19 @@ export class GeneratedDocumentsService {
     const currentPractice = student.practices[0];
     const academicPeriodCode = currentPractice?.academicPeriod || '2024-1';
 
-    // Requisito institucional: el certificado de culminación solo se emite si
-    // la práctica arrancó con una solicitud (oficio) vigente vinculada.
-    if (template.type !== 'DOCX') {
-      const solicitud = await this.prisma.generatedDocument.findFirst({
-        where: { studentId, documentType: 'SOLICITUD', status: 'VALID' },
+    // Requisitos para emitir el certificado: solicitud vigente (el proceso
+    // arrancó formalmente) y los datos que se imprimen. NO se exige estado
+    // "Finalizado": ese estado es la consecuencia de que este certificado
+    // quede firmado, así que exigirlo sería un ciclo imposible.
+    if (template.type !== 'DOCX' && currentPractice) {
+      const docs = await this.prisma.generatedDocument.findMany({
+        where: { studentId },
+        select: { documentType: true, status: true, signatureStatus: true },
       });
-      if (!solicitud) {
+      const { ok, missing } = canIssueCertificate(currentPractice, docs);
+      if (!ok) {
         throw new BadRequestException(
-          `No se puede generar el certificado de ${student.firstName} ${student.lastName}: no tiene una solicitud de prácticas vigente vinculada. Genera primero la solicitud grupal de su empresa.`,
+          `No se puede generar el certificado de ${student.firstName} ${student.lastName}. Falta: ${missing.join(', ')}.`,
         );
       }
     }
@@ -113,7 +124,8 @@ export class GeneratedDocumentsService {
     // Validar autoridades ANTES de consumir un número de secuencia
     const { deanName, directorName } = await this.getAuthoritiesOrFail(academicPeriodCode);
 
-    const documentCode = await this.generateSequence('CERTIFICADO', academicPeriodCode);
+    const programAbbr = student.program?.abbreviation || student.faculty?.abbreviation || 'SIN';
+    const documentCode = await this.generateDocumentCode('CERTIFICADO', academicPeriodCode, programAbbr, 'CERT', '');
 
     const dataToInject = {
       documentCode,
@@ -430,15 +442,17 @@ export class GeneratedDocumentsService {
     // Validar autoridades ANTES de consumir un número de secuencia
     const { deanName, directorName } = await this.getAuthoritiesOrFail(academicPeriodCode);
 
-    const oficioId = await this.generateSequence('SOLICITUD', academicPeriodCode);
-
-    // Código oficial del oficio: [prefijo editable] + numeración única + [sufijo editable].
-    // El prefijo/sufijo se configuran por plantilla (Documentos → Numeración);
-    // {{oficioId}} es inamovible porque garantiza la unicidad.
     const docxCfg = typeof template.content === 'object' && template.content !== null
       ? (template.content as any)
       : {};
-    const oficioCode = `${docxCfg.codePrefix ?? ''}${oficioId}${docxCfg.codeSuffix ?? ''}`;
+
+    const programAbbr = program?.abbreviation || faculty?.abbreviation || 'SIN';
+    const docTypeAbbr = docxCfg.docTypeAbbr || 'SPP';
+    const suffix = docxCfg.codeSuffix || '';
+
+    const oficioId = await this.generateDocumentCode('SOLICITUD', academicPeriodCode, programAbbr, docTypeAbbr, suffix);
+
+    const oficioCode = oficioId;
 
     const dataToInject = {
       oficioId: oficioId,
@@ -493,6 +507,9 @@ export class GeneratedDocumentsService {
         generatedById,
       })),
     });
+
+    // La solicitud vigente es lo que mueve la práctica de Pendiente a En curso
+    await this.practices.recalculateForStudents(studentIds).catch((): void => undefined);
 
     // URL prefirmada para descarga inmediata desde la UI (el bucket es privado)
     const downloadUrl = await this.minio.getPresignedUrl(storedKey, 900, storedKey.split('/').pop());

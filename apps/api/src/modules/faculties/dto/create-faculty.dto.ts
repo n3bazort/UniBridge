@@ -11,4 +11,9 @@ export class CreateFacultyDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @ApiPropertyOptional({ example: 'FACI' })
+  @IsString()
+  @IsOptional()
+  abbreviation?: string;
 }

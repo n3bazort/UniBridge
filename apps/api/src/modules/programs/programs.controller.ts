@@ -50,4 +50,18 @@ export class ProgramsController {
   remove(@Param('id') id: string) {
     return this.programsService.remove(id);
   }
+
+  @Patch(':id/abbreviation')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Establecer abreviatura de la carrera' })
+  updateAbbreviation(@Param('id') id: string, @Body() body: { abbreviation: string }) {
+    return this.programsService.updateAbbreviation(id, body.abbreviation);
+  }
+
+  @Get('misc/missing-abbreviations')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Listar programas sin abreviatura configurada' })
+  getMissingAbbreviations() {
+    return this.programsService.findMissingAbbreviations();
+  }
 }

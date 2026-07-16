@@ -37,4 +37,11 @@ export class FacultiesService {
   remove(id: string) {
     return this.prisma.faculty.delete({ where: { id } });
   }
+
+  async updateAbbreviation(id: string, abbreviation: string) {
+    return this.prisma.faculty.update({
+      where: { id },
+      data: { abbreviation: abbreviation.toUpperCase().trim() },
+    });
+  }
 }

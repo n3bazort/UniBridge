@@ -40,6 +40,7 @@ model Faculty {
   id          String   @id @default(uuid()) @db.Uuid
   name        String   @unique
   description String?
+  abbreviation String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
@@ -71,6 +72,7 @@ model Coordinator {
 model Program {
   id          String   @id @default(uuid()) @db.Uuid
   name        String
+  abbreviation String?
   facultyId   String   @db.Uuid
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

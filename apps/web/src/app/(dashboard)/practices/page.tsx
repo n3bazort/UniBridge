@@ -23,10 +23,45 @@ export default function PracticesPage() {
   const { searchQuery } = useSearchStore()
   const queryClient = useQueryClient()
   
-  const [filterPeriod, setFilterPeriod] = useState<string | null>(null)
-  const [filterStatus, setFilterStatus] = useState<string | null>(null)
-  const [filterFaculty, setFilterFaculty] = useState<string | null>(null)
-  const [filterProgram, setFilterProgram] = useState<string | null>(null)
+  const [filterPeriod, setFilterPeriodState] = useState<string | null>(null)
+  const [filterStatus, setFilterStatusState] = useState<string | null>(null)
+  const [filterFaculty, setFilterFacultyState] = useState<string | null>(null)
+  const [filterProgram, setFilterProgramState] = useState<string | null>(null)
+
+  useEffect(() => {
+    const savedPeriod = localStorage.getItem('practices-filter-period')
+    if (savedPeriod) setFilterPeriodState(savedPeriod)
+    
+    const savedStatus = localStorage.getItem('practices-filter-status')
+    if (savedStatus) setFilterStatusState(savedStatus)
+      
+    const savedFaculty = localStorage.getItem('practices-filter-faculty')
+    if (savedFaculty) setFilterFacultyState(savedFaculty)
+      
+    const savedProgram = localStorage.getItem('practices-filter-program')
+    if (savedProgram) setFilterProgramState(savedProgram)
+  }, [])
+
+  const setFilterPeriod = (val: string | null) => {
+    setFilterPeriodState(val)
+    if (val) localStorage.setItem('practices-filter-period', val)
+    else localStorage.removeItem('practices-filter-period')
+  }
+  const setFilterStatus = (val: string | null) => {
+    setFilterStatusState(val)
+    if (val) localStorage.setItem('practices-filter-status', val)
+    else localStorage.removeItem('practices-filter-status')
+  }
+  const setFilterFaculty = (val: string | null) => {
+    setFilterFacultyState(val)
+    if (val) localStorage.setItem('practices-filter-faculty', val)
+    else localStorage.removeItem('practices-filter-faculty')
+  }
+  const setFilterProgram = (val: string | null) => {
+    setFilterProgramState(val)
+    if (val) localStorage.setItem('practices-filter-program', val)
+    else localStorage.removeItem('practices-filter-program')
+  }
   const [groupBy, setGroupBy] = useState<'none' | 'company' | 'tutor' | 'level'>('company')
   
   const [activeTab, setActiveTab] = useState<'assigned' | 'unassigned'>('assigned')

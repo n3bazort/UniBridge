@@ -12,6 +12,7 @@ import * as crypto from 'crypto';
 import * as archiver from 'archiver';
 import type { Response } from 'express';
 import { extractDocumentCode, assertPdfHasDigitalSignature } from './signature-verification.util';
+import { PracticesService } from '../practices/practices.service';
 
 /**
  * Flujo de firma digital con FirmaEC (firma externa):
@@ -34,6 +35,7 @@ export class SignaturesService {
   constructor(
     private prisma: PrismaService,
     private minio: MinioService,
+    private practices: PracticesService,
   ) {}
 
   // ───────────────────────── Lotes ─────────────────────────
@@ -286,6 +288,18 @@ export class SignaturesService {
         where: { id: batchId },
         data: { status: newStatus, directorSignedAt: new Date() },
       });
+    }
+
+    // Certificado firmado por ambas autoridades = práctica Finalizada.
+    // El estado se deriva de este hecho, no se marca a mano.
+    if (profile.signerRole === 'DIRECTOR') {
+      const signedDocs = await this.prisma.generatedDocument.findMany({
+        where: { id: { in: fresh.items.map((i) => i.document.id) } },
+        select: { studentId: true },
+      });
+      await this.practices
+        .recalculateForStudents([...new Set(signedDocs.map((d) => d.studentId))])
+        .catch((): void => undefined);
     }
 
     return {

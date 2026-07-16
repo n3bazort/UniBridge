@@ -100,7 +100,7 @@ export class DocumentTemplatesService {
    * formato original) o un objeto { path, isDefault?, codePrefix?, codeSuffix? }
    * (formato nuevo con configuración). Este helper normaliza ambos.
    */
-  static docxContent(content: any): { path: string; isDefault?: boolean; codePrefix?: string; codeSuffix?: string } {
+  static docxContent(content: any): { path: string; isDefault?: boolean; docTypeAbbr?: string; codeSuffix?: string; codePrefix?: string } {
     if (typeof content === 'string') return { path: content };
     return content || { path: '' };
   }
@@ -136,7 +136,7 @@ export class DocumentTemplatesService {
    * alrededor del número secuencial {{oficioId}}, que es inamovible porque
    * garantiza la unicidad del documento.
    */
-  async updateDocxConfig(id: string, config: { codePrefix?: string; codeSuffix?: string }) {
+  async updateDocxConfig(id: string, config: { docTypeAbbr?: string; codeSuffix?: string; codePrefix?: string }) {
     const template = await this.prisma.documentTemplate.findUnique({ where: { id } });
     if (!template) throw new NotFoundException('Template no encontrado');
     if (template.type !== 'DOCX') throw new BadRequestException('Solo aplica a plantillas DOCX');
@@ -144,11 +144,12 @@ export class DocumentTemplatesService {
     const current = DocumentTemplatesService.docxContent(template.content);
     const content = {
       ...current,
+      docTypeAbbr: config.docTypeAbbr ?? current.docTypeAbbr ?? 'SPP',
       codePrefix: config.codePrefix ?? current.codePrefix ?? '',
       codeSuffix: config.codeSuffix ?? current.codeSuffix ?? '',
     };
     await this.prisma.documentTemplate.update({ where: { id }, data: { content } });
-    return { id, codePrefix: content.codePrefix, codeSuffix: content.codeSuffix };
+    return { id, docTypeAbbr: content.docTypeAbbr, codeSuffix: content.codeSuffix, codePrefix: content.codePrefix };
   }
 
   async findAll() {

@@ -9,6 +9,8 @@ import { useAuth } from '@/hooks/use-auth'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { useSidebarStore } from '@/store/sidebar'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/axios'
 
 const navItems = [
   { name: 'Dashboard', href: '/overview', icon: LayoutDashboard, roles: ['ADMIN', 'COORDINATOR'] },
@@ -52,6 +54,17 @@ export function Sidebar() {
   const filteredNav = navItems.filter(item => 
     !user?.role || item.roles.includes(user.role)
   )
+
+  const { data: missingAbbreviations } = useQuery({
+    queryKey: ['missing-abbreviations'],
+    queryFn: async () => {
+      const res = await api.get('/programs/missing-abbreviations')
+      return res.data
+    },
+    enabled: !!user && (user.role === 'ADMIN' || user.role === 'COORDINATOR'),
+  })
+  
+  const missingCount = missingAbbreviations?.length || 0;
 
   return (
     <aside className={cn(
@@ -102,6 +115,14 @@ export function Sidebar() {
                   strokeWidth={1.8} 
                 />
                 {!isCollapsed && <span className="text-[14px] font-medium truncate">{item.name}</span>}
+                {item.name === 'Configuraciones' && missingCount > 0 && (
+                  <span className={cn(
+                    "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white px-1.5 shadow-sm",
+                    isCollapsed && "absolute -top-1 -right-1"
+                  )}>
+                    {missingCount > 99 ? '99+' : missingCount}
+                  </span>
+                )}
               </Link>
             )
           })}

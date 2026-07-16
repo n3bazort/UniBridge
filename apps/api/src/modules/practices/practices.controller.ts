@@ -69,6 +69,13 @@ export class PracticesController {
     return this.practicesService.restoreDocuments(body.documentIds || []);
   }
 
+  @Post('recalculate-status')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Recalcular el estado de todas las prácticas según sus documentos y firmas' })
+  recalculateStatuses() {
+    return this.practicesService.recalculateAllStatuses();
+  }
+
   @Delete(':id')
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Eliminar práctica' })

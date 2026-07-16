@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
@@ -63,7 +63,28 @@ export class ProgramsService {
     });
   }
 
-  remove(id: string) {
-    return this.prisma.program.delete({ where: { id } });
+  async remove(id: string) {
+    try {
+      return await this.prisma.program.delete({ where: { id } });
+    } catch (error: any) {
+      if (error.code === 'P2003') {
+        throw new ConflictException('No se puede eliminar la carrera porque tiene estudiantes u otros datos asociados.');
+      }
+      throw error;
+    }
+  }
+
+  async updateAbbreviation(id: string, abbreviation: string) {
+    return this.prisma.program.update({
+      where: { id },
+      data: { abbreviation: abbreviation.toUpperCase().trim() },
+    });
+  }
+
+  async findMissingAbbreviations() {
+    return this.prisma.program.findMany({
+      where: { abbreviation: null, deletedAt: null },
+      include: { faculty: { select: { name: true, abbreviation: true } } },
+    });
   }
 }

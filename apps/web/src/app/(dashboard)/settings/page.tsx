@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react'
 import { RoleGate } from '@/components/shared/role-gate'
 import { api } from '@/lib/axios'
-import { Plus, Check, Edit2, Shield, Calendar, Users, Hash } from 'lucide-react'
+import { Plus, Check, Edit2, Shield, Calendar, Users, Hash, ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/store/auth-store'
+import { ProgramsConfig } from '@/components/settings/programs-config'
 
 interface AcademicPeriod {
   id: string
@@ -26,10 +27,26 @@ export default function SettingsPage() {
   const [showModal, setShowModal] = useState(false)
   const [newPeriod, setNewPeriod] = useState({ code: '', name: '', startDate: '', endDate: '' })
 
+  const [expandedPeriods, setExpandedPeriods] = useState<Record<string, boolean>>({})
+
   const fetchPeriods = async () => {
     try {
       const res = await api.get('/academic-periods')
-      setPeriods(res.data)
+      const sortedPeriods = res.data.sort((a: AcademicPeriod, b: AcademicPeriod) => {
+        if (a.isActive && !b.isActive) return -1
+        if (!a.isActive && b.isActive) return 1
+        return b.code.localeCompare(a.code)
+      })
+      setPeriods(sortedPeriods)
+      
+      setExpandedPeriods(prev => {
+        if (Object.keys(prev).length > 0) return prev;
+        const initial: Record<string, boolean> = {};
+        sortedPeriods.forEach((p: AcademicPeriod) => {
+          if (p.isActive) initial[p.id] = true;
+        });
+        return initial;
+      });
     } catch (err) {
       console.error(err)
       toast.error('Error al cargar configuraciones')
@@ -41,6 +58,10 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchPeriods()
   }, [])
+
+  const togglePeriod = (id: string) => {
+    setExpandedPeriods(prev => ({ ...prev, [id]: !prev[id] }))
+  }
 
   const handleSetActive = async (id: string) => {
     try {
@@ -120,8 +141,8 @@ export default function SettingsPage() {
             ) : (
               <div className="grid gap-6">
                 {periods.map(period => (
-                  <div key={period.id} className={`p-6 rounded-[16px] border ${period.isActive ? 'border-indigo-200 bg-indigo-50/30 shadow-sm' : 'border-[#eef2f7] bg-white'}`}>
-                    <div className="flex justify-between items-start mb-6">
+                  <div key={period.id} className={`p-6 rounded-[16px] border transition-all ${period.isActive ? 'border-indigo-200 bg-indigo-50/30 shadow-sm' : 'border-[#eef2f7] bg-white'}`}>
+                    <div className="flex justify-between items-center cursor-pointer select-none" onClick={() => togglePeriod(period.id)}>
                       <div>
                         <div className="flex items-center gap-3">
                           <h3 className="text-[16px] font-bold text-[#0f172a]">{period.name}</h3>
@@ -131,17 +152,23 @@ export default function SettingsPage() {
                         </div>
                         <p className="text-sm text-[#64748b] mt-1 font-mono">{period.code}</p>
                       </div>
-                      {!period.isActive && isAdmin && (
-                        <button 
-                          onClick={() => handleSetActive(period.id)}
-                          className="text-sm font-medium text-[#64748b] hover:text-indigo-600 bg-white border border-[#eef2f7] hover:border-indigo-200 px-4 py-2 rounded-[10px] transition-colors"
-                        >
-                          Marcar como Activo
+                      <div className="flex items-center gap-4">
+                        {!period.isActive && isAdmin && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleSetActive(period.id); }}
+                            className="text-sm font-medium text-[#64748b] hover:text-indigo-600 bg-white border border-[#eef2f7] hover:border-indigo-200 px-4 py-2 rounded-[10px] transition-colors"
+                          >
+                            Marcar como Activo
+                          </button>
+                        )}
+                        <button className="text-[#64748b] hover:text-indigo-600 transition-colors p-1">
+                          {expandedPeriods[period.id] ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                         </button>
-                      )}
+                      </div>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-4">
+                    {expandedPeriods[period.id] && (
+                      <div className="grid md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-[#eef2f7]">
                       {/* Decano */}
                       <div className="bg-white border border-[#eef2f7] rounded-[12px] p-4 flex flex-col gap-2">
                         <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider flex items-center gap-1.5">
@@ -179,12 +206,15 @@ export default function SettingsPage() {
                           className="w-full bg-slate-50 border-none rounded-[8px] px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-100 transition-shadow text-[#0f172a]"
                         />
                       </div>
-                    </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          <ProgramsConfig />
 
         </div>
       </div>

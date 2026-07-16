@@ -1,13 +1,15 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CreatePracticeDto } from './dto/create-practice.dto';
 import { UpdatePracticeDto } from './dto/update-practice.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, PracticeStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { derivePracticeStatus, canIssueCertificate } from './practice-status.util';
 
 @Injectable()
 export class PracticesService {
+  private readonly logger = new Logger(PracticesService.name);
   constructor(private prisma: PrismaService) {}
 
   async create(createPracticeDto: CreatePracticeDto) {
@@ -111,6 +113,88 @@ export class PracticesService {
     });
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // ESTADOS DERIVADOS: el estado no se escribe a mano, se calcula
+  // de los documentos emitidos y sus firmas. Ver practice-status.util.ts
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Recalcula el estado de una práctica a partir de sus documentos.
+   * Se llama sola cuando cambia algo que puede afectarlo (solicitud
+   * generada/invalidada, certificado firmado, reasignación de empresa).
+   */
+  async recalculateStatus(practiceId: string): Promise<PracticeStatus | null> {
+    const practice = await this.prisma.practice.findUnique({
+      where: { id: practiceId },
+      include: {
+        student: {
+          include: {
+            generatedDocs: { select: { documentType: true, status: true, signatureStatus: true } },
+          },
+        },
+      },
+    });
+    if (!practice) return null;
+
+    const next = derivePracticeStatus(practice, practice.student.generatedDocs);
+    if (next !== practice.status) {
+      await this.prisma.practice.update({ where: { id: practiceId }, data: { status: next } });
+    }
+    return next;
+  }
+
+  /** Recalcula el estado de todas las prácticas de estos estudiantes. */
+  async recalculateForStudents(studentIds: string[]): Promise<void> {
+    if (!studentIds?.length) return;
+    const practices = await this.prisma.practice.findMany({
+      where: { studentId: { in: studentIds } },
+      select: { id: true },
+    });
+    for (const p of practices) {
+      await this.recalculateStatus(p.id).catch((): null => null);
+    }
+  }
+
+  /**
+   * Recalcula TODAS las prácticas. Sirve para sincronizar datos importados
+   * de Excel, cuyo estado venía escrito a mano y no refleja el proceso real.
+   */
+  async recalculateAllStatuses() {
+    const practices = await this.prisma.practice.findMany({
+      include: {
+        student: {
+          include: {
+            generatedDocs: { select: { documentType: true, status: true, signatureStatus: true } },
+          },
+        },
+      },
+    });
+
+    const changes: Record<string, number> = {};
+    const updates: { id: string; status: PracticeStatus }[] = [];
+
+    for (const p of practices) {
+      const next = derivePracticeStatus(p, p.student.generatedDocs);
+      if (next !== p.status) {
+        updates.push({ id: p.id, status: next });
+        const key = `${p.status} → ${next}`;
+        changes[key] = (changes[key] || 0) + 1;
+      }
+    }
+
+    // En lotes para no abrir una transacción gigante
+    const CHUNK = 50;
+    for (let i = 0; i < updates.length; i += CHUNK) {
+      await this.prisma.$transaction(
+        updates.slice(i, i + CHUNK).map((u) =>
+          this.prisma.practice.update({ where: { id: u.id }, data: { status: u.status } }),
+        ),
+      );
+    }
+
+    return { total: practices.length, updated: updates.length, changes };
+  }
+
   async update(id: string, updatePracticeDto: UpdatePracticeDto) {
     const practice = await this.prisma.practice.findUnique({
       where: { id },
@@ -118,21 +202,12 @@ export class PracticesService {
     });
     if (!practice) throw new NotFoundException('Práctica no encontrada');
 
-    // Requisitos para dar por terminada una práctica: los campos que se
-    // imprimen en el certificado de culminación deben estar completos.
+    // "Finalizado" ya no se marca a mano: es la consecuencia de tener el
+    // certificado firmado por ambas autoridades. Se deriva automáticamente.
     if (updatePracticeDto.status === 'COMPLETED') {
-      const merged = { ...practice, ...updatePracticeDto };
-      const missing: string[] = [];
-      if (!merged.totalHours || merged.totalHours <= 0) missing.push('horas totales (> 0)');
-      if (!merged.tutorName?.trim()) missing.push('tutor asignado');
-      if (!merged.practiceLevel?.trim()) missing.push('nivel de práctica');
-      if (!merged.academicLevel?.trim()) missing.push('nivel académico');
-
-      if (missing.length > 0) {
-        throw new ConflictException(
-          `No se puede finalizar la práctica. Falta: ${missing.join(', ')}. Estos datos se imprimen en el certificado de culminación.`,
-        );
-      }
+      throw new ConflictException(
+        'El estado "Finalizado" no se asigna manualmente: se alcanza cuando el certificado queda firmado por el Decano y el Responsable de Prácticas.',
+      );
     }
 
     // ── Reasignación de empresa ──
@@ -162,6 +237,13 @@ export class PracticesService {
       data: updatePracticeDto,
       include: { company: true, student: true },
     });
+
+    // La reasignación invalida la solicitud del grupo: los estados de todos
+    // los afectados dejan de reflejar la realidad hasta recalcularlos.
+    if (reassignment) {
+      await this.recalculateStatus(id).catch((): null => null);
+      await this.recalculateForStudents(reassignment.affectedStudentIds).catch((): void => undefined);
+    }
 
     return reassignment ? { ...updated, reassignment } : updated;
   }
@@ -280,6 +362,7 @@ export class PracticesService {
       program = await this.prisma.program.create({
         data: { name: programName, facultyId }
       });
+      this.logger.warn(`Programa "${programName}" creado automáticamente sin abreviatura. Se requiere configuración.`);
     }
 
     let importedCount = 0;
@@ -374,6 +457,7 @@ export class PracticesService {
                 rowProgram = await this.prisma.program.create({
                   data: { name: rowProgramName, facultyId }
                 });
+                this.logger.warn(`Programa "${rowProgramName}" creado automáticamente sin abreviatura. Se requiere configuración.`);
               } catch(e) {
                 rowProgram = await this.prisma.program.findFirst({ where: { name: rowProgramName, facultyId } });
               }

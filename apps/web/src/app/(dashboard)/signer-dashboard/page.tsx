@@ -57,9 +57,7 @@ export default function SignerDashboardPage() {
     mutationFn: async ({ batchId, files }: { batchId: string; files: FileList }) => {
       const formData = new FormData()
       Array.from(files).forEach((f) => formData.append('files', f))
-      const res = await api.post(`/signatures/batches/${batchId}/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      const res = await api.post(`/signatures/batches/${batchId}/upload`, formData)
       return res.data
     },
     onSuccess: (data) => {
