@@ -4,6 +4,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { SignerRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -63,9 +64,104 @@ export class SignersService {
 
   async listSigners() {
     return this.prisma.signerProfile.findMany({
-      include: { user: { select: { id: true, email: true, createdAt: true } } },
+      include: { user: { select: { id: true, email: true, createdAt: true, suspendedAt: true } } },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  // ───────────── Gestión de cuentas de firmantes ─────────────
+
+  /**
+   * Inhabilita (o reactiva) la cuenta de un firmante. Es reversible: la
+   * cuenta y su historial de firmas se conservan, solo se bloquea el acceso.
+   */
+  async setSuspended(userId: string, suspended: boolean) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { signerProfile: true },
+    });
+    if (!user || !user.signerProfile) throw new NotFoundException('Firmante no encontrado');
+
+    // Inhabilitar al ÚLTIMO firmante activo de un rol dejaría los lotes de esa
+    // etapa sin nadie que los firme. Si hay otro colega activo, no hay problema.
+    if (suspended) {
+      const role = user.signerProfile.signerRole;
+      const stage = role === 'DEAN' ? 'PENDING_DEAN' : 'PENDING_DIRECTOR';
+      const [pending, otherActive] = await Promise.all([
+        this.prisma.signatureBatch.count({ where: { status: stage } }),
+        this.prisma.signerProfile.count({
+          where: {
+            signerRole: role,
+            userId: { not: userId },
+            user: { suspendedAt: null, deletedAt: null },
+          },
+        }),
+      ]);
+      if (pending > 0 && otherActive === 0) {
+        throw new ConflictException(
+          `No se puede inhabilitar: es el único ${role === 'DEAN' ? 'Decano' : 'Responsable de Prácticas'} activo y hay ${pending} lote(s) esperando esa firma. Registra un reemplazo o completa esos lotes primero.`,
+        );
+      }
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { suspendedAt: suspended ? new Date() : null },
+    });
+
+    return {
+      id: userId,
+      suspended,
+      message: suspended
+        ? `La cuenta de ${user.email} quedó inhabilitada: no podrá iniciar sesión.`
+        : `La cuenta de ${user.email} fue reactivada.`,
+    };
+  }
+
+  /**
+   * Elimina definitivamente la cuenta de un firmante. Solo se permite si no
+   * dejó rastro en el circuito de firma: borrar a quien ya firmó documentos
+   * rompería la trazabilidad de esos documentos.
+   */
+  async deleteSigner(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { signerProfile: true },
+    });
+    if (!user || !user.signerProfile) throw new NotFoundException('Firmante no encontrado');
+
+    // Lo que de verdad ata a un firmante al historial son SUS FIRMAS: si se
+    // borra su cuenta, los documentos que respaldó quedan sin autor conocido.
+    const [deanSigs, finalSigs, batches, generated, invalidated] = await Promise.all([
+      this.prisma.signatureBatchItem.count({ where: { deanSignedById: userId } }),
+      this.prisma.signatureBatchItem.count({ where: { finalSignedById: userId } }),
+      this.prisma.signatureBatch.count({ where: { createdById: userId } }),
+      this.prisma.generatedDocument.count({ where: { generatedById: userId } }),
+      this.prisma.generatedDocument.count({ where: { invalidatedById: userId } }),
+    ]);
+
+    const signatures = deanSigs + finalSigs;
+    const traces = signatures + batches + generated + invalidated;
+    if (traces > 0) {
+      const detail = signatures > 0
+        ? `firmó ${signatures} documento(s)`
+        : `tiene ${traces} registro(s) en el historial de documentos`;
+      throw new ConflictException(
+        `No se puede eliminar a ${user.email}: ${detail}. Inhabilita la cuenta en su lugar para conservar la trazabilidad de esos documentos.`,
+      );
+    }
+
+    // Ojo: el middleware global convierte User.delete en soft-delete (marca
+    // deletedAt). Aquí queremos un borrado real —si no, el correo quedaría
+    // ocupado para siempre y no se podría volver a registrar— así que se
+    // ejecuta en SQL directo, que el middleware no intercepta.
+    await this.prisma.$transaction([
+      this.prisma.$executeRaw`DELETE FROM refresh_tokens WHERE "userId" = ${userId}::uuid`,
+      this.prisma.$executeRaw`DELETE FROM signer_profiles WHERE "userId" = ${userId}::uuid`,
+      this.prisma.$executeRaw`DELETE FROM users WHERE id = ${userId}::uuid`,
+    ]);
+
+    return { id: userId, message: `La cuenta de ${user.email} fue eliminada definitivamente.` };
   }
 
   // ───────────── Vía B: invitación con token ─────────────
@@ -88,22 +184,56 @@ export class SignersService {
       },
     });
 
-    const frontendUrl = process.env.FRONTEND_URL
-      || (process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',')[0].trim() : 'http://localhost:3000');
-
     return {
       id: invitation.id,
       token,
-      link: `${frontendUrl}/signer-register?token=${token}`,
+      link: `${this.frontendUrl()}/signer-register?token=${token}`,
       signerRole: invitation.signerRole,
       expiresAt: invitation.expiresAt,
     };
   }
 
+  /**
+   * Lista las invitaciones incluyendo el link completo: mientras siga activa,
+   * el admin necesita poder volver a copiarlo (p. ej. si se perdió el correo).
+   */
   async listInvitations() {
-    return this.prisma.signerInvitation.findMany({
+    const invitations = await this.prisma.signerInvitation.findMany({
       orderBy: { createdAt: 'desc' },
     });
+
+    const now = new Date();
+    return invitations.map((inv) => {
+      const isActive = !inv.usedAt && inv.expiresAt > now;
+      return {
+        ...inv,
+        isActive,
+        isExpired: !inv.usedAt && inv.expiresAt <= now,
+        // El link solo tiene sentido mientras la invitación pueda usarse
+        link: isActive ? `${this.frontendUrl()}/signer-register?token=${inv.token}` : null,
+      };
+    });
+  }
+
+  /** Elimina una invitación: el link deja de funcionar de inmediato. */
+  async deleteInvitation(id: string) {
+    const invitation = await this.prisma.signerInvitation.findUnique({ where: { id } });
+    if (!invitation) throw new NotFoundException('Invitación no encontrada');
+
+    await this.prisma.signerInvitation.delete({ where: { id } });
+    return {
+      id,
+      message: invitation.usedAt
+        ? 'Invitación eliminada del historial.'
+        : 'Invitación eliminada: el link dejó de ser válido.',
+    };
+  }
+
+  private frontendUrl(): string {
+    return (
+      process.env.FRONTEND_URL ||
+      (process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',')[0].trim() : 'http://localhost:3000')
+    );
   }
 
   /** Valida un token de invitación (para pre-llenar el formulario público). */

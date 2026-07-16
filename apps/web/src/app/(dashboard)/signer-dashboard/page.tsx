@@ -68,7 +68,7 @@ export default function SignerDashboardPage() {
       } else {
         toast.success(`${data.uploaded} documento(s) firmados subidos y verificados`)
       }
-      if (data.batchStatus === 'PENDING_DIRECTOR') toast.info('Lote completo: pasa al Director para la segunda firma')
+      if (data.batchStatus === 'PENDING_DIRECTOR') toast.info('Lote completo: pasa al Responsable de Prácticas para la segunda firma')
       if (data.batchStatus === 'COMPLETED') toast.success('Lote completado: documentos publicados a los estudiantes')
       queryClient.invalidateQueries({ queryKey: ['signer-pending-batches'] })
     },

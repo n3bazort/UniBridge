@@ -28,6 +28,14 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    // Cuenta inhabilitada por el administrador: la contraseña es correcta,
+    // pero el acceso está suspendido (se puede reactivar).
+    if ((user as any).suspendedAt) {
+      throw new UnauthorizedException(
+        'Tu cuenta está inhabilitada. Contacta al administrador del sistema.',
+      );
+    }
+
     // Identificar facultad si es coordinador
     let facultyId = null;
     if (user.role === 'COORDINATOR') {

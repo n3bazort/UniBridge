@@ -12,6 +12,9 @@ import {
   Plus,
   KeyRound,
   Mail,
+  Ban,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react'
 
 interface Signer {
@@ -19,7 +22,7 @@ interface Signer {
   signerRole: 'DEAN' | 'DIRECTOR'
   fullName: string
   title?: string
-  user: { id: string; email: string; createdAt: string }
+  user: { id: string; email: string; createdAt: string; suspendedAt?: string | null }
 }
 
 interface Invitation {
@@ -29,9 +32,16 @@ interface Invitation {
   expiresAt: string
   usedAt?: string
   createdAt: string
+  /** Sigue vigente: ni usada ni expirada */
+  isActive?: boolean
+  isExpired?: boolean
+  /** Link listo para copiar; solo viene si la invitación sigue activa */
+  link?: string | null
 }
 
-const ROLE_LABEL = { DEAN: 'Decano', DIRECTOR: 'Director' }
+// DIRECTOR es la clave interna del enum; en la interfaz la autoridad se llama
+// "Responsable de Prácticas", que es su nombre real en la facultad.
+const ROLE_LABEL = { DEAN: 'Decano', DIRECTOR: 'Responsable de Prácticas' }
 
 export default function SignersPage() {
   const queryClient = useQueryClient()
@@ -79,6 +89,34 @@ export default function SignersPage() {
     onError: (err: any) => toast.error(err.response?.data?.message || 'Error al generar invitación'),
   })
 
+  const setSuspended = useMutation({
+    mutationFn: async ({ userId, suspended }: { userId: string; suspended: boolean }) =>
+      (await api.patch(`/signatures/signers/${userId}/suspend`, { suspended })).data,
+    onSuccess: (data) => {
+      toast.success(data.message)
+      queryClient.invalidateQueries({ queryKey: ['signers'] })
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'No se pudo cambiar el estado de la cuenta'),
+  })
+
+  const deleteSigner = useMutation({
+    mutationFn: async (userId: string) => (await api.delete(`/signatures/signers/${userId}`)).data,
+    onSuccess: (data) => {
+      toast.success(data.message)
+      queryClient.invalidateQueries({ queryKey: ['signers'] })
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'No se pudo eliminar la cuenta'),
+  })
+
+  const deleteInvitation = useMutation({
+    mutationFn: async (id: string) => (await api.delete(`/signatures/invitations/${id}`)).data,
+    onSuccess: (data) => {
+      toast.success(data.message)
+      queryClient.invalidateQueries({ queryKey: ['signer-invitations'] })
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'No se pudo eliminar la invitación'),
+  })
+
   const copy = (text: string) => {
     navigator.clipboard.writeText(text)
     toast.success('Copiado al portapapeles')
@@ -100,7 +138,7 @@ export default function SignersPage() {
               </div>
               <div>
                 <h1 className="text-[20px] font-bold text-[#111827]">Firmantes</h1>
-                <p className="text-[13px] text-[#6b7280]">Autoridades que firman digitalmente los documentos (Decano y Director).</p>
+                <p className="text-[13px] text-[#6b7280]">Autoridades que firman digitalmente los certificados (Decano y Responsable de Prácticas).</p>
               </div>
             </div>
           </div>
@@ -136,7 +174,7 @@ export default function SignersPage() {
                     className={inputCls + ' cursor-pointer'}
                   >
                     <option value="DEAN">Decano (firma primero)</option>
-                    <option value="DIRECTOR">Director (firma después)</option>
+                    <option value="DIRECTOR">Responsable de Prácticas (firma después)</option>
                   </select>
                 </div>
                 <div>
@@ -221,28 +259,67 @@ export default function SignersPage() {
                   <p className="text-[13px] text-[#9ca3af] py-4">Aún no hay firmantes registrados.</p>
                 ) : (
                   <div className="divide-y divide-[#f3f4f6]">
-                    {signers.map((s) => (
-                      <div key={s.id} className="py-3 flex items-center justify-between">
+                    {signers.map((s) => {
+                      const suspended = !!s.user.suspendedAt
+                      return (
+                      <div key={s.id} className={`py-3 flex items-center justify-between gap-2 group ${suspended ? 'opacity-60' : ''}`}>
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-[13px] shrink-0 shadow-sm border border-slate-200/50">
                             {s.fullName?.[0] || 'F'}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-[13px] font-semibold text-[#111827] truncate leading-snug">{s.fullName}</span>
+                            <span className="text-[13px] font-semibold text-[#111827] truncate leading-snug flex items-center gap-1.5">
+                              {s.fullName}
+                              {suspended && (
+                                <span className="text-[9.5px] font-bold text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0">
+                                  Inhabilitada
+                                </span>
+                              )}
+                            </span>
                             <span className="text-[11px] text-[#9ca3af] tracking-wide mt-0.5 flex items-center gap-1 truncate">
-                              <Mail className="w-3 h-3" /> {s.user.email}
+                              <Mail className="w-3 h-3 shrink-0" /> {s.user.email}
                             </span>
                           </div>
                         </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-[6px] uppercase tracking-wider border shrink-0 ${
-                          s.signerRole === 'DEAN'
-                            ? 'text-purple-600 bg-purple-50 border-purple-100'
-                            : 'text-blue-600 bg-blue-50 border-blue-100'
-                        }`}>
-                          {ROLE_LABEL[s.signerRole]}
-                        </span>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-[6px] uppercase tracking-wider border ${
+                            s.signerRole === 'DEAN'
+                              ? 'text-purple-600 bg-purple-50 border-purple-100'
+                              : 'text-blue-600 bg-blue-50 border-blue-100'
+                          }`}>
+                            {ROLE_LABEL[s.signerRole]}
+                          </span>
+
+                          <button
+                            onClick={() => setSuspended.mutate({ userId: s.user.id, suspended: !suspended })}
+                            disabled={setSuspended.isPending}
+                            className={`p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40 ${
+                              suspended
+                                ? 'text-emerald-600 hover:bg-emerald-50'
+                                : 'text-[#9ca3af] hover:text-amber-600 hover:bg-amber-50'
+                            }`}
+                            title={suspended ? 'Reactivar cuenta' : 'Inhabilitar cuenta (no podrá iniciar sesión)'}
+                          >
+                            {suspended ? <RotateCcw className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              if (confirm(`¿Eliminar definitivamente la cuenta de ${s.fullName}?\n\nSolo es posible si no tiene documentos en el historial. Si los tiene, inhabilítala para conservar la trazabilidad.`)) {
+                                deleteSigner.mutate(s.user.id)
+                              }
+                            }}
+                            disabled={deleteSigner.isPending}
+                            className="p-1.5 rounded-md text-[#9ca3af] hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40"
+                            title="Eliminar cuenta definitivamente"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -254,24 +331,53 @@ export default function SignersPage() {
                 ) : (
                   <div className="divide-y divide-[#f3f4f6]">
                     {invitations.slice(0, 8).map((inv) => {
-                      const expired = new Date(inv.expiresAt) < new Date()
+                      const expired = inv.isExpired ?? (!inv.usedAt && new Date(inv.expiresAt) < new Date())
+                      const active = inv.isActive ?? (!inv.usedAt && !expired)
                       return (
-                        <div key={inv.id} className="py-3 flex items-center justify-between">
+                        <div key={inv.id} className="py-3 flex items-center justify-between gap-2 group">
                           <div className="flex flex-col min-w-0">
                             <span className="text-[13px] font-semibold text-[#374151] truncate">{inv.email || 'Sin correo restringido'}</span>
                             <span className="text-[11px] text-[#9ca3af] tracking-wide mt-0.5">
-                              {ROLE_LABEL[inv.signerRole]} · expira {new Date(inv.expiresAt).toLocaleDateString('es-ES')}
+                              {ROLE_LABEL[inv.signerRole]} · {inv.usedAt ? 'usada' : expired ? 'expiró' : 'expira'} {new Date(inv.usedAt || inv.expiresAt).toLocaleDateString('es-ES')}
                             </span>
                           </div>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-[6px] uppercase tracking-wider border shrink-0 ${
-                            inv.usedAt
-                              ? 'text-emerald-600 bg-emerald-50 border-emerald-100'
-                              : expired
-                                ? 'text-red-600 bg-red-50 border-red-100'
-                                : 'text-amber-600 bg-amber-50 border-amber-100'
-                          }`}>
-                            {inv.usedAt ? 'Usada' : expired ? 'Expirada' : 'Activa'}
-                          </span>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-[6px] uppercase tracking-wider border ${
+                              inv.usedAt
+                                ? 'text-emerald-600 bg-emerald-50 border-emerald-100'
+                                : expired
+                                  ? 'text-red-600 bg-red-50 border-red-100'
+                                  : 'text-amber-600 bg-amber-50 border-amber-100'
+                            }`}>
+                              {inv.usedAt ? 'Usada' : expired ? 'Expirada' : 'Activa'}
+                            </span>
+
+                            {/* Mientras siga activa, el link se puede volver a copiar */}
+                            {active && inv.link && (
+                              <button
+                                onClick={() => copy(inv.link!)}
+                                className="p-1.5 rounded-md text-[#9ca3af] hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                title="Copiar link de invitación"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => {
+                                const msg = active
+                                  ? '¿Eliminar esta invitación? El link dejará de funcionar de inmediato.'
+                                  : '¿Eliminar esta invitación del historial?'
+                                if (confirm(msg)) deleteInvitation.mutate(inv.id)
+                              }}
+                              disabled={deleteInvitation.isPending}
+                              className="p-1.5 rounded-md text-[#9ca3af] hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40"
+                              title="Eliminar invitación"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       )
                     })}

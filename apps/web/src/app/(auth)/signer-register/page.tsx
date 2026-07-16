@@ -91,7 +91,7 @@ function SignerRegisterForm() {
         <h2 className="text-2xl font-bold tracking-tight">UniBridge</h2>
         <p className="text-sm text-muted-foreground mt-2">
           Registro de firmante · Invitación válida como{' '}
-          <span className="font-semibold text-foreground">{signerRole === 'DEAN' ? 'Decano' : 'Director'}</span>
+          <span className="font-semibold text-foreground">{signerRole === 'DEAN' ? 'Decano' : 'Responsable de Prácticas'}</span>
         </p>
       </div>
 

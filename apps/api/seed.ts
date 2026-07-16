@@ -94,8 +94,8 @@ async function main() {
       signerProfile: {
         create: {
           signerRole: 'DIRECTOR',
-          fullName: 'Director de Carrera',
-          title: 'Director de Carrera',
+          fullName: 'Responsable de Prácticas',
+          title: 'Responsable de Prácticas Preprofesionales',
         },
       },
     },

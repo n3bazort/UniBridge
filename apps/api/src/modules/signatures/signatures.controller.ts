@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -68,6 +70,24 @@ export class SignaturesController {
     return this.signers.listSigners();
   }
 
+  @Patch('signers/:userId/suspend')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Inhabilita o reactiva la cuenta de un firmante' })
+  setSuspended(@Param('userId') userId: string, @Body() body: { suspended: boolean }) {
+    return this.signers.setSuspended(userId, body.suspended);
+  }
+
+  @Delete('signers/:userId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Elimina definitivamente la cuenta de un firmante (solo si no tiene historial)' })
+  deleteSigner(@Param('userId') userId: string) {
+    return this.signers.deleteSigner(userId);
+  }
+
   @Post('invitations')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
@@ -75,6 +95,15 @@ export class SignaturesController {
   @ApiOperation({ summary: 'Genera un link de invitación con token para que el firmante se auto-registre' })
   createInvitation(@Req() req: any, @Body() dto: CreateInvitationDto) {
     return this.signers.createInvitation(req.user.id, dto);
+  }
+
+  @Delete('invitations/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Elimina una invitación: su link deja de ser válido' })
+  deleteInvitation(@Param('id') id: string) {
+    return this.signers.deleteInvitation(id);
   }
 
   @Get('invitations')

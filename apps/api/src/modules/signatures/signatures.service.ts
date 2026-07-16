@@ -239,7 +239,9 @@ export class SignaturesService {
         if (profile.signerRole === 'DEAN') {
           await this.prisma.signatureBatchItem.updateMany({
             where: { id: { in: itemIds } },
-            data: { status: 'SIGNED_BY_DEAN', deanFileKey: objectKey, deanChecksum: checksum },
+            // Se guarda QUIÉN firmó: sin eso, el historial no puede decir qué
+            // autoridad respalda cada documento
+            data: { status: 'SIGNED_BY_DEAN', deanFileKey: objectKey, deanChecksum: checksum, deanSignedById: userId },
           });
           await this.prisma.generatedDocument.updateMany({
             where: { id: { in: items.map((i) => i.document.id) } },
@@ -248,7 +250,7 @@ export class SignaturesService {
         } else {
           await this.prisma.signatureBatchItem.updateMany({
             where: { id: { in: itemIds } },
-            data: { status: 'SIGNED', finalFileKey: objectKey, finalChecksum: checksum },
+            data: { status: 'SIGNED', finalFileKey: objectKey, finalChecksum: checksum, finalSignedById: userId },
           });
           await this.prisma.generatedDocument.updateMany({
             where: { id: { in: items.map((i) => i.document.id) } },

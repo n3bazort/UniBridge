@@ -22,6 +22,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
+  suspendedAt DateTime?  // cuenta inhabilitada: no puede iniciar sesión (reversible)
 
   coordinator        Coordinator?
   studentProfile     Student?
@@ -31,6 +32,8 @@ model User {
   excelImports       ExcelImport[]
   generatedDocuments GeneratedDocument[]
   invalidatedDocuments GeneratedDocument[] @relation("DocumentInvalidation")
+  deanSignedItems    SignatureBatchItem[] @relation("ItemDeanSigner")
+  finalSignedItems   SignatureBatchItem[] @relation("ItemFinalSigner")
   signatureBatches   SignatureBatch[]
   generationBatches  GenerationBatch[]
 
@@ -297,14 +300,18 @@ model SignatureBatchItem {
   status         SignatureItemStatus @default(PENDING)
   deanFileKey    String?             // objectKey del PDF firmado por el decano
   deanChecksum   String?
+  deanSignedById String?             @db.Uuid  // qué usuario firmó como Decano
   finalFileKey   String?             // objectKey del PDF con ambas firmas
   finalChecksum  String?
+  finalSignedById String?            @db.Uuid  // qué usuario firmó como Responsable
   rejectReason   String?
   updatedAt      DateTime            @updatedAt
   createdAt      DateTime            @default(now())
 
   batch          SignatureBatch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
   document       GeneratedDocument @relation(fields: [documentId], references: [id])
+  deanSignedBy   User?             @relation("ItemDeanSigner", fields: [deanSignedById], references: [id])
+  finalSignedBy  User?             @relation("ItemFinalSigner", fields: [finalSignedById], references: [id])
 
   @@unique([batchId, documentId])
   @@map("signature_batch_items")

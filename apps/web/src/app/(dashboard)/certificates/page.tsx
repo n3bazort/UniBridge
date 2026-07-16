@@ -70,7 +70,7 @@ interface SignatureBatch {
 
 const BATCH_STATUS_META: Record<SignatureBatch['status'], { label: string; cls: string }> = {
   PENDING_DEAN: { label: 'Esperando Decano (1 de 2)', cls: 'text-amber-700 bg-amber-50 border-amber-200' },
-  PENDING_DIRECTOR: { label: 'Decano ✓ · Esperando Director (2 de 2)', cls: 'text-blue-700 bg-blue-50 border-blue-200' },
+  PENDING_DIRECTOR: { label: 'Decano ✓ · Esperando Responsable de Prácticas (2 de 2)', cls: 'text-blue-700 bg-blue-50 border-blue-200' },
   COMPLETED: { label: 'Firmado y publicado', cls: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
   CANCELLED: { label: 'Cancelado', cls: 'text-slate-500 bg-slate-100 border-slate-200' },
 }
@@ -95,7 +95,7 @@ function docState(doc: GeneratedDocument): { label: string; cls: string; dot: st
   }
   switch (doc.signatureStatus) {
     case 'IN_SIGNING': return { label: 'Esperando Decano', cls: 'text-amber-700 bg-amber-50 border-amber-100', dot: 'bg-amber-500' }
-    case 'PARTIALLY_SIGNED': return { label: 'Esperando Director', cls: 'text-blue-700 bg-blue-50 border-blue-100', dot: 'bg-blue-500' }
+    case 'PARTIALLY_SIGNED': return { label: 'Esperando Responsable', cls: 'text-blue-700 bg-blue-50 border-blue-100', dot: 'bg-blue-500' }
     case 'SIGNED': return { label: 'Firmado ✓✓', cls: 'text-emerald-700 bg-emerald-50 border-emerald-100', dot: 'bg-emerald-500' }
     case 'REJECTED': return { label: 'Firma rechazada', cls: 'text-red-700 bg-red-50 border-red-100', dot: 'bg-red-500' }
     default: return { label: 'Listo para enviar', cls: 'text-slate-600 bg-slate-50 border-slate-200', dot: 'bg-slate-300' }
@@ -108,7 +108,7 @@ const formatShortDate = (d?: string | null) =>
 const formatDate = (d: string) =>
   new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
 
-/** Stepper horizontal: Enviado → Firma Decano → Firma Director → Publicado */
+/** Stepper horizontal: Enviado → Firma Decano → Firma Responsable → Publicado */
 function BatchStepper({ batch }: { batch: SignatureBatch }) {
   const steps = [
     { label: 'Enviado a firma', date: batch.createdAt, done: true },
@@ -118,7 +118,7 @@ function BatchStepper({ batch }: { batch: SignatureBatch }) {
       done: !!batch.deanSignedAt || batch.status === 'PENDING_DIRECTOR' || batch.status === 'COMPLETED',
     },
     {
-      label: 'Firma del Director',
+      label: 'Firma del Responsable',
       date: batch.directorSignedAt,
       done: !!batch.directorSignedAt || batch.status === 'COMPLETED',
     },
@@ -229,7 +229,7 @@ function CertificatesPageInner() {
     setSendingToSignature(true)
     try {
       const res = await api.post('/signatures/batches', { documentIds: Array.from(selectedIds) })
-      toast.success(`Lote ${res.data.code} enviado al circuito de firma (Decano → Director)`)
+      toast.success(`Lote ${res.data.code} enviado al circuito de firma (Decano → Responsable de Prácticas)`)
       setSelectedIds(new Set())
       setViewMode('batches')
       refetch()
@@ -472,7 +472,7 @@ function CertificatesPageInner() {
             {[
               { label: 'Sin enviar', value: kpis.notSent, cls: 'text-slate-700', dot: 'bg-slate-300', filter: 'READY' as const },
               { label: 'Esperando Decano', value: kpis.awaitingDean, cls: 'text-amber-600', dot: 'bg-amber-400', filter: 'IN_SIGNATURE' as const },
-              { label: 'Esperando Director', value: kpis.awaitingDirector, cls: 'text-blue-600', dot: 'bg-blue-500', filter: 'IN_SIGNATURE' as const },
+              { label: 'Esperando Responsable', value: kpis.awaitingDirector, cls: 'text-blue-600', dot: 'bg-blue-500', filter: 'IN_SIGNATURE' as const },
               { label: 'Firmados', value: kpis.signed, cls: 'text-emerald-600', dot: 'bg-emerald-500', filter: 'SIGNED' as const },
               { label: 'Rechazados', value: kpis.rejected, cls: 'text-red-600', dot: 'bg-red-500', filter: 'ALL' as const },
             ].map((kpi) => (
@@ -650,7 +650,7 @@ function CertificatesPageInner() {
                   </div>
                   <h3 className="text-[15px] font-bold text-slate-700">Aún no hay lotes de firma</h3>
                   <p className="text-[13px] text-slate-400 mt-1 max-w-[400px]">
-                    Selecciona documentos en la pestaña &quot;Documentos&quot; y presiona &quot;Enviar a firma&quot; para iniciar el circuito Decano → Director.
+                    Selecciona documentos en la pestaña &quot;Documentos&quot; y presiona &quot;Enviar a firma&quot; para iniciar el circuito Decano → Responsable de Prácticas.
                   </p>
                 </div>
               ) : (
@@ -678,7 +678,7 @@ function CertificatesPageInner() {
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           <span className="text-[10.5px] font-bold text-[#9ca3af] uppercase tracking-wider">
-                            Decano {deanSigned}/{active.length} · Director {directorSigned}/{active.length}
+                            Decano {deanSigned}/{active.length} · Responsable {directorSigned}/{active.length}
                           </span>
                           <div className="w-[180px] h-[6px] bg-slate-100 rounded-full overflow-hidden">
                             <div
