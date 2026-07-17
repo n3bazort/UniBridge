@@ -13,6 +13,9 @@ import {
   PenLine,
   X,
   Building2,
+  List,
+  LayoutGrid,
+  Archive,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -24,6 +27,7 @@ interface GeneratedDocument {
   templateId: string
   studentId: string
   fileUrl: string
+  signedFileKey?: string | null
   createdAt: string
   status: 'VALID' | 'INVALIDATED' | 'SUPERSEDED'
   signatureStatus?: 'NONE' | 'IN_SIGNING' | 'PARTIALLY_SIGNED' | 'SIGNED' | 'REJECTED'
@@ -181,6 +185,53 @@ function CertificatesPageInner() {
   const [sendingToSignature, setSendingToSignature] = useState(false)
   const [barHidden, setBarHidden] = useState(false)
   const lastScrollY = useRef(0)
+
+  // Vista de documentos: lista o cuadrícula estilo explorador, con tamaño
+  // de ícono ajustable (se recuerda entre sesiones)
+  const [layout, setLayout] = useState<'list' | 'grid'>(() =>
+    typeof window !== 'undefined' && localStorage.getItem('docs-layout') === 'grid' ? 'grid' : 'list'
+  )
+  const [iconSize, setIconSize] = useState<number>(() =>
+    typeof window !== 'undefined' ? Number(localStorage.getItem('docs-icon-size')) || 96 : 96
+  )
+  const changeLayout = (l: 'list' | 'grid') => { setLayout(l); localStorage.setItem('docs-layout', l) }
+  const changeIconSize = (s: number) => { setIconSize(s); localStorage.setItem('docs-icon-size', String(s)) }
+
+  // Descarga de ZIPs de lotes firmados (la única descarga automática permitida
+  // junto con los DOCX: un ZIP no se puede "visualizar")
+  const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set())
+  const [downloadingZip, setDownloadingZip] = useState(false)
+
+  const handleDownloadSignedZip = async (ids?: string[]) => {
+    setDownloadingZip(true)
+    try {
+      const params = ids?.length ? { ids: ids.join(',') } : undefined
+      const res = await api.get('/signatures/signed-zip', { responseType: 'blob', params })
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Certificados_Firmados_${new Date().toISOString().slice(0, 10)}.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success(ids?.length ? `ZIP con ${ids.length} lote(s) descargado` : 'ZIP con todos los lotes firmados descargado')
+      setSelectedBatchIds(new Set())
+    } catch (err: any) {
+      // El error de un blob viene como Blob: se lee para mostrar el mensaje real
+      let msg = 'No se pudo generar el ZIP'
+      try { msg = JSON.parse(await err.response?.data?.text())?.message || msg } catch {}
+      toast.error(msg)
+    } finally {
+      setDownloadingZip(false)
+    }
+  }
+
+  const toggleBatchSelected = (id: string) => {
+    setSelectedBatchIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
   const { data: documents = [], isLoading, refetch } = useQuery<GeneratedDocument[]>({
     queryKey: ['generated-documents-all'],
@@ -411,22 +462,26 @@ function CertificatesPageInner() {
           {state.label}
         </span>
 
-        {/* Acciones */}
+        {/* Acciones: nada se descarga solo — todo se VISUALIZA en pestaña
+            nueva, salvo los DOCX (el navegador no puede mostrarlos) */}
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => handleView(doc.id)}
-            className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-            title="Visualizar"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => handleDownload(doc.id)}
-            className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-            title="Descargar"
-          >
-            <Download className="w-4 h-4" />
-          </button>
+          {(doc.signedFileKey || doc.fileUrl || '').endsWith('.docx') ? (
+            <button
+              onClick={() => handleDownload(doc.id)}
+              className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              title="Descargar DOCX (Word no se visualiza en el navegador)"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={() => handleView(doc.id)}
+              className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+              title="Visualizar en pestaña nueva"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          )}
           {doc.status === 'VALID' && (
             <button
               onClick={() => { setDocToInvalidate(doc.id); setShowInvalidateModal(true) }}
@@ -441,7 +496,64 @@ function CertificatesPageInner() {
     )
   }
 
+  /**
+   * Tarjeta de cuadrícula (estilo explorador de Windows): el ícono escala con
+   * el slider, click = visualizar (o descargar si es DOCX).
+   */
+  const renderDocCard = (doc: GeneratedDocument) => {
+    const state = docState(doc)
+    const isDocxFile = (doc.signedFileKey || doc.fileUrl || '').endsWith('.docx')
+    const selectable = isSignable(doc)
+    const isHighlighted = highlightId === doc.id
+
+    return (
+      <div
+        key={doc.id}
+        id={`doc-${doc.id}`}
+        onClick={() => (isDocxFile ? handleDownload(doc.id) : handleView(doc.id))}
+        className={cn(
+          'relative flex flex-col items-center gap-1.5 p-3 rounded-[12px] border border-transparent cursor-pointer transition-colors hover:bg-slate-50 hover:border-[#eef2f7] group',
+          isHighlighted && 'ring-2 ring-blue-400 bg-blue-50/50'
+        )}
+        title={`${doc.documentCode} — ${isDocxFile ? 'descargar' : 'visualizar'}`}
+      >
+        {selectable && (
+          <input
+            type="checkbox"
+            checked={selectedIds.has(doc.id)}
+            onChange={() => toggleSelected(doc.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-2 left-2 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer opacity-0 group-hover:opacity-100 checked:opacity-100 transition-opacity"
+          />
+        )}
+        <div
+          className={cn(
+            'flex items-center justify-center rounded-[14px]',
+            doc.template?.type === 'PDF' ? 'bg-rose-50 text-rose-400' : 'bg-blue-50 text-blue-400'
+          )}
+          style={{ width: iconSize, height: iconSize * 0.78 }}
+        >
+          <FileText style={{ width: iconSize * 0.42, height: iconSize * 0.42 }} strokeWidth={1.5} />
+        </div>
+        <span
+          className="text-[11px] font-semibold text-[#111827] text-center leading-tight line-clamp-2"
+          style={{ maxWidth: iconSize + 24 }}
+        >
+          {doc.student?.firstName} {doc.student?.lastName}
+        </span>
+        <span className="text-[9.5px] font-mono text-slate-400 truncate" style={{ maxWidth: iconSize + 24 }}>
+          {doc.documentCode}
+        </span>
+        <span className={cn('flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full border', state.cls)}>
+          <span className={cn('w-1 h-1 rounded-full', state.dot)} />
+          {state.label}
+        </span>
+      </div>
+    )
+  }
+
   const pendingBatches = batches.filter(b => b.status === 'PENDING_DEAN' || b.status === 'PENDING_DIRECTOR').length
+  const completedBatches = batches.filter(b => b.status === 'COMPLETED')
 
   return (
     <RoleGate allowedRoles={['ADMIN', 'COORDINATOR']}>
@@ -541,6 +653,36 @@ function CertificatesPageInner() {
                     </button>
                   ))}
                 </div>
+
+                {/* Lista / cuadrícula + tamaño de ícono */}
+                <div className="flex items-center gap-1.5 bg-[#f1f5f9] p-1 rounded-[10px]">
+                  <button
+                    onClick={() => changeLayout('list')}
+                    className={`p-1.5 rounded-[8px] transition-all ${layout === 'list' ? 'bg-white text-[#111827] shadow-sm' : 'text-[#64748b] hover:text-[#111827]'}`}
+                    title="Vista de lista"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => changeLayout('grid')}
+                    className={`p-1.5 rounded-[8px] transition-all ${layout === 'grid' ? 'bg-white text-[#111827] shadow-sm' : 'text-[#64748b] hover:text-[#111827]'}`}
+                    title="Vista de cuadrícula"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </button>
+                  {layout === 'grid' && (
+                    <input
+                      type="range"
+                      min={64}
+                      max={160}
+                      step={8}
+                      value={iconSize}
+                      onChange={(e) => changeIconSize(Number(e.target.value))}
+                      className="w-[90px] accent-[#111827] cursor-pointer"
+                      title={`Tamaño de ícono: ${iconSize}px`}
+                    />
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -626,9 +768,18 @@ function CertificatesPageInner() {
                         <span className="text-[13.5px] font-bold text-[#111827] truncate">{companyName}</span>
                         <span className="text-[11.5px] font-medium text-[#9ca3af]">{docs.length} doc{docs.length > 1 ? 's' : ''}</span>
                       </div>
-                      <AnimatePresence mode="popLayout">
-                        {docs.map(renderDocRow)}
-                      </AnimatePresence>
+                      {layout === 'grid' ? (
+                        <div
+                          className="grid gap-1 p-3"
+                          style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${iconSize + 40}px, 1fr))` }}
+                        >
+                          {docs.map(renderDocCard)}
+                        </div>
+                      ) : (
+                        <AnimatePresence mode="popLayout">
+                          {docs.map(renderDocRow)}
+                        </AnimatePresence>
+                      )}
                     </div>
                   )
                 })}
@@ -638,6 +789,37 @@ function CertificatesPageInner() {
 
           {viewMode === 'batches' && (
             <div className="flex flex-col gap-5">
+              {/* Descarga de firmados: todos o los lotes seleccionados */}
+              {completedBatches.length > 0 && (
+                <div className="flex items-center justify-between gap-3 bg-white rounded-[14px] border border-[#eef2f7] shadow-soft px-4 py-3">
+                  <span className="text-[12.5px] font-medium text-[#64748b]">
+                    {completedBatches.length} lote(s) firmados y publicados.
+                    {selectedBatchIds.size > 0 && (
+                      <span className="text-[#111827] font-semibold"> {selectedBatchIds.size} seleccionado(s).</span>
+                    )}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {selectedBatchIds.size > 0 && (
+                      <button
+                        onClick={() => handleDownloadSignedZip([...selectedBatchIds])}
+                        disabled={downloadingZip}
+                        className="h-[34px] px-3.5 flex items-center gap-1.5 bg-[#111827] hover:bg-[#1f2937] text-white rounded-[10px] text-[12px] font-semibold transition-colors disabled:opacity-50"
+                      >
+                        <Archive className="w-3.5 h-3.5" />
+                        ZIP seleccionados ({selectedBatchIds.size})
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDownloadSignedZip()}
+                      disabled={downloadingZip}
+                      className="h-[34px] px-3.5 flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-[#eef2f7] text-[#374151] rounded-[10px] text-[12px] font-semibold transition-colors disabled:opacity-50"
+                    >
+                      <Archive className="w-3.5 h-3.5 text-emerald-600" />
+                      {downloadingZip ? 'Generando ZIP…' : 'ZIP de todos los firmados'}
+                    </button>
+                  </div>
+                </div>
+              )}
               {isLoadingBatches ? (
                 <div className="bg-white rounded-[16px] border border-[#eef2f7] shadow-soft flex flex-col items-center justify-center py-20 gap-3">
                   <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin" />
@@ -666,25 +848,49 @@ function CertificatesPageInner() {
                   return (
                     <div key={batch.id} className="bg-white rounded-[16px] border border-[#eef2f7] shadow-soft overflow-hidden">
                       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 px-5 py-4 border-b border-[#f3f4f6]">
-                        <div className="flex flex-col gap-1.5 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[14px] font-bold text-[#111827] font-mono">{batch.code}</span>
-                            <span className={`text-[10.5px] font-bold px-2.5 py-1 rounded-full border ${meta.cls}`}>{meta.label}</span>
-                          </div>
-                          <span className="text-[11.5px] text-[#9ca3af] font-medium">
-                            {batch.items.length} documento(s)
-                            {rejected > 0 && <span className="text-red-500"> · {rejected} rechazado(s)</span>}
-                          </span>
-                        </div>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <span className="text-[10.5px] font-bold text-[#9ca3af] uppercase tracking-wider">
-                            Decano {deanSigned}/{active.length} · Responsable {directorSigned}/{active.length}
-                          </span>
-                          <div className="w-[180px] h-[6px] bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${batch.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                              style={{ width: `${batch.status === 'COMPLETED' ? 100 : stagePct}%` }}
+                        <div className="flex items-center gap-3 min-w-0">
+                          {batch.status === 'COMPLETED' && (
+                            <input
+                              type="checkbox"
+                              checked={selectedBatchIds.has(batch.id)}
+                              onChange={() => toggleBatchSelected(batch.id)}
+                              className="w-4 h-4 rounded border-slate-300 text-[#111827] focus:ring-[#111827]/20 cursor-pointer shrink-0"
+                              title="Seleccionar este lote para el ZIP"
                             />
+                          )}
+                          <div className="flex flex-col gap-1.5 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[14px] font-bold text-[#111827] font-mono">{batch.code}</span>
+                              <span className={`text-[10.5px] font-bold px-2.5 py-1 rounded-full border ${meta.cls}`}>{meta.label}</span>
+                            </div>
+                            <span className="text-[11.5px] text-[#9ca3af] font-medium">
+                              {batch.items.length} documento(s)
+                              {rejected > 0 && <span className="text-red-500"> · {rejected} rechazado(s)</span>}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          {batch.status === 'COMPLETED' && (
+                            <button
+                              onClick={() => handleDownloadSignedZip([batch.id])}
+                              disabled={downloadingZip}
+                              className="h-[32px] px-3 flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-[9px] text-[11.5px] font-semibold transition-colors disabled:opacity-50"
+                              title="Descargar los PDFs firmados de este lote"
+                            >
+                              <Archive className="w-3.5 h-3.5" />
+                              ZIP firmado
+                            </button>
+                          )}
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="text-[10.5px] font-bold text-[#9ca3af] uppercase tracking-wider">
+                              Decano {deanSigned}/{active.length} · Responsable {directorSigned}/{active.length}
+                            </span>
+                            <div className="w-[180px] h-[6px] bg-slate-100 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${batch.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                                style={{ width: `${batch.status === 'COMPLETED' ? 100 : stagePct}%` }}
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>

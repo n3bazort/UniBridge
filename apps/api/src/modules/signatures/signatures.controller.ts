@@ -126,6 +126,16 @@ export class SignaturesController {
     return this.signatures.createBatch(dto.documentIds, req.user.id, dto.name);
   }
 
+  @Get('signed-zip')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'ZIP con los certificados firmados: todos los lotes completados o los ids indicados' })
+  downloadSignedZip(@Query('ids') ids: string, @Res() res: Response) {
+    const batchIds = ids ? ids.split(',').filter(Boolean) : undefined;
+    return this.signatures.streamSignedZip(res, batchIds);
+  }
+
   @Get('batches')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.COORDINATOR)

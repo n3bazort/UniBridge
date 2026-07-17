@@ -77,6 +77,24 @@ export default function PracticesPage() {
   // Confirmación de emisión de certificados (con palomita de auto-firma)
   const [showConfirmCerts, setShowConfirmCerts] = useState(false)
 
+  // Emisión masiva: certificados de todo un período, filtrado por carrera
+  const [periodCertModal, setPeriodCertModal] = useState(false)
+  const [massPeriod, setMassPeriod] = useState<string>('')
+  const [massProgram, setMassProgram] = useState<string>('ALL')
+  const [massAutoSign, setMassAutoSign] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('ppp-auto-send-signature') !== 'false' : true
+  )
+
+  // Modal previo a generar el oficio: formato (DOCX/PDF) + aviso de reemplazo
+  const [solicitudModal, setSolicitudModal] = useState<{ items: Practice[]; companyName: string; existing: boolean } | null>(null)
+  const [solicitudAsPdf, setSolicitudAsPdf] = useState<boolean>(() =>
+    typeof window !== 'undefined' && localStorage.getItem('solicitud-as-pdf') === 'true'
+  )
+  const changeSolicitudFormat = (asPdf: boolean) => {
+    setSolicitudAsPdf(asPdf)
+    localStorage.setItem('solicitud-as-pdf', String(asPdf))
+  }
+
   // Estados para la barra de progreso circular de generación de certificados
   const [isProgressModalOpen, setIsProgressModalOpen] = useState(false)
   const [generationProgress, setGenerationProgress] = useState(0)
@@ -255,6 +273,26 @@ export default function PracticesPage() {
     return { selected, eligible, alreadyCertified, omitted, companies, blockedReason }
   }, [rawPractices, selectedIds])
 
+  // Emisión masiva por período + carrera: mismos requisitos que la selección,
+  // pero el alcance es todo el período electivo filtrado.
+  const massEligibility = useMemo(() => {
+    const inScope = rawPractices.filter(p =>
+      ((p as any).academicPeriod || '2024-1') === massPeriod &&
+      (massProgram === 'ALL' || (p.student as any)?.program?.name === massProgram)
+    )
+    const eligible = inScope.filter(p =>
+      hasValidSolicitud(p) && !hasValidCertificate(p) && p.status !== 'CANCELED' && p.status !== 'REJECTED'
+    )
+    const already = inScope.filter(p => hasValidCertificate(p)).length
+    const noSolicitud = inScope.length - eligible.length - already
+    return { inScope, eligible, already, noSolicitud }
+  }, [rawPractices, massPeriod, massProgram])
+
+  const openPeriodCertModal = () => {
+    if (!massPeriod && periods.length > 0) setMassPeriod(String(periods[periods.length - 1]))
+    setPeriodCertModal(true)
+  }
+
   /** El ícono de documento lleva a su ficha en Certificados (no abre el archivo). */
   const handleDocumentClick = (docId: string) => {
     router.push(`/certificates?highlight=${docId}`)
@@ -343,8 +381,9 @@ export default function PracticesPage() {
     }
   }
 
-  const handleGenerateCertificates = async (autoSendToSignature = false) => {
+  const handleGenerateCertificates = async (autoSendToSignature = false, listOverride?: Practice[]) => {
     setShowConfirmCerts(false)
+    setPeriodCertModal(false)
     try {
       const templatesRes = await api.get('/document-templates')
       // La predeterminada manda; el nombre oficial queda solo como respaldo legado
@@ -357,7 +396,7 @@ export default function PracticesPage() {
         return
       }
 
-      const selectedPractices = certEligibility.eligible
+      const selectedPractices = listOverride ?? certEligibility.eligible
       if (selectedPractices.length === 0) {
         toast.error('No hay estudiantes elegibles seleccionados.')
         return
@@ -452,6 +491,10 @@ export default function PracticesPage() {
       setIsGenerating(false)
     }
   }
+  /**
+   * Paso previo a generar el oficio: valida requisitos y abre el modal donde
+   * se elige el formato (DOCX o PDF) y se confirma el reemplazo si ya existe.
+   */
   const handleGenerateSolicitud = async (groupItems: Practice[]) => {
     if (!groupItems || groupItems.length === 0) return
 
@@ -461,64 +504,74 @@ export default function PracticesPage() {
       return
     }
 
-    // El teléfono y correo de la empresa NO se imprimen en el oficio: sirven
-    // para que los estudiantes la contacten por fuera. Si faltan, no se avisa.
-    // El nombre del contacto sí aparece, pero la plantilla ya cae en un
-    // genérico ("Responsable"), así que tampoco justifica frenar la emisión.
-
-    // El celular del estudiante SÍ va impreso en la tabla del oficio.
+    // El teléfono/correo de la empresa NO se imprimen en el oficio (sirven
+    // para contacto externo). El celular del estudiante SÍ va impreso.
     const missingPhones = groupItems.filter(p => !p.student.phone)
     if (missingPhones.length > 0) {
       toast.error(`Faltan celulares de ${missingPhones.length} estudiante(s): ese dato se imprime en la tabla del oficio. Complétalos con el ícono rojo de su fila.`)
       return
     }
 
+    try {
+      const studentIds = groupItems.map((p) => p.studentId)
+      const checkRes = await api.post('/generated-documents/check-solicitud', { studentIds })
+      setSolicitudModal({
+        items: groupItems,
+        companyName: company.name,
+        existing: !!checkRes.data?.exists,
+      })
+    } catch {
+      setSolicitudModal({ items: groupItems, companyName: company.name, existing: false })
+    }
+  }
+
+  const confirmGenerateSolicitud = async () => {
+    const modal = solicitudModal
+    if (!modal) return
+    setSolicitudModal(null)
     setIsGenerating(true)
     try {
       const templatesRes = await api.get('/document-templates')
       const docxTemplates = templatesRes.data.filter((t: any) => t.type === 'DOCX')
       if (docxTemplates.length === 0) {
         toast.error('No se encontró ninguna plantilla DOCX subida.')
-        setIsGenerating(false)
         return
       }
-      // Se usa la plantilla DOCX marcada como predeterminada; si no hay, la primera
       const defaultDocxTemplate = docxTemplates.find((t: any) => typeof t.content === 'object' && t.content?.isDefault === true)
         || docxTemplates[0]
-      const studentIds = groupItems.map((p: any) => p.studentId)
-
-      // Verificar si ya existen
-      const checkRes = await api.post('/generated-documents/check-solicitud', { studentIds })
-      let overwrite = false
-      if (checkRes.data?.exists) {
-        const confirmOverwrite = window.confirm("Ya existe una solicitud grupal generada para estos estudiantes. ¿Deseas regenerarla invalidando la versión anterior?")
-        if (!confirmOverwrite) {
-          setIsGenerating(false)
-          return
-        }
-        overwrite = true
-      }
+      const studentIds = modal.items.map((p) => p.studentId)
 
       const response = await api.post('/generated-documents/generate-solicitud', {
         templateId: defaultDocxTemplate.id,
         studentIds,
-        overwrite
+        overwrite: modal.existing,
+        asPdf: solicitudAsPdf,
       })
-      
-      toast.success(`¡Generación exitosa! Revisa la carpeta de descargas o el sistema.`)
-      
-      // Invalidar consultas para refrescar la lista de prácticas y actualizar íconos inmediatamente
+
       queryClient.invalidateQueries({ queryKey: ['practices-all'] })
       queryClient.invalidateQueries({ queryKey: ['generated-documents'] })
 
-      if (response.data?.downloadUrl) {
-        // URL prefirmada devuelta por el backend (el bucket es privado)
-        const a = document.createElement('a');
-        a.href = response.data.downloadUrl;
-        a.download = (response.data.fileUrl || 'documento').split('/').pop() || 'documento';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+      if (solicitudAsPdf) {
+        // PDF: se VISUALIZA en pestaña nueva (política: nada se descarga solo)
+        toast.success(`Oficio ${response.data?.documentCode || ''} generado en PDF`)
+        const docCode = response.data?.documentCode
+        try {
+          const docs = await api.get('/generated-documents')
+          const doc = (docs.data || []).find((d: any) => d.documentCode === docCode && d.status === 'VALID')
+          if (doc) {
+            const v = await api.get(`/generated-documents/${doc.id}/view`)
+            window.open(v.data.url, '_blank')
+          }
+        } catch {}
+      } else if (response.data?.downloadUrl) {
+        // DOCX: única descarga automática permitida (Word no se ve en el navegador)
+        toast.success(`Oficio ${response.data?.documentCode || ''} generado — descargando DOCX`)
+        const a = document.createElement('a')
+        a.href = response.data.downloadUrl
+        a.download = (response.data.fileUrl || 'documento').split('/').pop() || 'documento'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
       }
     } catch (error: any) {
       console.error(error)
@@ -669,6 +722,16 @@ export default function PracticesPage() {
                 />
 
                 <div className="flex-1" />
+
+                {/* Emisión masiva: todo el período electivo, filtrado por carrera */}
+                <button
+                  onClick={openPeriodCertModal}
+                  className="flex items-center gap-1.5 h-[34px] px-3 rounded-lg bg-white border shadow-soft text-[12.5px] font-medium text-gray-600 hover:text-[#111827] hover:bg-slate-50 transition-colors shrink-0"
+                  title="Emitir los certificados de todos los elegibles de un período"
+                >
+                  <FileText className="w-3.5 h-3.5 text-rose-500" />
+                  Emitir período…
+                </button>
 
                 <div className="flex items-center gap-2 bg-white rounded-lg p-1 border shadow-soft shrink-0">
                   <span className="text-[12px] font-medium text-gray-500 pl-2 pr-1">Agrupar por:</span>
@@ -901,6 +964,154 @@ export default function PracticesPage() {
           onClose={() => setShowConfirmCerts(false)}
           onConfirm={handleGenerateCertificates}
         />
+
+        {/* Emisión masiva por período + carrera */}
+        {periodCertModal && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
+            onMouseDown={(e) => { if (e.target === e.currentTarget) setPeriodCertModal(false) }}
+          >
+            <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[460px] border border-slate-100 overflow-hidden">
+              <div className="px-6 pt-5 pb-4">
+                <h2 className="text-[16px] font-bold text-[#111827]">Emitir certificados del período</h2>
+                <p className="text-[12.5px] text-slate-500 mt-0.5">
+                  Genera de una vez los certificados de todos los que cumplen los requisitos.
+                </p>
+              </div>
+
+              <div className="mx-6 grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Período electivo</label>
+                  <select
+                    value={massPeriod}
+                    onChange={(e) => setMassPeriod(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 bg-[#f9fafb] border border-[#eef2f7] rounded-[10px] text-[13px] font-medium cursor-pointer"
+                  >
+                    {periods.map(p => <option key={String(p)} value={String(p)}>{String(p)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Carrera</label>
+                  <select
+                    value={massProgram}
+                    onChange={(e) => setMassProgram(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 bg-[#f9fafb] border border-[#eef2f7] rounded-[10px] text-[13px] font-medium cursor-pointer"
+                  >
+                    <option value="ALL">Todas las carreras</option>
+                    {programs.map(p => <option key={String(p)} value={String(p)}>{String(p)}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Desglose: qué entra y qué se omite */}
+              <div className="mx-6 mb-4 grid grid-cols-3 gap-2 text-center">
+                <div className="bg-emerald-50 border border-emerald-100 rounded-[10px] py-2">
+                  <div className="text-[20px] font-bold text-emerald-600 leading-none">{massEligibility.eligible.length}</div>
+                  <div className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide mt-1">se emiten</div>
+                </div>
+                <div className="bg-slate-50 border border-slate-200 rounded-[10px] py-2">
+                  <div className="text-[20px] font-bold text-slate-500 leading-none">{massEligibility.already}</div>
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mt-1">ya tienen</div>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 rounded-[10px] py-2">
+                  <div className="text-[20px] font-bold text-amber-600 leading-none">{massEligibility.noSolicitud}</div>
+                  <div className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide mt-1">sin requisitos</div>
+                </div>
+              </div>
+
+              <label className="mx-6 mb-5 flex items-start gap-2.5 p-3 rounded-[12px] border border-slate-200 hover:border-blue-200 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={massAutoSign}
+                  onChange={(e) => { setMassAutoSign(e.target.checked); localStorage.setItem('ppp-auto-send-signature', String(e.target.checked)) }}
+                  className="w-[16px] h-[16px] mt-0.5 rounded border-slate-300 text-blue-600 cursor-pointer shrink-0"
+                />
+                <span className="text-[12.5px] text-slate-600 leading-snug">
+                  <span className="font-semibold text-[#111827]">Enviar a firma automáticamente</span> al terminar
+                  (circuito Decano → Responsable de Prácticas)
+                </span>
+              </label>
+
+              <div className="flex justify-end gap-2 px-6 py-4 bg-slate-50 border-t border-slate-100">
+                <button
+                  onClick={() => setPeriodCertModal(false)}
+                  className="px-4 py-2.5 text-[13px] font-semibold text-slate-600 hover:bg-slate-200/60 rounded-[10px] transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => handleGenerateCertificates(massAutoSign, massEligibility.eligible)}
+                  disabled={massEligibility.eligible.length === 0 || isGenerating}
+                  className="px-5 py-2.5 text-[13px] font-semibold text-white bg-[#111827] hover:bg-[#1f2937] rounded-[10px] transition-colors shadow-sm disabled:opacity-50"
+                >
+                  Emitir {massEligibility.eligible.length} certificado{massEligibility.eligible.length !== 1 ? 's' : ''}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmación del oficio: formato DOCX/PDF + aviso de reemplazo */}
+        {solicitudModal && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
+            onMouseDown={(e) => { if (e.target === e.currentTarget) setSolicitudModal(null) }}
+          >
+            <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[440px] border border-slate-100 overflow-hidden">
+              <div className="px-6 pt-5 pb-4">
+                <h2 className="text-[16px] font-bold text-[#111827]">
+                  Generar solicitud · {solicitudModal.companyName}
+                </h2>
+                <p className="text-[12.5px] text-slate-500 mt-0.5">
+                  Un único oficio con los {solicitudModal.items.length} estudiante{solicitudModal.items.length > 1 ? 's' : ''} del grupo.
+                </p>
+              </div>
+
+              {solicitudModal.existing && (
+                <div className="mx-6 mb-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-[10px] px-3 py-2.5">
+                  <span className="text-[12px] text-amber-800 leading-snug">
+                    ⚠ Ya existe una solicitud vigente para este grupo: la versión anterior quedará
+                    invalidada (visible en el historial por 30 días).
+                  </span>
+                </div>
+              )}
+
+              {/* Formato de entrega */}
+              <div className="mx-6 mb-5 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => changeSolicitudFormat(false)}
+                  className={`flex flex-col items-start gap-0.5 p-3 rounded-[12px] border text-left transition-colors ${!solicitudAsPdf ? 'border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/10' : 'border-slate-200 hover:border-slate-300'}`}
+                >
+                  <span className="text-[13px] font-bold text-[#111827]">Word (DOCX)</span>
+                  <span className="text-[11px] text-slate-500 leading-snug">Editable. Se descarga al generar.</span>
+                </button>
+                <button
+                  onClick={() => changeSolicitudFormat(true)}
+                  className={`flex flex-col items-start gap-0.5 p-3 rounded-[12px] border text-left transition-colors ${solicitudAsPdf ? 'border-rose-500 bg-rose-50/60 ring-2 ring-rose-500/10' : 'border-slate-200 hover:border-slate-300'}`}
+                >
+                  <span className="text-[13px] font-bold text-[#111827]">PDF</span>
+                  <span className="text-[11px] text-slate-500 leading-snug">Listo para enviar. Se abre para visualizar.</span>
+                </button>
+              </div>
+
+              <div className="flex justify-end gap-2 px-6 py-4 bg-slate-50 border-t border-slate-100">
+                <button
+                  onClick={() => setSolicitudModal(null)}
+                  className="px-4 py-2.5 text-[13px] font-semibold text-slate-600 hover:bg-slate-200/60 rounded-[10px] transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmGenerateSolicitud}
+                  disabled={isGenerating}
+                  className="px-5 py-2.5 text-[13px] font-semibold text-white bg-[#111827] hover:bg-[#1f2937] rounded-[10px] transition-colors shadow-sm disabled:opacity-50"
+                >
+                  {solicitudModal.existing ? 'Regenerar' : 'Generar'} en {solicitudAsPdf ? 'PDF' : 'DOCX'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </RoleGate>
   )

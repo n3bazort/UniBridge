@@ -21,7 +21,7 @@ const PROTECTED_ROUTES: { path: string; roles: string[] }[] = [
 ]
 
 /** Rutas públicas que nunca redirigen */
-const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/signer-register']
+const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/signer-register']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

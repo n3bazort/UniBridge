@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException, BadRequestException, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
@@ -15,7 +15,9 @@ export interface DocumentGenerationJob {
 }
 
 @Injectable()
-export class GeneratedDocumentsService {
+export class GeneratedDocumentsService implements OnModuleInit {
+  private readonly logger = new Logger(GeneratedDocumentsService.name);
+
   constructor(
     private prisma: PrismaService,
     private documentEngine: DocumentEngineService,
@@ -23,6 +25,71 @@ export class GeneratedDocumentsService {
     private practices: PracticesService,
     @InjectQueue('document-generation') private documentQueue: Queue<DocumentGenerationJob>,
   ) {}
+
+  /** Papelera de versiones: purga diaria de documentos no vigentes con +30 días. */
+  onModuleInit() {
+    // Primer barrido al minuto de arrancar; luego cada 24 horas
+    setTimeout(() => this.purgeTrash().catch((e) => this.logger.error('Purga inicial falló', e)), 60_000);
+    setInterval(() => this.purgeTrash().catch((e) => this.logger.error('Purga diaria falló', e)), 24 * 60 * 60 * 1000);
+  }
+
+  /**
+   * Elimina DEFINITIVAMENTE (BD + archivo en MinIO) las versiones anuladas
+   * con más de 30 días. Funciona como papelera: durante ese mes el historial
+   * las muestra con su motivo; después desaparecen.
+   *
+   * Se conservan siempre las que participaron en un circuito de firma:
+   * borrar esas filas rompería la trazabilidad de las firmas.
+   */
+  async purgeTrash(): Promise<{ purged: number; filesRemoved: number }> {
+    const candidates = await this.prisma.$queryRaw<
+      { id: string; fileUrl: string; signedFileKey: string | null }[]
+    >`
+      SELECT d.id, d."fileUrl", d."signedFileKey"
+      FROM generated_documents d
+      WHERE d.status != 'VALID'
+        AND COALESCE(d."invalidatedAt", d."createdAt") < now() - interval '30 days'
+        AND NOT EXISTS (SELECT 1 FROM signature_batch_items i WHERE i."documentId" = d.id)
+    `;
+
+    if (candidates.length === 0) return { purged: 0, filesRemoved: 0 };
+
+    const ids = candidates.map((c) => c.id);
+
+    // Romper las referencias de reemplazo que apunten a filas por purgar
+    await this.prisma.$executeRaw`
+      UPDATE generated_documents SET "replacedById" = NULL
+      WHERE "replacedById" = ANY(${ids}::uuid[])
+    `;
+    await this.prisma.$executeRaw`
+      DELETE FROM generated_documents WHERE id = ANY(${ids}::uuid[])
+    `;
+
+    // Un oficio grupal comparte archivo entre varias filas: el objeto solo se
+    // borra de MinIO cuando ya NINGUNA fila viva lo referencia.
+    const keys = new Set<string>();
+    for (const c of candidates) {
+      if (c.fileUrl) keys.add(c.fileUrl);
+      if (c.signedFileKey) keys.add(c.signedFileKey);
+    }
+    let filesRemoved = 0;
+    for (const key of keys) {
+      const stillUsed = await this.prisma.generatedDocument.count({
+        where: { OR: [{ fileUrl: key }, { signedFileKey: key }] },
+      });
+      if (stillUsed === 0) {
+        try {
+          await this.minio.removeObject(key);
+          filesRemoved++;
+        } catch (e: any) {
+          this.logger.warn(`No se pudo borrar de MinIO: ${key} (${e?.message})`);
+        }
+      }
+    }
+
+    this.logger.log(`Papelera: ${ids.length} versión(es) purgadas, ${filesRemoved} archivo(s) eliminados de MinIO`);
+    return { purged: ids.length, filesRemoved };
+  }
 
   async generateDocumentCode(
     type: string,
@@ -388,7 +455,7 @@ export class GeneratedDocumentsService {
     return { exists: !!existing };
   }
 
-  async generateSolicitudGrouped(templateId: string, studentIds: string[], generatedById?: string, overwrite?: boolean) {
+  async generateSolicitudGrouped(templateId: string, studentIds: string[], generatedById?: string, overwrite?: boolean, asPdf?: boolean) {
     // 1. Obtener template
     const template = await this.prisma.documentTemplate.findUnique({
       where: { id: templateId },
@@ -507,13 +574,17 @@ export class GeneratedDocumentsService {
     };
 
     // 4. Delegar al Motor de Documentos con key único
-    const objectKey = this.buildObjectKey(academicPeriodCode, 'SOLICITUD', oficioId, company.name.substring(0, 12), '.docx');
+    // La casilla "en PDF" entrega el MISMO oficio convertido con LibreOffice:
+    // un solo documento oficial, en el formato que se pidió.
+    const ext = asPdf ? '.pdf' : '.docx';
+    const objectKey = this.buildObjectKey(academicPeriodCode, 'SOLICITUD', oficioId, company.name.substring(0, 12), ext);
 
     const storedKey = await this.documentEngine.generateDocument(
       'DOCX',
       template.content, // Path al DOCX original
       dataToInject,
       objectKey,
+      { convertToPdf: !!asPdf },
     );
 
     // 5. Guardar el registro en GeneratedDocument para TODOS los estudiantes involucrados.

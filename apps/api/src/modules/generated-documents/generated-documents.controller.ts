@@ -35,7 +35,7 @@ export class GeneratedDocumentsController {
   @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Genera una solicitud grupal agrupando a los estudiantes (DOCX)' })
   generateSolicitud(@Req() req: any, @Body() dto: GenerateSolicitudDto) {
-    return this.service.generateSolicitudGrouped(dto.templateId, dto.studentIds, req.user?.id, dto.overwrite);
+    return this.service.generateSolicitudGrouped(dto.templateId, dto.studentIds, req.user?.id, dto.overwrite, dto.asPdf);
   }
 
   @Post('check-solicitud')
@@ -72,6 +72,13 @@ export class GeneratedDocumentsController {
   @ApiOperation({ summary: 'Devuelve una URL prefirmada de descarga (bucket privado, expira en 15 min)' })
   getDownloadUrl(@Req() req: any, @Param('id') id: string) {
     return this.service.getDownloadUrl(id, { id: req.user.id, role: req.user.role });
+  }
+
+  @Post('purge-trash')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Ejecuta ahora la purga de la papelera (versiones anuladas con +30 días)' })
+  purgeTrash() {
+    return this.service.purgeTrash();
   }
 
   @Get(':id/view')

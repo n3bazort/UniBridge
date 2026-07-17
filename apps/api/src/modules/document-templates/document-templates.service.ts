@@ -152,6 +152,34 @@ export class DocumentTemplatesService {
     return { id, docTypeAbbr: content.docTypeAbbr, codeSuffix: content.codeSuffix, codePrefix: content.codePrefix };
   }
 
+  /**
+   * Descarga de la plantilla original:
+   *  - DOCX → URL prefirmada del archivo Word subido
+   *  - PDF  → el diseño (JSON) como archivo, para respaldo o migración
+   */
+  async getDownloadInfo(id: string) {
+    const template = await this.prisma.documentTemplate.findUnique({ where: { id } });
+    if (!template) throw new NotFoundException('Template no encontrado');
+
+    const safeName = template.name.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ _.-]/g, '').trim() || 'plantilla';
+
+    if (template.type === 'DOCX') {
+      const docxPath = DocumentTemplatesService.docxContent(template.content).path;
+      if (!docxPath.startsWith('templates/')) {
+        throw new BadRequestException('Esta plantilla antigua no está en el almacenamiento descargable');
+      }
+      const url = await this.minio.getPresignedUrl(docxPath, 900, `${safeName}.docx`);
+      return { kind: 'url' as const, url, filename: `${safeName}.docx` };
+    }
+
+    // PDF: el "archivo" es el diseño JSON del editor
+    return {
+      kind: 'json' as const,
+      filename: `${safeName}.diseno.json`,
+      content: template.content,
+    };
+  }
+
   async findAll() {
     return this.prisma.documentTemplate.findMany({
       orderBy: { createdAt: 'desc' }

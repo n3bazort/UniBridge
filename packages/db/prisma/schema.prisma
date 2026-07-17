@@ -24,6 +24,10 @@ model User {
   deletedAt DateTime?
   suspendedAt DateTime?  // cuenta inhabilitada: no puede iniciar sesión (reversible)
 
+  // ── Recuperación de contraseña ──
+  resetToken          String?   @unique
+  resetTokenExpiresAt DateTime?
+
   coordinator        Coordinator?
   studentProfile     Student?
   signerProfile      SignerProfile?

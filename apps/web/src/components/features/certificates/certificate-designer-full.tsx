@@ -52,6 +52,7 @@ export function CertificateDesignerFull() {
   const [bgImageUrl, setBgImageUrl] = useState<string | null>(null)
   // Key durable en MinIO (lo que se persiste); bgImageUrl es la URL para mostrar
   const [bgImageKey, setBgImageKey] = useState<string | null>(null)
+  const bgFileInputRef = useRef<HTMLInputElement>(null)
   const [templateName, setTemplateName] = useState('')
   const [saving, setSaving] = useState(false)
   const [isDefaultTemplate, setIsDefaultTemplate] = useState(false)
@@ -272,11 +273,52 @@ export function CertificateDesignerFull() {
           />
         </div>
 
-        {/* Fondo */}
+        {/* Fondo: zona clickeable evidente — con miniatura y acciones cuando ya hay imagen */}
         <div className="p-4 border-b space-y-2">
           <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Imagen de Fondo</label>
-          <input type="file" accept="image/*" onChange={handleUploadBackground} className="w-full text-xs" />
-          {bgImageUrl && <p className="text-[10px] text-green-600 truncate">✓ Imagen cargada</p>}
+          <input
+            ref={bgFileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleUploadBackground}
+            className="hidden"
+          />
+          {bgImageUrl ? (
+            <div className="relative group/bg rounded-lg overflow-hidden border border-slate-200">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={bgImageUrl} alt="Fondo actual" className="w-full h-[86px] object-cover" />
+              <div className="absolute inset-0 bg-black/0 group-hover/bg:bg-black/45 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover/bg:opacity-100">
+                <button
+                  onClick={() => bgFileInputRef.current?.click()}
+                  className="px-3 py-1.5 bg-white text-[12px] font-semibold text-slate-800 rounded-md shadow hover:bg-slate-100"
+                >
+                  Cambiar fondo
+                </button>
+                <button
+                  onClick={() => { setBgImageUrl(null); setBgImageKey(null) }}
+                  className="px-3 py-1.5 bg-red-500 text-[12px] font-semibold text-white rounded-md shadow hover:bg-red-600"
+                >
+                  Quitar
+                </button>
+              </div>
+              <span className="absolute bottom-1 left-1.5 text-[9.5px] font-semibold text-white bg-black/50 px-1.5 py-0.5 rounded pointer-events-none group-hover/bg:opacity-0 transition-opacity">
+                Pasa el mouse para cambiar o quitar
+              </span>
+            </div>
+          ) : (
+            <button
+              onClick={() => bgFileInputRef.current?.click()}
+              className="w-full h-[86px] border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50/50 rounded-lg flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-blue-600 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <span className="text-[12px] font-semibold">Haz click para subir el fondo</span>
+              <span className="text-[10px]">PNG o JPG, tamaño carta</span>
+            </button>
+          )}
         </div>
 
         {/* Variables */}

@@ -103,15 +103,22 @@ export class DocumentTemplatesController {
     return this.service.findOne(id);
   }
 
-  @Patch(':id/set-default')
+  @Get(':id/download')
   @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Descarga la plantilla original (DOCX: archivo Word; PDF: diseño JSON)' })
+  downloadTemplate(@Param('id') id: string) {
+    return this.service.getDownloadInfo(id);
+  }
+
+  @Patch(':id/set-default')
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Marcar plantilla como predeterminada (desmarca todas las demás de su tipo)' })
   setDefault(@Param('id') id: string) {
     return this.service.setDefault(id);
   }
 
   @Patch(':id/docx-config')
-  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Configurar numeración del oficio' })
   updateDocxConfig(@Param('id') id: string, @Body() body: { docTypeAbbr?: string; codeSuffix?: string; codePrefix?: string }) {
     return this.service.updateDocxConfig(id, body);

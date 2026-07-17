@@ -16,4 +16,8 @@ export class GenerateSolicitudDto {
   @ApiProperty({ required: false, example: true })
   @IsOptional()
   overwrite?: boolean;
+
+  @ApiProperty({ required: false, example: false, description: 'Entregar el oficio en PDF (conversión vía LibreOffice) en vez de DOCX' })
+  @IsOptional()
+  asPdf?: boolean;
 }

@@ -193,6 +193,59 @@ export class SignaturesService {
     await archive.finalize();
   }
 
+  /**
+   * ZIP con los PDFs FINALES (ambas firmas) de lotes completados.
+   * Sin ids: todos los lotes COMPLETED. Con ids: solo los seleccionados.
+   */
+  async streamSignedZip(res: Response, batchIds?: string[]) {
+    const batches = await this.prisma.signatureBatch.findMany({
+      where: {
+        status: 'COMPLETED',
+        ...(batchIds?.length ? { id: { in: batchIds } } : {}),
+      },
+      include: {
+        items: {
+          where: { status: 'SIGNED', finalFileKey: { not: null } },
+          include: { document: { select: { documentCode: true } } },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Deduplicar por archivo (una SOLICITUD grupal comparte finalFileKey)
+    const seen = new Set<string>();
+    const entries: { key: string; name: string }[] = [];
+    for (const batch of batches) {
+      for (const item of batch.items) {
+        if (!item.finalFileKey || seen.has(item.finalFileKey)) continue;
+        seen.add(item.finalFileKey);
+        const code = item.document.documentCode || item.id;
+        // Carpeta por lote para que el ZIP quede navegable
+        entries.push({ key: item.finalFileKey, name: `${batch.code}/${code}.pdf` });
+      }
+    }
+
+    if (entries.length === 0) {
+      throw new NotFoundException('No hay documentos firmados que descargar en la selección');
+    }
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="Certificados_Firmados_${stamp}.zip"`);
+
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.on('error', (err) => {
+      this.logger.error('Error creando ZIP de firmados', err);
+      res.destroy(err);
+    });
+    archive.pipe(res);
+    for (const entry of entries) {
+      const stream = await this.minio.getObjectStream(entry.key);
+      archive.append(stream, { name: entry.name });
+    }
+    await archive.finalize();
+  }
+
   // ─────────────────── Subida de firmados ───────────────────
 
   /**

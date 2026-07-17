@@ -108,6 +108,33 @@ export default function DocumentsPage() {
     setCodeModal({ show: true, template })
   }
 
+  /** Descarga la plantilla original: DOCX = archivo Word; PDF = diseño JSON. */
+  const handleDownloadTemplate = async (template: DocumentTemplate, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    try {
+      const { data } = await api.get(`/document-templates/${template.id}/download`)
+      if (data.kind === 'url') {
+        // La URL prefirmada ya trae Content-Disposition attachment
+        const a = document.createElement('a')
+        a.href = data.url
+        a.download = data.filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      } else {
+        const blob = new Blob([JSON.stringify(data.content, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = data.filename
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'No se pudo descargar la plantilla')
+    }
+  }
+
   const saveCodeConfig = async () => {
     if (!codeModal.template) return
     try {
@@ -212,13 +239,14 @@ export default function DocumentsPage() {
                 // Única fuente de verdad: el flag isDefault (el backend garantiza que sea uno solo)
                 const isDefault = template.content?.isDefault === true;
                 return (
-                  <TemplateCard 
-                    key={template.id} 
+                  <TemplateCard
+                    key={template.id}
                     template={template}
                     isDefault={isDefault}
-                    onClick={() => router.push(`/documents/designer?templateId=${template.id}`)} 
+                    onClick={() => router.push(`/documents/designer?templateId=${template.id}`)}
                     onDelete={handleDelete}
                     onMakeDefault={(e) => handleMakeDefault(template, e)}
+                    onDownload={(e) => handleDownloadTemplate(template, e)}
                     onRename={handleRenameClick}
                   />
                 );
@@ -310,6 +338,17 @@ export default function DocumentsPage() {
                         {template.name}
                       </h3>
                       <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => handleDownloadTemplate(template, e)}
+                          className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#111827] hover:bg-slate-100 rounded-[8px] transition-colors"
+                          title="Descargar la plantilla Word original"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                          </svg>
+                        </button>
                         <button
                           onClick={(e) => handleMakeDefault(template, e)}
                           className={`flex items-center justify-center w-7 h-7 rounded-[8px] transition-colors ${isDocxDefault ? 'text-emerald-600 bg-emerald-50' : 'text-[#9ca3af] hover:text-emerald-600 hover:bg-emerald-50'}`}
@@ -536,19 +575,21 @@ export default function DocumentsPage() {
   )
 }
 
-function TemplateCard({ 
-  template, 
-  isDefault, 
-  onClick, 
-  onDelete, 
-  onMakeDefault, 
-  onRename 
-}: { 
-  template: DocumentTemplate; 
-  isDefault?: boolean; 
-  onClick: () => void; 
-  onDelete: (id: string, e: React.MouseEvent) => void; 
+function TemplateCard({
+  template,
+  isDefault,
+  onClick,
+  onDelete,
+  onMakeDefault,
+  onDownload,
+  onRename
+}: {
+  template: DocumentTemplate;
+  isDefault?: boolean;
+  onClick: () => void;
+  onDelete: (id: string, e: React.MouseEvent) => void;
   onMakeDefault: (e: React.MouseEvent) => void;
+  onDownload?: (e: React.MouseEvent) => void;
   onRename: (id: string, name: string, e: React.MouseEvent) => void;
 }) {
   const user = useAuthStore((state) => state.user)
@@ -595,6 +636,19 @@ function TemplateCard({
       
       {/* Botones Flotantes (Aparecen en hover o si están activos) */}
       <div className="absolute bottom-[20px] right-[20px] flex items-center gap-1 z-20">
+        {onDownload && (
+          <button
+            onClick={onDownload}
+            className="flex items-center justify-center w-7 h-7 bg-white text-[#9ca3af] rounded-[8px] opacity-0 group-hover:opacity-100 hover:bg-slate-100 hover:text-[#111827] transition-all border border-[#eef2f7]"
+            title="Descargar el diseño (JSON)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </button>
+        )}
         <button
           onClick={onMakeDefault}
           className={`flex items-center justify-center w-7 h-7 rounded-[8px] transition-all

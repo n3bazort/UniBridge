@@ -23,6 +23,22 @@ export class AuthController {
   }
 
 
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ auth: { limit: 5, ttl: 900000 } }) // Anti-abuso: 5 solicitudes por 15 min
+  @ApiOperation({ summary: 'Solicitar enlace de recuperación de contraseña' })
+  forgotPassword(@Body() body: { email: string }) {
+    return this.authService.forgotPassword(body.email || '');
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ auth: { limit: 10, ttl: 900000 } })
+  @ApiOperation({ summary: 'Establecer nueva contraseña con el token del enlace' })
+  resetPassword(@Body() body: { token: string; password: string }) {
+    return this.authService.resetPassword(body.token || '', body.password || '');
+  }
+
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refrescar sesión usando Refresh Token' })

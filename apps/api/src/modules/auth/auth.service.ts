@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
@@ -8,11 +8,104 @@ import { randomBytes } from 'crypto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
     private prisma: PrismaService,
   ) {}
+
+  // ─────────── Recuperación de contraseña (estudiantes y demás) ───────────
+
+  /**
+   * Genera un token de recuperación de un solo uso (1 hora de vigencia).
+   * Con SMTP configurado el link viaja por correo; sin SMTP (entorno local)
+   * el link se registra en el log del servidor y, fuera de producción,
+   * también se devuelve para poder probar el flujo completo.
+   *
+   * La respuesta es idéntica exista o no el correo: no se revela cuáles
+   * cuentas están registradas.
+   */
+  async forgotPassword(email: string) {
+    const generic = { message: 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.' };
+
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user || user.suspendedAt) return generic;
+
+    const token = randomBytes(32).toString('base64url');
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { resetToken: token, resetTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+    });
+
+    const frontendUrl = process.env.FRONTEND_URL
+      || (process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',')[0].trim() : 'http://localhost:3000');
+    const link = `${frontendUrl}/reset-password?token=${token}`;
+
+    const sent = await this.trySendResetEmail(email, link);
+    if (!sent) {
+      this.logger.warn(`SMTP no configurado. Link de recuperación para ${email}: ${link}`);
+      if (process.env.NODE_ENV !== 'production') {
+        // Solo en desarrollo: permite probar el flujo sin servidor de correo
+        return { ...generic, devLink: link };
+      }
+    }
+    return generic;
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    if (!newPassword || newPassword.length < 8) {
+      throw new BadRequestException('La contraseña debe tener al menos 8 caracteres');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { resetToken: token } });
+    if (!user || !user.resetTokenExpiresAt || user.resetTokenExpiresAt < new Date()) {
+      throw new BadRequestException('El enlace de recuperación no es válido o ya expiró. Solicita uno nuevo.');
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashed, resetToken: null, resetTokenExpiresAt: null },
+      }),
+      // Cerrar todas las sesiones abiertas: la clave vieja pudo estar comprometida
+      this.prisma.refreshToken.deleteMany({ where: { userId: user.id } }),
+    ]);
+
+    return { message: 'Contraseña actualizada. Ya puedes iniciar sesión.' };
+  }
+
+  /** Envía el correo si hay SMTP + nodemailer disponibles; false si no. */
+  private async trySendResetEmail(to: string, link: string): Promise<boolean> {
+    if (!process.env.SMTP_HOST) return false;
+    try {
+      // Carga perezosa: nodemailer es opcional en este proyecto
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: process.env.SMTP_USER
+          ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+          : undefined,
+      });
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || 'UniBridge <no-reply@uleam.edu.ec>',
+        to,
+        subject: 'Restablecer tu contraseña — UniBridge',
+        html: `<p>Recibimos una solicitud para restablecer tu contraseña.</p>
+               <p><a href="${link}">Haz click aquí para crear una nueva contraseña</a> (válido por 1 hora).</p>
+               <p>Si no fuiste tú, ignora este correo.</p>`,
+      });
+      return true;
+    } catch (e: any) {
+      this.logger.error(`No se pudo enviar el correo de recuperación: ${e?.message}`);
+      return false;
+    }
+  }
 
   async login(loginDto: LoginDto) {
     const user = await this.usersService.findByEmail(loginDto.email);

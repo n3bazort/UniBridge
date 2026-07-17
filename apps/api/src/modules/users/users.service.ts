@@ -9,26 +9,43 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async create(createUserDto: CreateUserDto) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: createUserDto.email },
-    });
+    const { facultyId, ...userData } = createUserDto;
 
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: userData.email },
+    });
     if (existingUser) throw new ConflictException('El email ya está registrado');
 
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    // Un coordinador sin facultad no puede operar: el multi-tenancy filtra
+    // todos sus datos por facultyId. Se exige al crear, no después.
+    if (userData.role === 'COORDINATOR' && !facultyId) {
+      throw new ConflictException('Un coordinador necesita una facultad asignada');
+    }
 
-    return this.prisma.user.create({
-      data: {
-        ...createUserDto,
-        password: hashedPassword,
-      },
-      select: { id: true, email: true, role: true, createdAt: true }
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { ...userData, password: hashedPassword },
+        select: { id: true, email: true, role: true, createdAt: true },
+      });
+      if (userData.role === 'COORDINATOR' && facultyId) {
+        await tx.coordinator.create({ data: { userId: user.id, facultyId } });
+      }
+      return user;
     });
   }
 
   findAll() {
     return this.prisma.user.findMany({
-      select: { id: true, email: true, role: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        suspendedAt: true,
+        coordinator: { select: { faculty: { select: { name: true } } } },
+      },
     });
   }
 

@@ -7,6 +7,7 @@ import { Plus, Check, Edit2, Shield, Calendar, Users, Hash, ChevronDown, Chevron
 import { toast } from 'sonner'
 import { useAuthStore } from '@/store/auth-store'
 import { ProgramsConfig } from '@/components/settings/programs-config'
+import { TeamAccountsConfig } from '@/components/settings/team-accounts-config'
 
 interface AcademicPeriod {
   id: string
@@ -178,13 +179,15 @@ export default function SettingsPage() {
                         <input
                           type="text"
                           defaultValue={period.deanName || ''}
+                          disabled={!isAdmin}
                           onBlur={(e) => {
                             if (e.target.value !== period.deanName) {
                               handleUpdateAuthority(period.id, 'deanName', e.target.value)
                             }
                           }}
                           placeholder="Ej: Dr. Juan Pérez"
-                          className="w-full bg-slate-50 border-none rounded-[8px] px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-100 transition-shadow text-[#0f172a]"
+                          title={!isAdmin ? 'Solo el Administrador define las autoridades' : undefined}
+                          className="w-full bg-slate-50 border-none rounded-[8px] px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-100 transition-shadow text-[#0f172a] disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                       </div>
 
@@ -197,13 +200,15 @@ export default function SettingsPage() {
                         <input
                           type="text"
                           defaultValue={period.directorName || ''}
+                          disabled={!isAdmin}
                           onBlur={(e) => {
                             if (e.target.value !== period.directorName) {
                               handleUpdateAuthority(period.id, 'directorName', e.target.value)
                             }
                           }}
                           placeholder="Ej: Ing. María Gómez"
-                          className="w-full bg-slate-50 border-none rounded-[8px] px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-100 transition-shadow text-[#0f172a]"
+                          title={!isAdmin ? 'Solo el Administrador define las autoridades' : undefined}
+                          className="w-full bg-slate-50 border-none rounded-[8px] px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-100 transition-shadow text-[#0f172a] disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                       </div>
                       </div>
@@ -215,6 +220,9 @@ export default function SettingsPage() {
           </div>
 
           <ProgramsConfig />
+
+          {/* Cuentas del equipo: solo el ADMIN crea coordinadores/administradores */}
+          {isAdmin && <TeamAccountsConfig />}
 
         </div>
       </div>

@@ -39,7 +39,9 @@ export class AcademicPeriodsController {
   }
 
   @Put(':id')
-  @Roles(Role.ADMIN, Role.COORDINATOR)
+  // Configuración institucional (autoridades, periodo activo): solo el ADMIN.
+  // El coordinador consume esta configuración, no la define.
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Actualizar período académico' })
   update(@Param('id') id: string, @Body() updateDto: UpdateAcademicPeriodDto) {
     const data: Record<string, unknown> = { ...updateDto };
