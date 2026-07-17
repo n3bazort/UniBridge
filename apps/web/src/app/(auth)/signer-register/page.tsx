@@ -16,7 +16,7 @@ function SignerRegisterForm() {
 
   const [validating, setValidating] = useState(true)
   const [invalid, setInvalid] = useState<string | null>(null)
-  const [signerRole, setSignerRole] = useState<'DEAN' | 'DIRECTOR' | null>(null)
+  const [invitationData, setInvitationData] = useState<{ role: string, signerRole?: string, inviterEmail: string } | null>(null)
   const [emailLocked, setEmailLocked] = useState(false)
   const [form, setForm] = useState({ email: '', password: '', confirm: '', fullName: '', title: '' })
   const [submitting, setSubmitting] = useState(false)
@@ -31,7 +31,7 @@ function SignerRegisterForm() {
     }
     api.get('/signatures/invitations/validate', { params: { token } })
       .then(({ data }) => {
-        setSignerRole(data.signerRole)
+        setInvitationData({ role: data.role, signerRole: data.signerRole, inviterEmail: data.inviterEmail })
         if (data.email) {
           setForm((f) => ({ ...f, email: data.email }))
           setEmailLocked(true)
@@ -85,20 +85,33 @@ function SignerRegisterForm() {
     )
   }
 
+  const getRoleLabel = () => {
+    if (invitationData?.role === 'ADMIN') return 'Administrador'
+    if (invitationData?.role === 'COORDINATOR') return 'Coordinador de Facultad'
+    if (invitationData?.signerRole === 'DEAN') return 'Decano'
+    if (invitationData?.signerRole === 'DIRECTOR') return 'Responsable de Prácticas'
+    return 'Usuario'
+  }
+
   return (
     <>
       <div className="text-center">
-        <h2 className="text-2xl font-bold tracking-tight">UniBridge</h2>
-        <p className="text-sm text-muted-foreground mt-2">
-          Registro de firmante · Invitación válida como{' '}
-          <span className="font-semibold text-foreground">{signerRole === 'DEAN' ? 'Decano' : 'Responsable de Prácticas'}</span>
-        </p>
+        <h2 className="text-2xl font-bold tracking-tight">Registro de Cuenta</h2>
+        <div className="mt-4 p-4 bg-blue-50/50 border border-blue-100 rounded-xl">
+          <p className="text-[13px] text-blue-800 leading-relaxed">
+            Has sido invitado por <span className="font-semibold">{invitationData?.inviterEmail}</span> para unirte a UniBridge.
+          </p>
+          <p className="text-[13px] text-blue-800 mt-1">
+            Se te asignará el rol de: <span className="font-semibold bg-white px-2 py-0.5 rounded shadow-sm inline-block mt-1">{getRoleLabel()}</span>
+          </p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {formError && (
-          <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 rounded-md border border-destructive/20">
-            {formError}
+          <div className="flex items-start gap-2 p-3 text-sm font-medium text-red-700 bg-red-50 rounded-md border border-red-200">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>{formError}</span>
           </div>
         )}
 
@@ -115,28 +128,32 @@ function SignerRegisterForm() {
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="fullName">Nombre Completo</Label>
-          <Input
-            id="fullName"
-            required
-            disabled={submitting}
-            placeholder="Dr. Nombre Apellido"
-            value={form.fullName}
-            onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-          />
-        </div>
+        {(invitationData?.role === 'SIGNER' || invitationData?.role === 'ADMIN' || invitationData?.role === 'COORDINATOR') && (
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Nombre Completo</Label>
+            <Input
+              id="fullName"
+              required
+              disabled={submitting}
+              placeholder="Dr. Nombre Apellido"
+              value={form.fullName}
+              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+            />
+          </div>
+        )}
 
-        <div className="space-y-2">
-          <Label htmlFor="title">Cargo (opcional)</Label>
-          <Input
-            id="title"
-            disabled={submitting}
-            placeholder="Decano de la Facultad de..."
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-          />
-        </div>
+        {invitationData?.role === 'SIGNER' && (
+          <div className="space-y-2">
+            <Label htmlFor="title">Cargo (opcional)</Label>
+            <Input
+              id="title"
+              disabled={submitting}
+              placeholder="Decano de la Facultad de..."
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">

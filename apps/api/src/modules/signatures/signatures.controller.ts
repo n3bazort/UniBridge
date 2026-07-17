@@ -50,42 +50,42 @@ export class SignaturesController {
     return this.signers.registerWithInvitation(dto);
   }
 
-  // ─────────── Gestión de firmantes (ADMIN) ───────────
+  // ─────────── Gestión de usuarios (ADMIN) ───────────
 
-  @Post('signers')
+  @Post('users')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Crea un usuario firmante directamente (decano/director)' })
-  createSigner(@Body() dto: CreateSignerDto) {
-    return this.signers.createSigner(dto);
+  @ApiOperation({ summary: 'Crea un usuario directamente (cualquier rol)' })
+  createSigner(@Req() req: any, @Body() dto: CreateSignerDto) {
+    return this.signers.createSigner(dto, req.user?.id);
   }
 
-  @Get('signers')
+  @Get('users')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Lista los firmantes registrados' })
+  @ApiOperation({ summary: 'Lista los usuarios registrados' })
   listSigners() {
     return this.signers.listSigners();
   }
 
-  @Patch('signers/:userId/suspend')
+  @Patch('users/:userId/suspend')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Inhabilita o reactiva la cuenta de un firmante' })
-  setSuspended(@Param('userId') userId: string, @Body() body: { suspended: boolean }) {
-    return this.signers.setSuspended(userId, body.suspended);
+  @ApiOperation({ summary: 'Inhabilita o reactiva la cuenta de un usuario' })
+  setSuspended(@Req() req: any, @Param('userId') userId: string, @Body() body: { suspended: boolean }) {
+    return this.signers.setSuspended(userId, body.suspended, req.user?.id);
   }
 
-  @Delete('signers/:userId')
+  @Delete('users/:userId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Elimina definitivamente la cuenta de un firmante (solo si no tiene historial)' })
-  deleteSigner(@Param('userId') userId: string) {
-    return this.signers.deleteSigner(userId);
+  @ApiOperation({ summary: 'Elimina definitivamente la cuenta de un usuario' })
+  deleteSigner(@Req() req: any, @Param('userId') userId: string) {
+    return this.signers.deleteSigner(userId, req.user?.id);
   }
 
   @Post('invitations')

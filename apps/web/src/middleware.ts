@@ -17,7 +17,7 @@ const PROTECTED_ROUTES: { path: string; roles: string[] }[] = [
   { path: '/settings', roles: ['ADMIN', 'COORDINATOR'] },
   { path: '/student-dashboard', roles: ['STUDENT'] },
   { path: '/signer-dashboard', roles: ['SIGNER'] },
-  { path: '/signers', roles: ['ADMIN'] },
+  { path: '/users', roles: ['ADMIN'] },
 ]
 
 /** Rutas públicas que nunca redirigen */

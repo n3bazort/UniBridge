@@ -1,11 +1,16 @@
 import { IsEmail, IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { SignerRole } from '@prisma/client';
+import { SignerRole, Role } from '@prisma/client';
 
 export class CreateInvitationDto {
-  @ApiProperty({ enum: SignerRole })
+  @ApiProperty({ enum: Role })
+  @IsEnum(Role)
+  role: Role;
+
+  @ApiPropertyOptional({ enum: SignerRole })
+  @IsOptional()
   @IsEnum(SignerRole)
-  signerRole: SignerRole;
+  signerRole?: SignerRole;
 
   @ApiPropertyOptional({ description: 'Si se fija, el registro exigirá este correo' })
   @IsOptional()
@@ -23,4 +28,14 @@ export class CreateInvitationDto {
   @Min(1)
   @Max(30)
   expiresInDays?: number;
+
+  @ApiPropertyOptional({ description: 'ID de la facultad si es Coordinador' })
+  @IsOptional()
+  @IsString()
+  facultyId?: string;
+
+  @ApiPropertyOptional({ description: 'ID de la carrera que coordina' })
+  @IsOptional()
+  @IsString()
+  programId?: string;
 }

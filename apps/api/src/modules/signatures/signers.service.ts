@@ -3,88 +3,152 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 
 import { PrismaService } from '../../infrastructure/database/prisma.service';
-import { SignerRole } from '@prisma/client';
+import { SignerRole, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
-/**
- * Gestión de usuarios firmantes (autoridades). Dos vías:
- *  A) El ADMIN crea el usuario directamente (con contraseña temporal generada).
- *  B) El ADMIN genera un link de invitación con token de un solo uso y se lo
- *     envía a la autoridad, que se auto-registra y rellena sus datos.
- */
 @Injectable()
 export class SignersService {
   constructor(private prisma: PrismaService) {}
 
-  // ───────────── Vía A: creación directa por el admin ─────────────
+  /**
+   * Correos con privilegio root (dueños del sistema). Definidos en
+   * ROOT_ADMIN_EMAILS (separados por coma) en el entorno del servidor —
+   * NUNCA en la base de datos, para que nadie los altere desde la app.
+   * Solo un root puede crear o tocar otras cuentas ADMIN.
+   */
+  private rootEmails(): string[] {
+    return (process.env.ROOT_ADMIN_EMAILS || '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  private isRoot(email?: string | null): boolean {
+    if (!email) return false;
+    return this.rootEmails().includes(email.toLowerCase());
+  }
+
+  /**
+   * Verifica que el actor pueda otorgar el rol solicitado.
+   * Crear/gestionar un ADMIN es privilegio EXCLUSIVO de un root: así, aunque
+   * una cuenta admin común sea comprometida, no puede fabricar más admins ni
+   * escalar a tomar el control total.
+   */
+  private async assertCanGrantRole(actorId: string | undefined, targetRole: Role) {
+    if (targetRole !== 'ADMIN') return; // coordinadores/firmantes: cualquier admin
+    const actor = actorId
+      ? await this.prisma.user.findUnique({ where: { id: actorId }, select: { email: true } })
+      : null;
+    if (!this.isRoot(actor?.email)) {
+      throw new ForbiddenException(
+        'Solo el administrador raíz del sistema puede crear o gestionar cuentas de Administrador.',
+      );
+    }
+  }
 
   async createSigner(dto: {
     email: string;
     password?: string;
-    fullName: string;
+    fullName?: string;
     title?: string;
-    signerRole: SignerRole;
-  }) {
+    signerRole?: SignerRole;
+    role: Role;
+    facultyId?: string;
+    programId?: string;
+  }, actorId?: string) {
+    await this.assertCanGrantRole(actorId, dto.role);
+
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existing) throw new ConflictException('Ya existe un usuario con ese correo');
 
-    // Contraseña temporal si el admin no define una
     const tempPassword = dto.password || crypto.randomBytes(6).toString('base64url');
     const hashed = await bcrypt.hash(tempPassword, 10);
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        password: hashed,
-        role: 'SIGNER',
-        signerProfile: {
-          create: {
-            signerRole: dto.signerRole,
-            fullName: dto.fullName,
-            title: dto.title,
-          },
+    const userData: any = {
+      email: dto.email,
+      password: hashed,
+      role: dto.role,
+    };
+
+    if (dto.role === 'SIGNER') {
+      if (!dto.signerRole || !dto.fullName) throw new BadRequestException('Faltan datos para el firmante');
+      userData.signerProfile = {
+        create: {
+          signerRole: dto.signerRole,
+          fullName: dto.fullName,
+          title: dto.title,
         },
-      },
-      include: { signerProfile: true },
+      };
+    } else if (dto.role === 'COORDINATOR') {
+      // La carrera define la facultad; se acepta cualquiera de las dos como ancla
+      const facultyId = dto.facultyId || (dto.programId
+        ? (await this.prisma.program.findUnique({ where: { id: dto.programId }, select: { facultyId: true } }))?.facultyId
+        : undefined);
+      if (!facultyId) throw new BadRequestException('Falta la carrera (o facultad) para el coordinador');
+      userData.coordinator = {
+        create: {
+          facultyId,
+          programId: dto.programId || null,
+        },
+      };
+    }
+
+    const user = await this.prisma.user.create({
+      data: userData,
+      include: { signerProfile: true, coordinator: true },
     });
 
     return {
       id: user.id,
       email: user.email,
+      role: user.role,
       signerRole: user.signerProfile?.signerRole,
       fullName: user.signerProfile?.fullName,
-      // Solo se devuelve si fue autogenerada, para que el admin la comunique
       temporaryPassword: dto.password ? undefined : tempPassword,
     };
   }
 
   async listSigners() {
-    return this.prisma.signerProfile.findMany({
-      include: { user: { select: { id: true, email: true, createdAt: true, suspendedAt: true } } },
+    const users = await this.prisma.user.findMany({
+      where: { role: { in: ['ADMIN', 'COORDINATOR', 'SIGNER'] }, deletedAt: null },
+      include: { signerProfile: true, coordinator: { include: { faculty: true, program: true } } },
       orderBy: { createdAt: 'desc' },
     });
+    return users.map(user => ({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      suspendedAt: user.suspendedAt,
+      createdAt: user.createdAt,
+      isRoot: this.isRoot(user.email),
+      signerRole: user.signerProfile?.signerRole,
+      fullName: user.signerProfile?.fullName || user.email.split('@')[0],
+      title: user.signerProfile?.title,
+      facultyName: user.coordinator?.faculty?.name,
+      programName: user.coordinator?.program?.name,
+    }));
   }
 
-  // ───────────── Gestión de cuentas de firmantes ─────────────
-
-  /**
-   * Inhabilita (o reactiva) la cuenta de un firmante. Es reversible: la
-   * cuenta y su historial de firmas se conservan, solo se bloquea el acceso.
-   */
-  async setSuspended(userId: string, suspended: boolean) {
+  async setSuspended(userId: string, suspended: boolean, actorId?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { signerProfile: true },
     });
-    if (!user || !user.signerProfile) throw new NotFoundException('Firmante no encontrado');
+    if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    // Inhabilitar al ÚLTIMO firmante activo de un rol dejaría los lotes de esa
-    // etapa sin nadie que los firme. Si hay otro colega activo, no hay problema.
-    if (suspended) {
+    // Una cuenta root es intocable desde la app; y tocar cualquier admin
+    // (aunque no sea root) exige ser root.
+    if (this.isRoot(user.email)) {
+      throw new ForbiddenException('La cuenta raíz del sistema no puede inhabilitarse desde la aplicación.');
+    }
+    await this.assertCanGrantRole(actorId, user.role);
+
+    if (suspended && user.role === 'SIGNER' && user.signerProfile) {
       const role = user.signerProfile.signerRole;
       const stage = role === 'DEAN' ? 'PENDING_DEAN' : 'PENDING_DIRECTOR';
       const [pending, otherActive] = await Promise.all([
@@ -99,7 +163,7 @@ export class SignersService {
       ]);
       if (pending > 0 && otherActive === 0) {
         throw new ConflictException(
-          `No se puede inhabilitar: es el único ${role === 'DEAN' ? 'Decano' : 'Responsable de Prácticas'} activo y hay ${pending} lote(s) esperando esa firma. Registra un reemplazo o completa esos lotes primero.`,
+          `No se puede inhabilitar: es el único activo y hay ${pending} lote(s) esperando firma.`
         );
       }
     }
@@ -113,70 +177,74 @@ export class SignersService {
       id: userId,
       suspended,
       message: suspended
-        ? `La cuenta de ${user.email} quedó inhabilitada: no podrá iniciar sesión.`
-        : `La cuenta de ${user.email} fue reactivada.`,
+        ? `La cuenta quedó inhabilitada: no podrá iniciar sesión.`
+        : `La cuenta fue reactivada.`,
     };
   }
 
-  /**
-   * Elimina definitivamente la cuenta de un firmante. Solo se permite si no
-   * dejó rastro en el circuito de firma: borrar a quien ya firmó documentos
-   * rompería la trazabilidad de esos documentos.
-   */
-  async deleteSigner(userId: string) {
+  async deleteSigner(userId: string, actorId?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { signerProfile: true },
+      include: { signerProfile: true, coordinator: true },
     });
-    if (!user || !user.signerProfile) throw new NotFoundException('Firmante no encontrado');
+    if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    // Lo que de verdad ata a un firmante al historial son SUS FIRMAS: si se
-    // borra su cuenta, los documentos que respaldó quedan sin autor conocido.
-    const [deanSigs, finalSigs, batches, generated, invalidated] = await Promise.all([
-      this.prisma.signatureBatchItem.count({ where: { deanSignedById: userId } }),
-      this.prisma.signatureBatchItem.count({ where: { finalSignedById: userId } }),
-      this.prisma.signatureBatch.count({ where: { createdById: userId } }),
-      this.prisma.generatedDocument.count({ where: { generatedById: userId } }),
-      this.prisma.generatedDocument.count({ where: { invalidatedById: userId } }),
-    ]);
+    if (this.isRoot(user.email)) {
+      throw new ForbiddenException('La cuenta raíz del sistema no puede eliminarse desde la aplicación.');
+    }
+    await this.assertCanGrantRole(actorId, user.role);
 
-    const signatures = deanSigs + finalSigs;
-    const traces = signatures + batches + generated + invalidated;
-    if (traces > 0) {
-      const detail = signatures > 0
-        ? `firmó ${signatures} documento(s)`
-        : `tiene ${traces} registro(s) en el historial de documentos`;
-      throw new ConflictException(
-        `No se puede eliminar a ${user.email}: ${detail}. Inhabilita la cuenta en su lugar para conservar la trazabilidad de esos documentos.`,
-      );
+    if (user.role === 'SIGNER') {
+      const [deanSigs, finalSigs, batches, generated, invalidated] = await Promise.all([
+        this.prisma.signatureBatchItem.count({ where: { deanSignedById: userId } }),
+        this.prisma.signatureBatchItem.count({ where: { finalSignedById: userId } }),
+        this.prisma.signatureBatch.count({ where: { createdById: userId } }),
+        this.prisma.generatedDocument.count({ where: { generatedById: userId } }),
+        this.prisma.generatedDocument.count({ where: { invalidatedById: userId } }),
+      ]);
+
+      const traces = deanSigs + finalSigs + batches + generated + invalidated;
+      if (traces > 0) {
+        throw new ConflictException(
+          `No se puede eliminar: tiene ${traces} registro(s) en el historial. Inhabilítalo en su lugar.`
+        );
+      }
     }
 
-    // Ojo: el middleware global convierte User.delete en soft-delete (marca
-    // deletedAt). Aquí queremos un borrado real —si no, el correo quedaría
-    // ocupado para siempre y no se podría volver a registrar— así que se
-    // ejecuta en SQL directo, que el middleware no intercepta.
     await this.prisma.$transaction([
       this.prisma.$executeRaw`DELETE FROM refresh_tokens WHERE "userId" = ${userId}::uuid`,
       this.prisma.$executeRaw`DELETE FROM signer_profiles WHERE "userId" = ${userId}::uuid`,
+      this.prisma.$executeRaw`DELETE FROM coordinators WHERE "userId" = ${userId}::uuid`,
       this.prisma.$executeRaw`DELETE FROM users WHERE id = ${userId}::uuid`,
     ]);
 
-    return { id: userId, message: `La cuenta de ${user.email} fue eliminada definitivamente.` };
+    return { id: userId, message: `La cuenta fue eliminada definitivamente.` };
   }
-
-  // ───────────── Vía B: invitación con token ─────────────
 
   async createInvitation(
     createdById: string,
-    dto: { signerRole: SignerRole; email?: string; fullName?: string; expiresInDays?: number },
+    dto: { role: Role; signerRole?: SignerRole; email?: string; fullName?: string; expiresInDays?: number; facultyId?: string; programId?: string },
   ) {
+    // Una invitación de ADMIN es otra vía de escalar privilegios: mismo candado.
+    await this.assertCanGrantRole(createdById, dto.role);
+
     const token = crypto.randomBytes(32).toString('base64url');
     const days = Math.min(Math.max(dto.expiresInDays ?? 7, 1), 30);
 
-    const invitation = await this.prisma.signerInvitation.create({
+    let coordFaculty: string | null = null;
+    if (dto.role === 'COORDINATOR') {
+      coordFaculty = dto.facultyId || (dto.programId
+        ? (await this.prisma.program.findUnique({ where: { id: dto.programId }, select: { facultyId: true } }))?.facultyId || null
+        : null);
+    }
+
+    const invitation = await this.prisma.userInvitation.create({
       data: {
         token,
-        signerRole: dto.signerRole,
+        role: dto.role,
+        signerRole: dto.role === 'SIGNER' ? dto.signerRole : null,
+        facultyId: coordFaculty,
+        programId: dto.role === 'COORDINATOR' ? dto.programId : null,
         email: dto.email,
         fullName: dto.fullName,
         expiresAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000),
@@ -188,17 +256,13 @@ export class SignersService {
       id: invitation.id,
       token,
       link: `${this.frontendUrl()}/signer-register?token=${token}`,
-      signerRole: invitation.signerRole,
+      role: invitation.role,
       expiresAt: invitation.expiresAt,
     };
   }
 
-  /**
-   * Lista las invitaciones incluyendo el link completo: mientras siga activa,
-   * el admin necesita poder volver a copiarlo (p. ej. si se perdió el correo).
-   */
   async listInvitations() {
-    const invitations = await this.prisma.signerInvitation.findMany({
+    const invitations = await this.prisma.userInvitation.findMany({
       orderBy: { createdAt: 'desc' },
     });
 
@@ -209,18 +273,16 @@ export class SignersService {
         ...inv,
         isActive,
         isExpired: !inv.usedAt && inv.expiresAt <= now,
-        // El link solo tiene sentido mientras la invitación pueda usarse
         link: isActive ? `${this.frontendUrl()}/signer-register?token=${inv.token}` : null,
       };
     });
   }
 
-  /** Elimina una invitación: el link deja de funcionar de inmediato. */
   async deleteInvitation(id: string) {
-    const invitation = await this.prisma.signerInvitation.findUnique({ where: { id } });
+    const invitation = await this.prisma.userInvitation.findUnique({ where: { id } });
     if (!invitation) throw new NotFoundException('Invitación no encontrada');
 
-    await this.prisma.signerInvitation.delete({ where: { id } });
+    await this.prisma.userInvitation.delete({ where: { id } });
     return {
       id,
       message: invitation.usedAt
@@ -236,33 +298,36 @@ export class SignersService {
     );
   }
 
-  /** Valida un token de invitación (para pre-llenar el formulario público). */
   async validateInvitation(token: string) {
-    const invitation = await this.prisma.signerInvitation.findUnique({ where: { token } });
+    const invitation = await this.prisma.userInvitation.findUnique({ 
+      where: { token },
+      include: { createdBy: true }
+    });
     if (!invitation) throw new NotFoundException('Invitación no válida');
     if (invitation.usedAt) throw new BadRequestException('Esta invitación ya fue utilizada');
     if (invitation.expiresAt < new Date()) throw new BadRequestException('Esta invitación ha expirado');
     return {
+      role: invitation.role,
       signerRole: invitation.signerRole,
+      facultyId: invitation.facultyId,
       email: invitation.email,
       fullName: invitation.fullName,
+      inviterEmail: invitation.createdBy.email,
     };
   }
 
-  /** Registro público del firmante usando el token de invitación. */
   async registerWithInvitation(dto: {
     token: string;
     email: string;
     password: string;
-    fullName: string;
+    fullName?: string;
     title?: string;
   }) {
-    const invitation = await this.prisma.signerInvitation.findUnique({ where: { token: dto.token } });
+    const invitation = await this.prisma.userInvitation.findUnique({ where: { token: dto.token } });
     if (!invitation) throw new NotFoundException('Invitación no válida');
     if (invitation.usedAt) throw new BadRequestException('Esta invitación ya fue utilizada');
     if (invitation.expiresAt < new Date()) throw new BadRequestException('Esta invitación ha expirado');
 
-    // Si el admin fijó el correo en la invitación, debe coincidir
     if (invitation.email && invitation.email.toLowerCase() !== dto.email.toLowerCase()) {
       throw new BadRequestException('El correo no coincide con el de la invitación');
     }
@@ -276,22 +341,34 @@ export class SignersService {
 
     const hashed = await bcrypt.hash(dto.password, 10);
 
+    const userData: any = {
+      email: dto.email,
+      password: hashed,
+      role: invitation.role,
+    };
+
+    if (invitation.role === 'SIGNER') {
+      userData.signerProfile = {
+        create: {
+          signerRole: invitation.signerRole,
+          fullName: dto.fullName || 'Autoridad',
+          title: dto.title,
+        },
+      };
+    } else if (invitation.role === 'COORDINATOR') {
+      userData.coordinator = {
+        create: {
+          facultyId: invitation.facultyId,
+          programId: invitation.programId || null,
+        },
+      };
+    }
+
     const [user] = await this.prisma.$transaction([
       this.prisma.user.create({
-        data: {
-          email: dto.email,
-          password: hashed,
-          role: 'SIGNER',
-          signerProfile: {
-            create: {
-              signerRole: invitation.signerRole,
-              fullName: dto.fullName,
-              title: dto.title,
-            },
-          },
-        },
+        data: userData,
       }),
-      this.prisma.signerInvitation.update({
+      this.prisma.userInvitation.update({
         where: { id: invitation.id },
         data: { usedAt: new Date() },
       }),

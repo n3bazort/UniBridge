@@ -16,8 +16,13 @@ export class CreateUserDto {
   @IsEnum(Role)
   role!: Role;
 
-  @ApiPropertyOptional({ description: 'Facultad a cargo (requerida cuando el rol es COORDINATOR)' })
+  @ApiPropertyOptional({ description: 'Facultad a cargo (o se deriva del programId)' })
   @IsOptional()
   @IsUUID()
   facultyId?: string;
+
+  @ApiPropertyOptional({ description: 'Carrera que coordina (deriva la facultad)' })
+  @IsOptional()
+  @IsUUID()
+  programId?: string;
 }

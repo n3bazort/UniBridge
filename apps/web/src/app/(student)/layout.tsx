@@ -15,15 +15,23 @@ export default function StudentLayout({
   const logout = useAuthStore((state) => state.logout)
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  const [hasHydrated, setHasHydrated] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    if (mounted && !isAuthenticated) {
+    setHasHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hasHydrated) return
+
+    if (!isAuthenticated) {
+      document.cookie = 'unibridge-session=; path=/; max-age=0; SameSite=Lax'
       router.replace('/login')
-    } else if (mounted && user?.role !== 'STUDENT') {
+    } else if (user?.role !== 'STUDENT') {
       router.replace('/overview') // Redirigir admin/coordinator a su dashboard
     }
-  }, [isAuthenticated, user, router, mounted])
+  }, [isAuthenticated, user, router, hasHydrated])
 
   if (!mounted || !isAuthenticated || user?.role !== 'STUDENT') {
     return (

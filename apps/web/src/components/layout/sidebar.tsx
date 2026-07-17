@@ -21,7 +21,7 @@ const navItems = [
   { name: 'Documentos', href: '/documents', icon: Files, roles: ['ADMIN', 'COORDINATOR'] },
   { name: 'Certificados', href: '/certificates', icon: FileText, roles: ['ADMIN', 'COORDINATOR'] },
   { name: 'Importaciones', href: '/imports', icon: Upload, roles: ['ADMIN', 'COORDINATOR'] },
-  { name: 'Firmantes', href: '/signers', icon: UserCheck, roles: ['ADMIN'] },
+  { name: 'Usuarios', href: '/users', icon: UserCheck, roles: ['ADMIN'] },
   { name: 'Firma de Documentos', href: '/signer-dashboard', icon: PenLine, roles: ['SIGNER'] },
   { name: 'Configuraciones', href: '/settings', icon: Settings, roles: ['ADMIN', 'COORDINATOR'] },
 ]

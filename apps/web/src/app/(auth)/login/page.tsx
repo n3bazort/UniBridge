@@ -26,14 +26,22 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    // Check if the session cookie actually exists to avoid stale localStorage loop
+    const hasCookie = document.cookie.includes('unibridge-session=')
+
+    if (isAuthenticated && user && hasCookie) {
       if (user.role === 'ADMIN') {
         router.replace('/overview')
       } else if (user.role === 'COORDINATOR') {
         router.replace('/students')
+      } else if (user.role === 'SIGNER') {
+        router.replace('/signer-dashboard')
       } else {
-        router.replace('/dashboard')
+        router.replace('/student-dashboard')
       }
+    } else if (isAuthenticated && !hasCookie) {
+      // Stale Zustand state without valid cookie: clear it
+      useAuthStore.getState().logout()
     }
   }, [isAuthenticated, user, router])
 
@@ -67,8 +75,13 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {error && (
-            <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 rounded-md border border-destructive/20">
-              {error}
+            <div className="flex items-start gap-2 p-3 text-sm font-medium text-red-700 bg-red-50 rounded-md border border-red-200">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>{error}</span>
             </div>
           )}
           

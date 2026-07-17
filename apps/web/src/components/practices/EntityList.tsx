@@ -179,6 +179,21 @@ export function EntityList({
         const solicitudAction = getSolicitudAction(group.items)
         const needsAttention = solicitudAction.kind === 'regenerate' || solicitudAction.kind === 'update'
 
+        // Campos que TODO el grupo comparte se dicen UNA vez en la cabecera;
+        // las filas solo muestran lo que varía entre estudiantes.
+        const uniq = (vals: (string | number | null | undefined)[]) => {
+          const s = new Set(vals.map(v => String(v ?? '')))
+          return s.size === 1 && group.items.length > 1 ? vals[0] : null
+        }
+        const sharedTutor = isGrouped ? (uniq(group.items.map(p => p.tutorName)) as string | null) : null
+        const sharedHours = isGrouped ? (uniq(group.items.map(p => p.totalHours || 0)) as number | null) : null
+        const sharedLevel = isGrouped ? (uniq(group.items.map(p => p.academicLevel)) as string | null) : null
+        const sharedParts = [
+          sharedLevel ? String(sharedLevel).replace(' Nivel', '') : null,
+          sharedHours !== null ? `${sharedHours} h` : null,
+          sharedTutor || null,
+        ].filter(Boolean)
+
         return (
           <div key={gIdx} className="flex flex-col gap-[12px]">
             {/* Cabecera de empresa: seleccionarla es lo que habilita la acción */}
@@ -212,7 +227,8 @@ export function EntityList({
                   {isGrouped ? <Building2 className="w-4 h-4" /> : (isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}
                 </div>
 
-                <div className="flex items-baseline gap-2.5 min-w-0">
+                <div className="flex flex-col min-w-0 gap-0.5">
+                  <div className="flex items-baseline gap-2.5 min-w-0">
                   <h3 className="text-[15px] font-semibold text-[#111827] truncate">{group.name}</h3>
                   <span className="text-[13px] text-[#9ca3af] shrink-0">{group.count}</span>
                   {solicitudAction.kind === 'regenerate' && (
@@ -225,6 +241,16 @@ export function EntityList({
                     <span className="flex items-center gap-1 text-amber-600 text-[12px] font-medium shrink-0">
                       <AlertCircle className="w-3.5 h-3.5" />
                       {solicitudAction.missing} sin incluir en el oficio
+                    </span>
+                  )}
+                  </div>
+                  {/* Lo que todo el grupo comparte se dice UNA sola vez aquí */}
+                  {sharedParts.length > 0 && (
+                    <span
+                      className="text-[11.5px] text-[#9ca3af] truncate"
+                      title="Datos comunes a todos los estudiantes del grupo"
+                    >
+                      Todos: {sharedParts.join(' · ')}
                     </span>
                   )}
                 </div>
@@ -342,17 +368,16 @@ export function EntityList({
                               </span>
                             )}
                           </span>
-                          {/* Contexto en una línea: nivel · horas · tutor */}
+                          {/* Solo lo que VARÍA entre compañeros; lo común vive en
+                              la cabecera. Si nada varía, la cédula da identidad. */}
                           <span className="text-[12px] text-[#9ca3af] truncate">
-                            {practice.academicLevel?.replace(' Nivel', '') || '—'}
-                            <span className="mx-1.5 text-[#e5e7eb]">·</span>
-                            {practice.totalHours || 0} h
-                            {practice.tutorName && (
-                              <span className="hidden lg:inline">
-                                <span className="mx-1.5 text-[#e5e7eb]">·</span>
-                                {practice.tutorName}
-                              </span>
-                            )}
+                            {(() => {
+                              const parts: string[] = []
+                              if (sharedLevel === null && practice.academicLevel) parts.push(practice.academicLevel.replace(' Nivel', ''))
+                              if (sharedHours === null) parts.push(`${practice.totalHours || 0} h`)
+                              if (sharedTutor === null && practice.tutorName) parts.push(practice.tutorName)
+                              return parts.length > 0 ? parts.join(' · ') : `CI ${practice.student.dni}`
+                            })()}
                           </span>
                         </div>
 

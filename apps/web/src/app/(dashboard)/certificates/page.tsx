@@ -497,6 +497,104 @@ function CertificatesPageInner() {
   }
 
   /**
+   * Una SOLICITUD es un solo documento físico compartido por varios
+   * estudiantes: se agrupan sus filas (mismo código + estado) en una sola,
+   * con un único estado y un único juego de acciones. Los certificados son
+   * individuales y quedan como filas propias.
+   */
+  const clusterDocs = (docs: GeneratedDocument[]) => {
+    const map = new Map<string, GeneratedDocument[]>()
+    const order: string[] = []
+    for (const d of docs) {
+      const key = d.documentType !== 'CERTIFICADO' && d.documentCode
+        ? `S:${d.documentCode}:${d.status}:${d.signatureStatus || 'NONE'}`
+        : `U:${d.id}`
+      if (!map.has(key)) { map.set(key, []); order.push(key) }
+      map.get(key)!.push(d)
+    }
+    return order.map(k => map.get(k)!)
+  }
+
+  /** Fila unificada del oficio grupal: un documento, N estudiantes. */
+  const renderSharedRow = (cluster: GeneratedDocument[]) => {
+    const doc = cluster[0]
+    const state = docState(doc)
+    const isDocxFile = (doc.signedFileKey || doc.fileUrl || '').endsWith('.docx')
+    const isHighlighted = cluster.some(d => d.id === highlightId)
+
+    return (
+      <div
+        key={`shared-${doc.documentCode}-${doc.status}`}
+        id={`doc-${doc.id}`}
+        className={cn(
+          'flex items-center gap-3 px-4 py-3 border-b border-[#f3f4f6] last:border-0 transition-colors hover:bg-slate-50/70',
+          isHighlighted && 'ring-2 ring-blue-400 ring-inset rounded-[10px] bg-blue-50/40'
+        )}
+      >
+        <span className="w-4 shrink-0" />
+
+        {/* Ícono "apilado": comunica que es UN documento de varios */}
+        <div className="relative shrink-0 w-9 h-8">
+          <div className="absolute left-1.5 top-0 w-8 h-8 rounded-[9px] bg-blue-100/70 rotate-3" />
+          <div className="absolute left-0 top-0 w-8 h-8 rounded-[9px] bg-blue-50 text-blue-500 flex items-center justify-center border border-blue-100">
+            <FileText className="w-4 h-4" />
+          </div>
+        </div>
+
+        <div className="flex flex-col min-w-0 flex-1 gap-0.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[13px] font-semibold text-[#111827] shrink-0">Solicitud grupal</span>
+            <span className="text-[10.5px] font-bold text-slate-400 font-mono truncate">{doc.documentCode}</span>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full shrink-0">
+              {cluster.length} estudiantes
+            </span>
+          </div>
+          {/* Los dueños del documento, en una línea */}
+          <span className="text-[11.5px] text-[#9ca3af] truncate">
+            {cluster.map(d => `${d.student?.firstName?.split(' ')[0]} ${d.student?.lastName?.split(' ')[0]}`).join(' · ')}
+            <span className="text-[#d1d5db]"> — {formatDate(doc.createdAt)}</span>
+          </span>
+        </div>
+
+        {/* UN estado y UN juego de acciones para todo el grupo */}
+        <span className={cn('flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border shrink-0', state.cls)}>
+          <span className={cn('w-1.5 h-1.5 rounded-full', state.dot)} />
+          {state.label}
+        </span>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {isDocxFile ? (
+            <button
+              onClick={() => handleDownload(doc.id)}
+              className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              title="Descargar DOCX"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={() => handleView(doc.id)}
+              className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+              title="Visualizar en pestaña nueva"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          )}
+          {doc.status === 'VALID' && (
+            <button
+              onClick={() => { setDocToInvalidate(doc.id); setShowInvalidateModal(true) }}
+              className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-300 hover:bg-red-50 hover:text-red-600 transition-colors"
+              title={`Invalidar el oficio (afecta a los ${cluster.length} estudiantes)`}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  /**
    * Tarjeta de cuadrícula (estilo explorador de Windows): el ícono escala con
    * el slider, click = visualizar (o descargar si es DOCX).
    */
@@ -770,15 +868,46 @@ function CertificatesPageInner() {
                       </div>
                       {layout === 'grid' ? (
                         <div
-                          className="grid gap-1 p-3"
+                          className="grid gap-1 p-3 pl-6"
                           style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${iconSize + 40}px, 1fr))` }}
                         >
-                          {docs.map(renderDocCard)}
+                          {clusterDocs(docs).map(cluster =>
+                            cluster.length > 1 ? (
+                              <div
+                                key={`shared-${cluster[0].documentCode}-${cluster[0].status}`}
+                                id={`doc-${cluster[0].id}`}
+                                onClick={() => ((cluster[0].signedFileKey || cluster[0].fileUrl || '').endsWith('.docx') ? handleDownload(cluster[0].id) : handleView(cluster[0].id))}
+                                className="relative flex flex-col items-center gap-1.5 p-3 rounded-[12px] border border-transparent cursor-pointer transition-colors hover:bg-slate-50 hover:border-[#eef2f7]"
+                                title={`Solicitud grupal ${cluster[0].documentCode} — ${cluster.length} estudiantes`}
+                              >
+                                <div className="relative" style={{ width: iconSize, height: iconSize * 0.78 }}>
+                                  <div className="absolute left-1.5 top-1 w-full h-full rounded-[14px] bg-blue-100/60 rotate-2" />
+                                  <div className="absolute inset-0 rounded-[14px] bg-blue-50 text-blue-400 flex items-center justify-center border border-blue-100">
+                                    <FileText style={{ width: iconSize * 0.42, height: iconSize * 0.42 }} strokeWidth={1.5} />
+                                  </div>
+                                  <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
+                                    {cluster.length}
+                                  </span>
+                                </div>
+                                <span className="text-[11px] font-semibold text-[#111827] text-center leading-tight" style={{ maxWidth: iconSize + 24 }}>
+                                  Solicitud grupal
+                                </span>
+                                <span className="text-[9.5px] font-mono text-slate-400 truncate" style={{ maxWidth: iconSize + 24 }}>
+                                  {cluster[0].documentCode}
+                                </span>
+                              </div>
+                            ) : renderDocCard(cluster[0])
+                          )}
                         </div>
                       ) : (
-                        <AnimatePresence mode="popLayout">
-                          {docs.map(renderDocRow)}
-                        </AnimatePresence>
+                        // Sangría: los documentos son "hijos" de la empresa
+                        <div className="ml-6 border-l-2 border-[#eef2f7]">
+                          <AnimatePresence mode="popLayout">
+                            {clusterDocs(docs).map(cluster =>
+                              cluster.length > 1 ? renderSharedRow(cluster) : renderDocRow(cluster[0])
+                            )}
+                          </AnimatePresence>
+                        </div>
                       )}
                     </div>
                   )

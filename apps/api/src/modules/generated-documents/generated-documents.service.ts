@@ -612,22 +612,45 @@ export class GeneratedDocumentsService implements OnModuleInit {
   /**
    * Invalida un documento dejando rastro de por qué y de quién lo hizo: sin
    * eso, un documento anulado no se puede defender ante una auditoría.
+   *
+   * Si es una SOLICITUD, la invalidación alcanza a TODO el grupo (todas las
+   * filas que comparten el documentCode): el oficio es un solo documento
+   * físico compartido — invalidarlo "para uno solo" dejaría un estado
+   * imposible, con el mismo papel válido e inválido a la vez.
    */
   async invalidate(id: string, reason: string, invalidatedById?: string) {
-    const doc = await this.prisma.generatedDocument.update({
+    const doc = await this.prisma.generatedDocument.findUnique({
       where: { id },
-      data: {
-        status: 'INVALIDATED',
-        invalidatedAt: new Date(),
-        invalidReason: reason,
-        invalidatedById,
-      },
-      select: { id: true, studentId: true },
+      select: { id: true, studentId: true, documentType: true, documentCode: true, status: true },
     });
+    if (!doc) throw new NotFoundException('Documento no encontrado');
 
-    // Invalidar la solicitud puede devolver la práctica a "Pendiente"
-    await this.practices.recalculateForStudents([doc.studentId]).catch((): void => undefined);
-    return doc;
+    const data = {
+      status: 'INVALIDATED' as const,
+      invalidatedAt: new Date(),
+      invalidReason: reason,
+      invalidatedById,
+    };
+
+    let affectedStudentIds: string[] = [doc.studentId];
+
+    if (doc.documentType === 'SOLICITUD' && doc.documentCode) {
+      const group = await this.prisma.generatedDocument.findMany({
+        where: { documentCode: doc.documentCode, documentType: 'SOLICITUD', status: 'VALID' },
+        select: { id: true, studentId: true },
+      });
+      await this.prisma.generatedDocument.updateMany({
+        where: { id: { in: group.map((g) => g.id) } },
+        data,
+      });
+      affectedStudentIds = [...new Set(group.map((g) => g.studentId))];
+    } else {
+      await this.prisma.generatedDocument.update({ where: { id }, data });
+    }
+
+    // Invalidar la solicitud puede devolver las prácticas a "Pendiente"
+    await this.practices.recalculateForStudents(affectedStudentIds).catch((): void => undefined);
+    return { id: doc.id, affected: affectedStudentIds.length };
   }
 
   async regenerate(id: string, generatedById?: string) {

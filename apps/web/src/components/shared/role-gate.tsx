@@ -14,9 +14,19 @@ export function RoleGate({ children, allowedRoles }: RoleGateProps) {
   const { user, isAuthenticated } = useAuthStore()
   const router = useRouter()
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
+  const [hasHydrated, setHasHydrated] = useState(false)
+
+  // Wait for client-side hydration to complete so Zustand can read from localStorage
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
 
   useEffect(() => {
+    if (!hasHydrated) return
+
     if (!isAuthenticated || !user) {
+      // Clear the session cookie to prevent infinite redirect loops with middleware if localStorage was cleared
+      document.cookie = 'unibridge-session=; path=/; max-age=0; SameSite=Lax'
       router.replace('/login')
       return
     }
@@ -35,7 +45,7 @@ export function RoleGate({ children, allowedRoles }: RoleGateProps) {
     } else {
       setIsAuthorized(true)
     }
-  }, [isAuthenticated, user, allowedRoles, router])
+  }, [isAuthenticated, user, allowedRoles, router, hasHydrated])
 
   if (isAuthorized === null) {
     return (

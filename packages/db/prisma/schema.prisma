@@ -40,6 +40,7 @@ model User {
   finalSignedItems   SignatureBatchItem[] @relation("ItemFinalSigner")
   signatureBatches   SignatureBatch[]
   generationBatches  GenerationBatch[]
+  userInvitations    UserInvitation[] @relation("UserInvitations")
 
   @@map("users")
 }
@@ -59,6 +60,7 @@ model Faculty {
   practices     Practice[]
   excelImports  ExcelImport[]
   documentTemplates DocumentTemplate[]
+  userInvitations UserInvitation[]
 
   @@map("faculties")
 }
@@ -67,12 +69,14 @@ model Coordinator {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @unique @db.Uuid
   facultyId String   @db.Uuid
+  programId String?  @db.Uuid  // carrera específica que coordina (la facultad se deriva de ella)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
 
   user      User     @relation(fields: [userId], references: [id])
   faculty   Faculty  @relation(fields: [facultyId], references: [id])
+  program   Program? @relation(fields: [programId], references: [id])
 
   @@map("coordinators")
 }
@@ -88,6 +92,7 @@ model Program {
 
   faculty     Faculty  @relation(fields: [facultyId], references: [id])
   students    Student[]
+  coordinators Coordinator[]
 
   @@map("programs")
 }
@@ -236,12 +241,15 @@ enum SignerRole {
   DIRECTOR  // Director: firma sobre el PDF ya firmado por el decano
 }
 
-// Invitación para que una autoridad se auto-registre como firmante
-// mediante un link con token de un solo uso (o creación directa por el admin).
-model SignerInvitation {
+// Invitación genérica para que cualquier rol se auto-registre (ADMIN, COORDINATOR, SIGNER)
+// mediante un link con token de un solo uso.
+model UserInvitation {
   id          String     @id @default(uuid()) @db.Uuid
   token       String     @unique
-  signerRole  SignerRole
+  role        Role       @default(SIGNER)
+  signerRole  SignerRole?
+  facultyId   String?    @db.Uuid
+  programId   String?    @db.Uuid  // carrera que coordinará (deriva la facultad)
   email       String?    // si el admin la fija, el registro exige este correo
   fullName    String?    // pre-llenado opcional
   expiresAt   DateTime
@@ -249,7 +257,10 @@ model SignerInvitation {
   createdById String     @db.Uuid
   createdAt   DateTime   @default(now())
 
-  @@map("signer_invitations")
+  createdBy   User       @relation("UserInvitations", fields: [createdById], references: [id])
+  faculty     Faculty?   @relation(fields: [facultyId], references: [id])
+
+  @@map("user_invitations")
 }
 
 // Vincula a un usuario con rol SIGNER con la autoridad que representa

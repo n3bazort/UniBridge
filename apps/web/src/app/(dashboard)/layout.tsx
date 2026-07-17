@@ -15,16 +15,25 @@ export default function DashboardLayout({
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  const [hasHydrated, setHasHydrated] = useState(false)
   const { isCollapsed } = useSidebarStore()
 
   useEffect(() => {
     setMounted(true)
-    if (mounted && !isAuthenticated) {
+    setHasHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hasHydrated) return
+    
+    if (!isAuthenticated) {
+      // Clear cookie to break middleware infinite loops
+      document.cookie = 'unibridge-session=; path=/; max-age=0; SameSite=Lax'
       router.replace('/login')
     }
-  }, [isAuthenticated, router, mounted])
+  }, [isAuthenticated, router, hasHydrated])
 
-  if (!mounted || !isAuthenticated) {
+  if (!mounted || !hasHydrated || !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

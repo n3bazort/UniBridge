@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -18,8 +18,8 @@ export class UsersController {
   @Post()
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Crear usuario (Solo ADMIN)' })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  create(@Req() req: any, @Body() createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto, req.user?.id);
   }
 
   @Get()
