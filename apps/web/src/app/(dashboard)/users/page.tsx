@@ -151,6 +151,15 @@ export default function UsersPage() {
     onError: (err: any) => toast.error(err.response?.data?.message || 'No se pudo eliminar la invitación'),
   })
 
+  // El admin restablece la contraseña: el backend genera una clave temporal
+  // que se muestra en un modal para entregarla al usuario.
+  const [resetResult, setResetResult] = useState<{ email: string; temporaryPassword: string } | null>(null)
+  const resetPassword = useMutation({
+    mutationFn: async (userId: string) => (await api.patch(`/signatures/users/${userId}/reset-password`)).data,
+    onSuccess: (data) => setResetResult({ email: data.email, temporaryPassword: data.temporaryPassword }),
+    onError: (err: any) => toast.error(err.response?.data?.message || 'No se pudo restablecer la contraseña'),
+  })
+
   const copy = (text: string) => {
     navigator.clipboard.writeText(text)
     toast.success('Copiado al portapapeles')
@@ -371,6 +380,19 @@ export default function UsersPage() {
                           </span>
 
                           <button
+                            onClick={() => {
+                              if (confirm(`¿Restablecer la contraseña de ${u.email}?\n\nSe generará una clave temporal que deberás entregarle. Sus sesiones abiertas se cerrarán.`)) {
+                                resetPassword.mutate(u.id)
+                              }
+                            }}
+                            disabled={resetPassword.isPending}
+                            className="p-1.5 rounded-md text-[#9ca3af] hover:text-blue-600 hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40"
+                            title="Restablecer contraseña"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
                             onClick={() => setSuspended.mutate({ userId: u.id, suspended: !suspended })}
                             disabled={setSuspended.isPending}
                             className={`p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40 ${
@@ -464,6 +486,47 @@ export default function UsersPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal con la clave temporal tras un restablecimiento */}
+      {resetResult && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setResetResult(null) }}
+        >
+          <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[420px] border border-slate-100 p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-[12px] bg-blue-50 flex items-center justify-center shrink-0">
+                <KeyRound className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-[16px] font-bold text-[#111827] leading-tight">Contraseña restablecida</h2>
+                <p className="text-[12.5px] text-slate-500 mt-0.5">Entrégala a {resetResult.email}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-[10px] px-3 py-2.5 mb-2">
+              <code className="flex-1 text-[16px] font-mono font-bold text-amber-900 tracking-wide">{resetResult.temporaryPassword}</code>
+              <button
+                onClick={() => { navigator.clipboard.writeText(resetResult.temporaryPassword); toast.success('Clave copiada') }}
+                className="p-1.5 rounded-md bg-white border border-amber-200 text-amber-700 hover:bg-amber-100 shrink-0"
+                title="Copiar clave"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-[11.5px] text-slate-500 mb-5 leading-snug">
+              Esta clave solo se muestra ahora. El usuario debe cambiarla al iniciar sesión. Sus sesiones abiertas ya se cerraron.
+            </p>
+
+            <button
+              onClick={() => setResetResult(null)}
+              className="w-full py-2.5 text-[13px] font-semibold text-white bg-[#111827] hover:bg-[#1f2937] rounded-[10px] transition-colors"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </RoleGate>
   )
 }

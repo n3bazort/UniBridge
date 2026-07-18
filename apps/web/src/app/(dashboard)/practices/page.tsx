@@ -68,6 +68,7 @@ export default function PracticesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [activePracticeId, setActivePracticeId] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [generatingCertIds, setGeneratingCertIds] = useState<Set<string>>(new Set())
 
   // Reasignación de empresa
   const [reassignPractice, setReassignPractice] = useState<Practice | null>(null)
@@ -403,6 +404,7 @@ export default function PracticesPage() {
       }
 
       // Initialize progress states
+      setGeneratingCertIds(new Set(selectedPractices.map((p: any) => p.id)))
       setGenerationTotal(selectedPractices.length)
       setGenerationCurrent(0)
       setGenerationProgress(0)
@@ -489,6 +491,7 @@ export default function PracticesPage() {
       setIsProgressModalOpen(false)
     } finally {
       setIsGenerating(false)
+      setGeneratingCertIds(new Set())
     }
   }
   /**
@@ -837,6 +840,7 @@ export default function PracticesPage() {
                 onEditPhone={handleEditPhone}
                 onReassign={activeTab === 'assigned' ? setReassignPractice : undefined}
                 recentlyInvalidatedDocIds={recentlyInvalidatedDocIds}
+                generatingCertIds={generatingCertIds}
                 onDocumentClick={handleDocumentClick}
               />
             )}

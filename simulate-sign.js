@@ -25,8 +25,10 @@ if (originalBuffer.toString('latin1', 0, 4) !== '%PDF') {
 
 // Comprobar si ya fue firmado simuladamente
 const content = originalBuffer.toString('latin1');
-if (content.includes('FAKE SIGNATURE FOR TESTING')) {
-  console.log(`⚠️ Ya estaba firmado: ${path.basename(inputPath)}`);
+const signatureCount = (content.match(/FAKE SIGNATURE FOR TESTING/g) || []).length;
+
+if (signatureCount >= 2) {
+  console.log(`⚠️ Ya tiene 2 firmas simuladas: ${path.basename(inputPath)}`);
   process.exit(0);
 }
 

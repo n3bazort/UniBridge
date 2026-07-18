@@ -40,13 +40,13 @@ async function main() {
   await prisma.refreshToken.deleteMany({});
   await prisma.user.deleteMany({});
 
-  const hashedPassword = await bcrypt.hash('@adminadmin007', 10);
+  const hashedPassword = await bcrypt.hash('@devdev007', 10);
   
   const user = await prisma.user.upsert({
-    where: { email: 'admin@uleam.edu.ec' },
+    where: { email: 'devoot@dev.com' },
     update: {},
     create: {
-      email: 'admin@uleam.edu.ec',
+      email: 'devoot@dev.com',
       password: hashedPassword,
       role: 'ADMIN',
     },
@@ -54,53 +54,53 @@ async function main() {
   
   console.log('✅ Usuario Admin maestro creado exitosamente!');
   console.log(`Email: ${user.email}`);
-  console.log(`Password: @adminadmin007`);
+  console.log(`Password: @devdev007`);
 
   const coordinator = await prisma.user.upsert({
-    where: { email: 'coordinator@uleam.edu.ec' },
+    where: { email: 'fabricio@dev.com' },
     update: {},
     create: {
-      email: 'coordinator@uleam.edu.ec',
+      email: 'fabricio@dev.com',
       password: hashedPassword,
       role: 'COORDINATOR',
     },
   });
-  console.log('✅ Usuario Coordinator creado exitosamente!');
+  console.log('✅ Usuario Coordinator (Fabricio Z) creado exitosamente!');
 
   // ─── Firmantes (autoridades): decano y director ───
   await prisma.user.upsert({
-    where: { email: 'decano@uleam.edu.ec' },
+    where: { email: 'danna@dev.com' },
     update: {},
     create: {
-      email: 'decano@uleam.edu.ec',
+      email: 'danna@dev.com',
       password: hashedPassword,
       role: 'SIGNER',
       signerProfile: {
         create: {
           signerRole: 'DEAN',
-          fullName: 'Decano de Facultad',
-          title: 'Decano de la Facultad de Ciencias de la Vida y Tecnologías',
+          fullName: 'Danna Danna',
+          title: 'Decana de la Facultad',
         },
       },
     },
   });
   await prisma.user.upsert({
-    where: { email: 'director@uleam.edu.ec' },
+    where: { email: 'byron@dev.com' },
     update: {},
     create: {
-      email: 'director@uleam.edu.ec',
+      email: 'byron@dev.com',
       password: hashedPassword,
       role: 'SIGNER',
       signerProfile: {
         create: {
           signerRole: 'DIRECTOR',
-          fullName: 'Responsable de Prácticas',
+          fullName: 'Byron Calderon Z',
           title: 'Responsable de Prácticas Preprofesionales',
         },
       },
     },
   });
-  console.log('✅ Usuarios Firmantes (decano/director) creados exitosamente!');
+  console.log('✅ Usuarios Firmantes (Decana Danna y Responsable Byron) creados exitosamente!');
 
   const faculty = await prisma.faculty.upsert({
     where: { name: 'Facultad de Ciencias Informáticas' },

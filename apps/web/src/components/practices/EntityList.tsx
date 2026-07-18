@@ -66,6 +66,8 @@ interface EntityListProps {
   recentlyInvalidatedDocIds?: Set<string>
   /** Click en un mini-ícono de documento: navega a su instancia en /certificates */
   onDocumentClick?: (docId: string) => void
+  /** IDs de prácticas que actualmente están generando certificado */
+  generatingCertIds?: Set<string>
 }
 
 /** Estado efectivo del ícono de solicitud (DOCX) de un estudiante. */
@@ -124,7 +126,8 @@ export function EntityList({
   onEditPhone,
   onReassign,
   recentlyInvalidatedDocIds,
-  onDocumentClick
+  onDocumentClick,
+  generatingCertIds
 }: EntityListProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [contextMenu, setContextMenu] = useState<{ id: string, studentId: string, currentPhone: string, x: number, y: number } | null>(null)
@@ -405,6 +408,8 @@ export function EntityList({
                                 ? `Solicitud invalidada: ${docxState.doc?.invalidReason || 'requiere regenerarse'}`
                                 : 'Sin solicitud — requisito para el certificado'
 
+                            const isGeneratingCert = generatingCertIds?.has(practice.id)
+
                             return (
                               <>
                                 <motion.button
@@ -413,14 +418,28 @@ export function EntityList({
                                   onClick={(e) => docxState.doc ? handleDocClick(e, docxState.doc.id) : e.stopPropagation()}
                                   className={cn(
                                     "relative w-[28px] h-[28px] rounded-[8px] flex items-center justify-center transition-all",
-                                    (isGenerating && isSelected) ? "bg-blue-50 text-blue-500 cursor-wait" :
                                     docxState.state === 'valid' ? "bg-blue-50 hover:bg-blue-100 text-blue-500 cursor-pointer" :
                                     docxState.state === 'stale' ? "bg-amber-50 hover:bg-amber-100 text-amber-500 cursor-pointer" :
                                     "bg-slate-50 text-slate-300 cursor-default",
                                   )}
                                   title={docxTitle}
                                 >
-                                  {(isGenerating && isSelected) ? (
+                                  <FileText className="w-4 h-4" />
+                                  {docxState.state === 'stale' && (
+                                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">!</span>
+                                  )}
+                                </motion.button>
+                                <button
+                                  onClick={(e) => pdf && !isGeneratingCert ? handleDocClick(e, pdf.id) : e.stopPropagation()}
+                                  className={cn(
+                                    "w-[28px] h-[28px] rounded-[8px] flex items-center justify-center transition-all", 
+                                    isGeneratingCert ? "bg-rose-50 text-rose-500 cursor-wait" :
+                                    pdf ? "bg-rose-50 hover:bg-rose-100 text-rose-500 cursor-pointer" : 
+                                    "bg-slate-50 text-slate-300 cursor-default"
+                                  )}
+                                  title={isGeneratingCert ? 'Generando certificado...' : pdf ? `Certificado ${pdf.documentCode || ''} — ver en Certificados` : 'Sin certificado emitido'}
+                                >
+                                  {isGeneratingCert ? (
                                     <div className="relative w-4 h-4">
                                       <svg className="w-4 h-4 -rotate-90 animate-spin" viewBox="0 0 24 24">
                                         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray="45" strokeDashoffset="15" />
@@ -429,16 +448,6 @@ export function EntityList({
                                   ) : (
                                     <FileText className="w-4 h-4" />
                                   )}
-                                  {docxState.state === 'stale' && !(isGenerating && isSelected) && (
-                                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">!</span>
-                                  )}
-                                </motion.button>
-                                <button
-                                  onClick={(e) => pdf ? handleDocClick(e, pdf.id) : e.stopPropagation()}
-                                  className={cn("w-[28px] h-[28px] rounded-[8px] flex items-center justify-center transition-all", pdf ? "bg-rose-50 hover:bg-rose-100 text-rose-500 cursor-pointer" : "bg-slate-50 text-slate-300 cursor-default")}
-                                  title={pdf ? `Certificado ${pdf.documentCode || ''} — ver en Certificados` : 'Sin certificado emitido'}
-                                >
-                                  <FileText className="w-4 h-4" />
                                 </button>
                               </>
                             )

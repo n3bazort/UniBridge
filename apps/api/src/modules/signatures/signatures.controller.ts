@@ -88,6 +88,15 @@ export class SignaturesController {
     return this.signers.deleteSigner(userId, req.user?.id);
   }
 
+  @Patch('users/:userId/reset-password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'El admin restablece la contraseña de un usuario (genera clave temporal)' })
+  resetUserPassword(@Req() req: any, @Param('userId') userId: string) {
+    return this.signers.resetUserPassword(userId, req.user?.id);
+  }
+
   @Post('invitations')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
@@ -143,6 +152,15 @@ export class SignaturesController {
   @ApiOperation({ summary: 'Lista todos los lotes de firma con su avance' })
   findBatches() {
     return this.signatures.findBatches();
+  }
+
+  @Delete('batches/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Anula un lote de firma que no se ha completado' })
+  cancelBatch(@Param('id') id: string) {
+    return this.signatures.cancelBatch(id);
   }
 
   @Get('batches/pending')

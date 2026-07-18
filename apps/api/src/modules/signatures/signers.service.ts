@@ -182,6 +182,40 @@ export class SignersService {
     };
   }
 
+  /**
+   * El administrador restablece la contraseña de un usuario: genera una clave
+   * temporal aleatoria y la devuelve UNA vez para que el admin se la entregue.
+   * Cierra las sesiones abiertas de ese usuario.
+   *
+   * Restablecer a un ADMIN exige ser root (mismo candado que crear admins).
+   * La cuenta root solo se restablece con el script create-root.js.
+   */
+  async resetUserPassword(userId: string, actorId?: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    if (this.isRoot(user.email)) {
+      throw new ForbiddenException('La contraseña de la cuenta raíz solo se restablece con el script create-root.js.');
+    }
+    await this.assertCanGrantRole(actorId, user.role);
+
+    // Clave temporal legible: 3 bloques (ej. "k7m-9qx-4pz")
+    const tempPassword = Array.from({ length: 3 }, () => crypto.randomBytes(2).toString('hex')).join('-');
+    const hashed = await bcrypt.hash(tempPassword, 10);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { password: hashed } }),
+      this.prisma.refreshToken.deleteMany({ where: { userId } }),
+    ]);
+
+    return {
+      id: userId,
+      email: user.email,
+      temporaryPassword: tempPassword,
+      message: `Contraseña restablecida. Entrega esta clave temporal a ${user.email} y pídele que la cambie al ingresar.`,
+    };
+  }
+
   async deleteSigner(userId: string, actorId?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

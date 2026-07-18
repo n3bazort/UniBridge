@@ -401,6 +401,18 @@ function CertificatesPageInner() {
     }
   }
 
+  const handleCancelBatch = async (id: string) => {
+    if (!confirm('¿Estás seguro de anular este lote? Los documentos volverán a estar pendientes de envío.')) return
+    try {
+      await api.delete(`/signatures/batches/${id}`)
+      toast.success('Lote anulado correctamente')
+      refetchBatches()
+      refetch()
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Error al anular el lote')
+    }
+  }
+
   const renderDocRow = (doc: GeneratedDocument) => {
     const state = docState(doc)
     const isPdf = doc.template?.type === 'PDF'
@@ -1008,6 +1020,16 @@ function CertificatesPageInner() {
                             >
                               <Archive className="w-3.5 h-3.5" />
                               ZIP firmado
+                            </button>
+                          )}
+                          {(batch.status === 'PENDING_DEAN' || batch.status === 'PENDING_DIRECTOR') && (
+                            <button
+                              onClick={() => handleCancelBatch(batch.id)}
+                              className="h-[32px] px-3 flex items-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-[9px] text-[11.5px] font-semibold transition-colors"
+                              title="Anular lote y devolver documentos a estado pendiente"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              Anular Lote
                             </button>
                           )}
                           <div className="flex flex-col items-end gap-1">

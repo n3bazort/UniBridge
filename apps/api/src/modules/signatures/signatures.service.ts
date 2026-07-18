@@ -88,6 +88,31 @@ export class SignaturesService {
     return batch;
   }
 
+  async cancelBatch(id: string) {
+    const batch = await this.prisma.signatureBatch.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!batch) throw new NotFoundException('Lote no encontrado');
+    if (batch.status === 'COMPLETED' || batch.status === 'CANCELLED') {
+      throw new BadRequestException('No se puede anular un lote que ya está completado o cancelado');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.signatureBatch.update({
+        where: { id },
+        data: { status: 'CANCELLED' }
+      });
+
+      await tx.generatedDocument.updateMany({
+        where: { id: { in: batch.items.map(i => i.documentId) } },
+        data: { signatureStatus: 'NONE' }
+      });
+    });
+
+    return { success: true, message: 'Lote anulado correctamente' };
+  }
+
   async findBatches() {
     return this.prisma.signatureBatch.findMany({
       include: {
@@ -266,6 +291,9 @@ export class SignaturesService {
       throw new ForbiddenException('Este lote no está pendiente de tu firma');
     }
 
+    const activePeriod = await this.prisma.academicPeriod.findFirst({ where: { isActive: true } });
+    const periodo = activePeriod?.code || new Date().getFullYear().toString();
+
     const results: Array<{ file: string; ok: boolean; documentCode?: string; error?: string }> = [];
 
     for (const file of files) {
@@ -285,7 +313,7 @@ export class SignaturesService {
 
         const checksum = crypto.createHash('sha256').update(file.buffer).digest('hex');
         const stage = profile.signerRole === 'DEAN' ? 'dean' : 'final';
-        const objectKey = `signed/${batch.code}/${stage}/${documentCode}.pdf`;
+        const objectKey = `signed/${periodo}/${batch.code}/${stage}/${documentCode}.pdf`;
         await this.minio.uploadBuffer(file.buffer, objectKey, 'application/pdf');
 
         const itemIds = items.map((i) => i.id);

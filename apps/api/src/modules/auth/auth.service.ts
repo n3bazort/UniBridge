@@ -16,95 +16,34 @@ export class AuthService {
     private prisma: PrismaService,
   ) {}
 
-  // ─────────── Recuperación de contraseña (estudiantes y demás) ───────────
+  // ─────────── Recuperación de contraseña ───────────
+  // Decisión de diseño: en este sistema institucional la recuperación de
+  // contraseñas la gestiona el ADMINISTRADOR (no hay auto-servicio por correo).
+  // El usuario que olvida su clave contacta a coordinación, que la restablece
+  // al instante desde Gestión de Usuarios. Ver SignersService.resetUserPassword.
 
-  /**
-   * Genera un token de recuperación de un solo uso (1 hora de vigencia).
-   * Con SMTP configurado el link viaja por correo; sin SMTP (entorno local)
-   * el link se registra en el log del servidor y, fuera de producción,
-   * también se devuelve para poder probar el flujo completo.
-   *
-   * La respuesta es idéntica exista o no el correo: no se revela cuáles
-   * cuentas están registradas.
-   */
-  async forgotPassword(email: string) {
-    const generic = { message: 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.' };
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    // findOne() no devuelve el hash; se lee directo para poder comparar
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException('Usuario no encontrado');
 
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user || user.suspendedAt) return generic;
-
-    const token = randomBytes(32).toString('base64url');
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { resetToken: token, resetTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000) },
-    });
-
-    const frontendUrl = process.env.FRONTEND_URL
-      || (process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',')[0].trim() : 'http://localhost:3000');
-    const link = `${frontendUrl}/reset-password?token=${token}`;
-
-    const sent = await this.trySendResetEmail(email, link);
-    if (!sent) {
-      this.logger.warn(`SMTP no configurado. Link de recuperación para ${email}: ${link}`);
-      if (process.env.NODE_ENV !== 'production') {
-        // Solo en desarrollo: permite probar el flujo sin servidor de correo
-        return { ...generic, devLink: link };
-      }
-    }
-    return generic;
-  }
-
-  async resetPassword(token: string, newPassword: string) {
-    if (!newPassword || newPassword.length < 8) {
-      throw new BadRequestException('La contraseña debe tener al menos 8 caracteres');
-    }
-
-    const user = await this.prisma.user.findUnique({ where: { resetToken: token } });
-    if (!user || !user.resetTokenExpiresAt || user.resetTokenExpiresAt < new Date()) {
-      throw new BadRequestException('El enlace de recuperación no es válido o ya expiró. Solicita uno nuevo.');
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      throw new BadRequestException('La contraseña actual es incorrecta');
     }
 
     const hashed = await bcrypt.hash(newPassword, 10);
     await this.prisma.$transaction([
       this.prisma.user.update({
         where: { id: user.id },
-        data: { password: hashed, resetToken: null, resetTokenExpiresAt: null },
+        data: { password: hashed },
       }),
-      // Cerrar todas las sesiones abiertas: la clave vieja pudo estar comprometida
+      // Cerrar todas las sesiones abiertas (excepto la actual, pero por seguridad se pueden cerrar todas, o no.
+      // Si cerramos todas el usuario tendra que volver a logearse, lo cual es buena practica de seguridad).
       this.prisma.refreshToken.deleteMany({ where: { userId: user.id } }),
     ]);
 
-    return { message: 'Contraseña actualizada. Ya puedes iniciar sesión.' };
-  }
-
-  /** Envía el correo si hay SMTP + nodemailer disponibles; false si no. */
-  private async trySendResetEmail(to: string, link: string): Promise<boolean> {
-    if (!process.env.SMTP_HOST) return false;
-    try {
-      // Carga perezosa: nodemailer es opcional en este proyecto
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const nodemailer = require('nodemailer');
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: process.env.SMTP_USER
-          ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-          : undefined,
-      });
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM || 'UniBridge <no-reply@uleam.edu.ec>',
-        to,
-        subject: 'Restablecer tu contraseña — UniBridge',
-        html: `<p>Recibimos una solicitud para restablecer tu contraseña.</p>
-               <p><a href="${link}">Haz click aquí para crear una nueva contraseña</a> (válido por 1 hora).</p>
-               <p>Si no fuiste tú, ignora este correo.</p>`,
-      });
-      return true;
-    } catch (e: any) {
-      this.logger.error(`No se pudo enviar el correo de recuperación: ${e?.message}`);
-      return false;
-    }
+    return { message: 'Contraseña actualizada correctamente. Por favor inicie sesión nuevamente.' };
   }
 
   async login(loginDto: LoginDto) {

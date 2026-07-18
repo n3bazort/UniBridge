@@ -2,8 +2,10 @@ import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { Req } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('auth')
@@ -23,20 +25,16 @@ export class AuthController {
   }
 
 
-  @Post('forgot-password')
-  @HttpCode(HttpStatus.OK)
-  @Throttle({ auth: { limit: 5, ttl: 900000 } }) // Anti-abuso: 5 solicitudes por 15 min
-  @ApiOperation({ summary: 'Solicitar enlace de recuperación de contraseña' })
-  forgotPassword(@Body() body: { email: string }) {
-    return this.authService.forgotPassword(body.email || '');
-  }
+  // Recuperación de contraseña: la gestiona el administrador desde Gestión de
+  // Usuarios (no hay auto-servicio por correo). Ver signatures/users/:id/reset-password.
 
-  @Post('reset-password')
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @Throttle({ auth: { limit: 10, ttl: 900000 } })
-  @ApiOperation({ summary: 'Establecer nueva contraseña con el token del enlace' })
-  resetPassword(@Body() body: { token: string; password: string }) {
-    return this.authService.resetPassword(body.token || '', body.password || '');
+  @ApiOperation({ summary: 'Cambiar la contraseña (estando autenticado)' })
+  changePassword(@Req() req: any, @Body() changePasswordDto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.id, changePasswordDto.currentPassword, changePasswordDto.newPassword);
   }
 
   @Post('refresh')

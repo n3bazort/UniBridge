@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, Briefcase, Building2, FileText, Settings, LogOut, Upload, BookOpen, Files, BarChart3, ChevronLeft, ChevronRight, GraduationCap, PenLine, UserCheck } from 'lucide-react'
+import { LayoutDashboard, Users, Briefcase, Building2, FileText, Settings, LogOut, Upload, BookOpen, Files, BarChart3, ChevronLeft, ChevronRight, GraduationCap, PenLine, UserCheck, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 import { useAuth } from '@/hooks/use-auth'
@@ -11,6 +11,8 @@ import Image from 'next/image'
 import { useSidebarStore } from '@/store/sidebar'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal'
+import { useState } from 'react'
 
 const navItems = [
   { name: 'Dashboard', href: '/overview', icon: LayoutDashboard, roles: ['ADMIN', 'COORDINATOR'] },
@@ -31,6 +33,7 @@ export function Sidebar() {
   const user = useAuthStore((state) => state.user)
   const { logout } = useAuth()
   const { isCollapsed, toggleSidebar } = useSidebarStore()
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
 
   const userName = user?.firstName && user?.lastName 
     ? `${user.firstName} ${user.lastName}` 
@@ -141,13 +144,22 @@ export function Sidebar() {
              )}
           </div>
           {!isCollapsed && (
-            <button
-              onClick={logout}
-              title="Cerrar sesión"
-              className="p-2 text-[#6b7280] hover:bg-[#f3f4f6] hover:text-red-500 rounded-[10px] transition-all shrink-0"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                title="Cambiar contraseña"
+                className="p-2 text-[#6b7280] hover:bg-[#f3f4f6] hover:text-blue-600 rounded-[10px] transition-all"
+              >
+                <Lock className="h-4 w-4" />
+              </button>
+              <button
+                onClick={logout}
+                title="Cerrar sesión"
+                className="p-2 text-[#6b7280] hover:bg-[#f3f4f6] hover:text-red-500 rounded-[10px] transition-all"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
           )}
         </div>
 
@@ -160,15 +172,28 @@ export function Sidebar() {
         </button>
 
         {isCollapsed && (
-          <button
-            onClick={logout}
-            title="Cerrar sesión"
-            className="mt-2 mx-auto flex items-center justify-center w-8 h-8 rounded-full bg-white text-[#6b7280] hover:bg-red-50 hover:text-red-500 transition-all"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
+          <div className="flex flex-col gap-1 mx-auto mt-2">
+            <button
+              onClick={() => setShowPasswordModal(true)}
+              title="Cambiar contraseña"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-white text-[#6b7280] hover:bg-blue-50 hover:text-blue-600 transition-all"
+            >
+              <Lock className="h-4 w-4" />
+            </button>
+            <button
+              onClick={logout}
+              title="Cerrar sesión"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-white text-[#6b7280] hover:bg-red-50 hover:text-red-500 transition-all"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         )}
       </div>
+
+      {showPasswordModal && (
+        <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
+      )}
     </aside>
   )
 }

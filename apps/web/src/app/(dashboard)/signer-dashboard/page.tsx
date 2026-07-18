@@ -47,6 +47,7 @@ export default function SignerDashboardPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null)
   const [downloading, setDownloading] = useState<string | null>(null)
+  const [dragOverBatchId, setDragOverBatchId] = useState<string | null>(null)
 
   const { data: batches = [], isLoading } = useQuery<SignatureBatch[]>({
     queryKey: ['signer-pending-batches'],
@@ -106,6 +107,29 @@ export default function SignerDashboardPage() {
     e.target.value = ''
   }
 
+  const handleDragOver = (e: React.DragEvent, batchId: string) => {
+    e.preventDefault()
+    setDragOverBatchId(batchId)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOverBatchId(null)
+  }
+
+  const handleDrop = (e: React.DragEvent, batchId: string) => {
+    e.preventDefault()
+    setDragOverBatchId(null)
+    if (e.dataTransfer.files?.length) {
+      const filesArray = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf')
+      if (filesArray.length > 0) {
+        uploadMutation.mutate({ batchId, files: filesArray })
+      } else {
+        toast.error('Solo se permiten archivos PDF.')
+      }
+    }
+  }
+
   return (
     <RoleGate allowedRoles={['SIGNER']}>
       <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8] pt-6 pb-12 px-4 lg:px-8">
@@ -156,7 +180,22 @@ export default function SignerDashboardPage() {
                 const active = batch.items.filter((i) => i.status !== 'REJECTED')
                 const done = active.filter((i) => i.status === 'SIGNED' || (batch.status === 'PENDING_DEAN' && i.status === 'SIGNED_BY_DEAN')).length
                 return (
-                  <div key={batch.id} className="bg-white rounded-[18px] border border-[#eef2f7] shadow-soft overflow-hidden">
+                  <div 
+                    key={batch.id} 
+                    className="relative bg-white rounded-[18px] border border-[#eef2f7] shadow-soft overflow-hidden"
+                    onDragOver={(e) => handleDragOver(e, batch.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, batch.id)}
+                  >
+                    {dragOverBatchId === batch.id && (
+                      <div className="absolute inset-0 z-50 bg-blue-50/90 border-2 border-dashed border-blue-400 rounded-[18px] flex flex-col items-center justify-center pointer-events-none transition-all">
+                        <div className="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center mb-3">
+                          <Upload className="w-8 h-8 text-blue-600 animate-bounce" />
+                        </div>
+                        <h3 className="text-[18px] font-bold text-blue-900">Suelta los PDF firmados aquí</h3>
+                        <p className="text-[14px] text-blue-700 mt-1">Para subirlos al {batch.code}</p>
+                      </div>
+                    )}
                     {/* Card header */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-6 py-4 border-b border-[#f3f4f6]">
                       <div className="flex flex-col">

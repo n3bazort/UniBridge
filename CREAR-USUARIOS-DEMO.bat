@@ -8,11 +8,10 @@ echo    Crear usuarios de demostracion
 echo ============================================================
 echo.
 echo Esto crea (o reinicia) estos usuarios para poder entrar:
-echo.
-echo    Admin:       admin@uleam.edu.ec        / @adminadmin007
-echo    Coordinador: coordinator@uleam.edu.ec  / @adminadmin007
-echo    Decano:      decano@uleam.edu.ec       / @adminadmin007
-echo    Director:    director@uleam.edu.ec     / @adminadmin007
+echo    Admin (devoot):                  devoot@dev.com     / @devdev007
+echo    Coordinador (Fabricio Z):        fabricio@dev.com   / @devdev007
+echo    Decana (Danna Danna):            danna@dev.com      / @devdev007
+echo    Responsable (Byron Calderon Z):  byron@dev.com      / @devdev007
 echo.
 echo AVISO: si ya tenias datos, este paso reinicia los usuarios.
 echo Ejecutalo solo la PRIMERA vez (o cuando quieras empezar limpio).

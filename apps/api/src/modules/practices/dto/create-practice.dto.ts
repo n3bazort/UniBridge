@@ -39,4 +39,19 @@ export class CreatePracticeDto {
   @IsInt()
   @IsOptional()
   totalHours?: number;
+
+  @ApiPropertyOptional({ description: 'Tutor institucional/empresarial' })
+  @IsString()
+  @IsOptional()
+  tutorName?: string;
+
+  @ApiPropertyOptional({ description: 'Nivel de práctica (ej. Prácticas Laborales II)' })
+  @IsString()
+  @IsOptional()
+  practiceLevel?: string;
+
+  @ApiPropertyOptional({ description: 'Nivel académico (ej. Octavo)' })
+  @IsString()
+  @IsOptional()
+  academicLevel?: string;
 }

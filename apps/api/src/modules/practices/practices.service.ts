@@ -233,9 +233,27 @@ export class PracticesService {
       );
     }
 
+    let dataToUpdate = { ...updatePracticeDto };
+
+    if (isReassignment && !updatePracticeDto.tutorName) {
+      // Buscar tutor de la nueva empresa
+      const peerPractice = await this.prisma.practice.findFirst({
+        where: { companyId: updatePracticeDto.companyId, tutorName: { not: null } },
+        select: { tutorName: true }
+      });
+      if (peerPractice?.tutorName) {
+        dataToUpdate.tutorName = peerPractice.tutorName;
+      } else {
+        const newCompanyInfo = await this.prisma.company.findUnique({ where: { id: updatePracticeDto.companyId! }});
+        if (newCompanyInfo?.contactName) {
+          dataToUpdate.tutorName = newCompanyInfo.contactName;
+        }
+      }
+    }
+
     const updated = await this.prisma.practice.update({
       where: { id },
-      data: updatePracticeDto,
+      data: dataToUpdate,
       include: { company: true, student: true },
     });
 
@@ -603,8 +621,9 @@ export class PracticesService {
       take: 5,
     });
 
+    const companyIds = loadByCompanyResult.map(r => r.companyId).filter(Boolean) as string[];
     const companies = await this.prisma.company.findMany({
-      where: { id: { in: loadByCompanyResult.map(r => r.companyId) } },
+      where: { id: { in: companyIds } },
       select: { id: true, name: true }
     });
 

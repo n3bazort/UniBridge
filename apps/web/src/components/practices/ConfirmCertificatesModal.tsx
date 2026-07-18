@@ -79,8 +79,8 @@ export function ConfirmCertificatesModal({ open, count, onClose, onConfirm }: Co
                 </span>
                 <span className="text-[12px] text-slate-500 leading-snug">
                   {autoSend
-                    ? 'Al terminar, los certificados entran solos al circuito Decano → Director.'
-                    : 'Los certificados quedarán en la bandeja; los enviarás a firma manualmente.'}
+                    ? 'Al terminar, los certificados entran solos al circuito Decano → Responsable de Prácticas.'
+                    : 'Al terminar, los certificados quedarán listos en la pestaña "Por Enviar a Firma".'}
                 </span>
               </div>
             </label>
