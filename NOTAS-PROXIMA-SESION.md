@@ -1,6 +1,35 @@
 # Notas para la próxima sesión — UniBridge
 
-_Última actualización: 15 de julio de 2026_
+_Última actualización: 17 de julio de 2026_
+
+---
+
+## 0. Decisiones de diseño (para la defensa)
+
+### Entrega de certificados a estudiantes — Opción A adoptada
+Los estudiantes **NO tienen cuenta** en el sistema. El coordinador descarga el
+ZIP de certificados firmados (botón "ZIP de todos los firmados", por lote, o de
+lotes seleccionados) y los distribuye por correo/aula. Menos superficie de
+seguridad, cero soporte de contraseñas olvidadas, cero cuentas muertas.
+
+- **Ya implementado:** no requiere código nuevo, la función de ZIP ya existe.
+- **Evolución futura (Opción B, mencionar en la defensa):** cada certificado
+  firmado podría exponer un link público con token (`/verificar/<token>` + QR).
+  Sirve para autoservicio del estudiante Y para que un empleador verifique la
+  autenticidad del documento sin necesidad de cuentas. Es la evolución natural
+  porque un documento firmado digitalmente cobra valor cuando cualquiera puede
+  verificarlo.
+
+### Envío de correos (recuperación de contraseña) — falta activar el "cartero"
+El flujo de recuperación (token 1h, un solo uso, reset, cierre de sesiones)
+está **completo y probado**. Lo único pendiente para que envíe correos reales
+en producción:
+1. `npm install nodemailer` en `apps/api`
+2. Variables en el `.env`: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`,
+   `SMTP_FROM` (correo institucional de la ULEAM)
+
+El código ya está escrito para usarlas apenas existan. En desarrollo, sin SMTP,
+el link se muestra en pantalla (modo dev) — suficiente para demostrar el flujo.
 
 ---
 
