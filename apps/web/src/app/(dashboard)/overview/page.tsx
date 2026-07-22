@@ -115,7 +115,6 @@ export default function OverviewPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Resumen General</h1>
             <p className="text-sm text-slate-500 mt-1">Monitoreo ejecutivo de prácticas preprofesionales</p>
           </div>
           <div className="flex items-center gap-3">
@@ -139,7 +138,7 @@ export default function OverviewPage() {
         </div>
 
         {/* 6 KPIs - Fila 1 */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <KpiCard 
             title="Prácticas Activas" 
             value={kpis?.activePractices || 0} 
@@ -159,12 +158,6 @@ export default function OverviewPage() {
             value={kpis?.totalCompanies || 0} 
             icon={<Building2 className="w-4 h-4 text-purple-600" />} 
             iconBg="bg-purple-50"
-          />
-          <KpiCard 
-            title="Horas Acumuladas" 
-            value={`${kpis?.totalHours || 0}h`}
-            icon={<Clock className="w-4 h-4 text-emerald-600" />} 
-            iconBg="bg-emerald-50"
           />
           <KpiCard 
             title="Finalización" 

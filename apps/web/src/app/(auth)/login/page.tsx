@@ -36,8 +36,6 @@ export default function LoginPage() {
         router.replace('/students')
       } else if (user.role === 'SIGNER') {
         router.replace('/signer-dashboard')
-      } else {
-        router.replace('/student-dashboard')
       }
     } else if (isAuthenticated && !hasCookie) {
       // Stale Zustand state without valid cookie: clear it

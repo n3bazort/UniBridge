@@ -342,7 +342,14 @@ export default function ImportsPage() {
       } else {
         toast.success(`¡Éxito! ${count} registros importados correctamente.`)
       }
-      setParsedData([]) 
+      
+      // Notificación urgente requerida por el usuario
+      toast.warning('⚠️ IMPORTANTE: Recuerda ir a "Configuraciones" y declarar las abreviaturas de las nuevas carreras. Sin esto, NO se podrán generar documentos.', {
+        duration: 15000,
+        position: 'top-center'
+      })
+
+      setParsedData([])
     } catch (error: any) {
       const serverMessage = error?.response?.data?.message
       if (serverMessage) {

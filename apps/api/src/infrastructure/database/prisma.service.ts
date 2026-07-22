@@ -57,13 +57,20 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       // 4. Audit Log Automático
       if (['create', 'update', 'delete', 'updateMany', 'deleteMany'].includes(params.action)) {
          if (params.model !== 'AuditLog') { 
-            const recordId = result?.id || params.args?.where?.id || '00000000-0000-0000-0000-000000000000';
+            let recordIdStr = '00000000-0000-0000-0000-000000000000';
+            const candidate = result?.id || params.args?.where?.id;
+            if (typeof candidate === 'string') {
+              recordIdStr = candidate;
+            } else if (candidate && typeof candidate === 'object' && Array.isArray(candidate.in)) {
+              recordIdStr = candidate.in.join(',');
+              if (recordIdStr.length > 200) recordIdStr = recordIdStr.substring(0, 200) + '...';
+            }
             
             this.auditLog.create({
               data: {
                 action: params.action,
                 tableName: params.model || 'Unknown',
-                recordId: recordId,
+                recordId: recordIdStr,
                 newData: params.args?.data || {},
                 userId: userId // ¡Capturado mágicamente por CLS desde el JWT!
               }

@@ -69,3 +69,20 @@ test-integration.js
 test-student.js
 render.yaml
 PROXIMOS_PASOS_Y_RECOMENDACIONES.md
+
+# Entorno y credenciales
+.env
+.env.local
+.env.*.local
+packages/db/.env
+
+# Archivos de tesis / documentacion personal (no forman parte del sistema)
+tesis-edit/
+*.docx
+*.pdf
+!apps/web/public/templates/*.docx
+
+# Artefactos locales
+uploads/
+capturas/
+*.bat

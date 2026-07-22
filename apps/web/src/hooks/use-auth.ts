@@ -44,7 +44,12 @@ export function useAuth() {
       } else if (data.user.role === 'SIGNER') {
         router.replace('/signer-dashboard')
       } else {
-        router.replace('/student-dashboard')
+        // Los estudiantes no tienen acceso a la plataforma (los documentos
+        // se los entrega la coordinacion). Se cierra la sesion.
+        setError('Esta plataforma es de uso administrativo. Los documentos se entregan por la coordinacion de practicas.')
+        useAuthStore.getState().logout()
+        clearSessionCookie()
+        return
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al iniciar sesión. Verifica tus credenciales.')

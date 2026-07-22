@@ -1,0 +1,94 @@
+erDiagram
+        User {
+        String id PK
+        String email
+        String role
+        }
+        Faculty {
+        String id PK
+        String name
+        }
+        Coordinator {
+        String id PK
+        String userId FK
+        String facultyId FK
+        String programId FK
+        }
+        Program {
+        String id PK
+        String name
+        String facultyId FK
+        }
+        Student {
+        String id PK
+        String userId FK
+        String facultyId FK
+        String programId FK
+        String dni
+        }
+        Company {
+        String id PK
+        String name
+        }
+        Practice {
+        String id PK
+        String studentId FK
+        String companyId FK
+        String facultyId FK
+        String academicPeriod FK
+        String status
+        }
+        DocumentTemplate {
+        String id PK
+        String name
+        String facultyId FK
+        }
+        GeneratedDocument {
+        String id PK
+        String templateId FK
+        String studentId FK
+        String status
+        String signatureStatus
+        }
+        SignatureBatch {
+        String id PK
+        String code
+        String status
+        String createdById FK
+        }
+        SignatureBatchItem {
+        String id PK
+        String batchId FK
+        String documentId FK
+        String status
+        }
+        AcademicPeriod {
+        String id PK
+        String code
+        }
+
+        User ||--o| Coordinator : "has"
+        User ||--o| Student : "has"
+        User ||--o{ GeneratedDocument : "generates/invalidates"
+        User ||--o{ SignatureBatch : "creates"
+
+        Faculty ||--o{ Coordinator : "has"
+        Faculty ||--o{ Program : "offers"
+        Faculty ||--o{ Student : "enrolls"
+        Faculty ||--o{ DocumentTemplate : "owns"
+        Faculty ||--o{ Practice : "manages"
+
+        Program ||--o{ Student : "enrolls"
+        Program ||--o{ Coordinator : "coordinated by"
+
+        Student ||--o{ Practice : "performs"
+        Student ||--o{ GeneratedDocument : "receives"
+
+        Company ||--o{ Practice : "hosts"
+
+        AcademicPeriod ||--o{ Practice : "has"
+
+        DocumentTemplate ||--o{ GeneratedDocument : "templates"
+
+        GeneratedDocument ||--o{ SignatureBatchItem : "contains"
+        SignatureBatch ||--o{ SignatureBatchItem : "contains"

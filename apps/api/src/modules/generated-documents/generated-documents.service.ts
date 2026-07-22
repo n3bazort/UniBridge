@@ -191,7 +191,10 @@ export class GeneratedDocumentsService implements OnModuleInit {
     // Validar autoridades ANTES de consumir un número de secuencia
     const { deanName, directorName } = await this.getAuthoritiesOrFail(academicPeriodCode);
 
-    const programAbbr = student.program?.abbreviation || student.faculty?.abbreviation || 'SIN';
+    const programAbbr = student.program?.abbreviation || student.faculty?.abbreviation;
+    if (!programAbbr) {
+      throw new BadRequestException(`No se puede generar el documento. La carrera "${student.program?.name || 'Desconocida'}" no tiene configurada su abreviatura. Ve a Configuraciones para asignarla.`);
+    }
     const documentCode = await this.generateDocumentCode('CERTIFICADO', academicPeriodCode, programAbbr, 'CERT', '');
 
     const dataToInject = {
@@ -534,7 +537,10 @@ export class GeneratedDocumentsService implements OnModuleInit {
       ? (template.content as any)
       : {};
 
-    const programAbbr = program?.abbreviation || faculty?.abbreviation || 'SIN';
+    const programAbbr = program?.abbreviation || faculty?.abbreviation;
+    if (!programAbbr) {
+      throw new BadRequestException(`No se puede generar la solicitud. La carrera "${program?.name || 'Desconocida'}" no tiene configurada su abreviatura. Ve a Configuraciones para asignarla.`);
+    }
     const docTypeAbbr = docxCfg.docTypeAbbr || 'SPP';
     const suffix = docxCfg.codeSuffix || '';
 
@@ -563,7 +569,8 @@ export class GeneratedDocumentsService implements OnModuleInit {
       students: students.map((s) => {
         const p = s.practices[0];
         return {
-          lastName: s.lastName,
+          fullName: `${s.lastName} ${s.firstName}`,
+          lastName: s.lastName + ' ',
           firstName: s.firstName,
           dni: s.dni,
           phone: (s as any).phone || 'N/A',

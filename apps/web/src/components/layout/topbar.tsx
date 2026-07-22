@@ -1,14 +1,22 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { Bell, HelpCircle, Search, X } from 'lucide-react'
+import { Bell, HelpCircle, Search, X, Menu, KeyRound, LogOut } from 'lucide-react'
 import { useSearchStore } from '@/store/search'
 import { useAuthStore } from '@/store/auth-store'
+import { useSidebarStore } from '@/store/sidebar'
+import { useAuth } from '@/hooks/use-auth'
+import { useState } from 'react'
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal'
 
 export function Topbar() {
   const { searchQuery, setSearchQuery } = useSearchStore()
   const pathname = usePathname()
   const user = useAuthStore((state) => state.user)
+  const { openMobileSidebar } = useSidebarStore()
+  const { logout } = useAuth()
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
 
   const isPractices = pathname === '/practices'
 
@@ -24,7 +32,12 @@ export function Topbar() {
     '/settings': 'Configuraciones del Sistema'
   }
 
-  const currentTitle = titles[pathname] !== undefined ? titles[pathname] : ''
+  const fallbackTitles: Record<string, string> = {
+    '/users': 'Gestión de Usuarios',
+    '/signer-dashboard': 'Firma de Documentos',
+    '/documents/designer': 'Diseñador de Certificados',
+  }
+  const currentTitle = titles[pathname] ?? fallbackTitles[pathname] ?? ''
 
   // Generar iniciales o abreviación del nombre dinámicamente
   const fullName = user?.firstName && user?.lastName
@@ -43,7 +56,15 @@ export function Topbar() {
 
   return (
     <header className="sticky top-0 z-[100] flex h-[72px] items-center justify-between bg-white px-4 md:px-[32px] border-b border-[#eef2f7]">
-      <div className="flex items-center min-w-fit md:min-w-[200px]">
+      <div className="flex items-center min-w-0 gap-2 md:min-w-[200px]">
+        <button
+          type="button"
+          onClick={openMobileSidebar}
+          aria-label="Abrir menú de navegación"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[#374151] transition-colors hover:bg-[#f3f4f6] focus:outline-none focus:ring-2 focus:ring-[#2563eb] md:hidden"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
         <h1 className="text-lg md:text-[24px] font-semibold text-[#111827] truncate max-w-[120px] sm:max-w-none">{currentTitle}</h1>
       </div>
 
@@ -78,7 +99,7 @@ export function Topbar() {
         <button className="text-[#6b7280] hover:text-[#111827] transition-colors hidden sm:block" aria-label="Ayuda">
           <HelpCircle className="h-[20px] w-[20px]" strokeWidth={1.8} />
         </button>
-        <div className="relative ml-2 flex h-[40px] items-center justify-center rounded-[12px] group transition-all hover:scale-[0.98] active:scale-[0.95] select-none cursor-pointer">
+        <div className="relative ml-2 flex h-[40px] items-center justify-center rounded-[12px] group transition-all hover:scale-[0.98] active:scale-[0.95] select-none">
           <style>{`
             @keyframes led-rotate {
               0% { transform: translate(-50%, -50%) rotate(0deg); }
@@ -116,9 +137,12 @@ export function Topbar() {
           `}</style>
 
           <button
+            type="button"
+            onClick={() => setIsUserMenuOpen((value) => !value)}
             className="relative z-10 flex h-[40px] w-full items-center justify-center rounded-[12px] bg-[#111827] px-5 text-[14px] font-semibold text-white transition-all duration-200 group-hover:bg-[#1a2235]"
             style={{ filter: 'drop-shadow(0 0 6px rgba(234, 179, 8, 0.45))' }}
             aria-label={`Usuario: ${fullName || 'Usuario'}`}
+            aria-expanded={isUserMenuOpen}
           >
             {getDisplayName()}
           </button>
@@ -126,8 +150,20 @@ export function Topbar() {
           <div className="beam-container-top">
             <div className="beam-light-top" />
           </div>
+          {isUserMenuOpen && (
+            <div className="absolute right-0 top-12 z-50 w-56 rounded-[14px] border border-[#eef2f7] bg-white p-2 shadow-lg">
+              <p className="px-3 py-2 text-xs font-medium text-[#6b7280]">{fullName || 'Usuario'}</p>
+              <button type="button" onClick={() => { setIsUserMenuOpen(false); setShowPasswordModal(true) }} className="flex w-full items-center gap-2 rounded-[10px] px-3 py-2.5 text-sm text-[#374151] hover:bg-[#f3f4f6]">
+                <KeyRound className="h-4 w-4" /> Cambiar contraseña
+              </button>
+              <button type="button" onClick={logout} className="flex w-full items-center gap-2 rounded-[10px] px-3 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
+                <LogOut className="h-4 w-4" /> Cerrar sesión
+              </button>
+            </div>
+          )}
         </div>
       </div>
+      {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />}
     </header>
   )
 }

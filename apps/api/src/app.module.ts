@@ -42,7 +42,7 @@ import { ReportsModule } from './modules/reports/reports.module';
       {
         name: 'global',
         ttl: 60000,   // 1 minuto
-        limit: 300,   // máx 300 requests por minuto por IP (panel admin con mucha data + IPs compartidas por NAT)
+        limit: 3000,  // máx 3000 requests por minuto por IP (aumentado para evitar 429 en desarrollo)
       },
       {
         name: 'auth',

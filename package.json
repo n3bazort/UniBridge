@@ -12,6 +12,7 @@
     "lint": "turbo run lint"
   },
   "devDependencies": {
+    "docx": "^9.7.1",
     "turbo": "^1.11.2"
   }
 }

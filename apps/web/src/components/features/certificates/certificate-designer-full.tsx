@@ -33,10 +33,12 @@ const SYSTEM_VARIABLES = [
   { label: 'Facultad', value: '{{facultyName}}' },
   { label: 'Empresa', value: '{{companyName}}' },
   { label: 'Total Horas', value: '{{totalHours}}' },
-  { label: 'Tutor', value: '{{tutorName}}' },
+  { label: 'Tutor Académico', value: '{{tutorName}}' },
   { label: 'Nivel Práctica', value: '{{practiceLevel}}' },
   { label: 'Periodo Académico', value: '{{academicPeriod}}' },
   { label: 'Fecha Actual', value: '{{currentDate}}' },
+  { label: 'Nombre Decano(a)', value: '{{deanName}}' },
+  { label: 'Responsable Prácticas', value: '{{responsableName}}' },
 ]
 
 /* ───────────── Componente Principal ───────────── */

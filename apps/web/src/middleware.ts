@@ -15,7 +15,6 @@ const PROTECTED_ROUTES: { path: string; roles: string[] }[] = [
   { path: '/certificates', roles: ['ADMIN', 'COORDINATOR'] },
   { path: '/imports', roles: ['ADMIN', 'COORDINATOR'] },
   { path: '/settings', roles: ['ADMIN', 'COORDINATOR'] },
-  { path: '/student-dashboard', roles: ['STUDENT'] },
   { path: '/signer-dashboard', roles: ['SIGNER'] },
   { path: '/users', roles: ['ADMIN'] },
 ]
@@ -56,11 +55,7 @@ export function middleware(request: NextRequest) {
 
   // Si ya está autenticado y trata de ir a login → redirigir al dashboard
   if (isAuthenticated && PUBLIC_ROUTES.includes(pathname)) {
-    const destination = userRole === 'STUDENT'
-      ? '/student-dashboard'
-      : userRole === 'SIGNER'
-        ? '/signer-dashboard'
-        : '/overview'
+    const destination = userRole === 'SIGNER' ? '/signer-dashboard' : '/overview'
     return NextResponse.redirect(new URL(destination, request.url))
   }
 
@@ -77,11 +72,7 @@ export function middleware(request: NextRequest) {
 
     // Autenticado pero sin el rol correcto → 403
     if (userRole && !matchedRoute.roles.includes(userRole)) {
-      const destination = userRole === 'STUDENT'
-        ? '/student-dashboard'
-        : userRole === 'SIGNER'
-          ? '/signer-dashboard'
-          : '/overview'
+      const destination = userRole === 'SIGNER' ? '/signer-dashboard' : '/overview'
       return NextResponse.redirect(new URL(destination, request.url))
     }
   }

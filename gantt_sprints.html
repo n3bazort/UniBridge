@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cronograma de Desarrollo por Sprints (12 Semanas)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 30px 20px;
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+        }
+        .gantt-container {
+            width: 1050px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .gantt-title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #1e293b;
+            padding: 14px;
+            background-color: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        th, td {
+            font-size: 12px;
+            padding: 8px 6px;
+            text-align: center;
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background-color: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+        }
+        th.col-sprint {
+            width: 140px;
+            text-align: left;
+            padding-left: 12px;
+        }
+        th.col-task {
+            width: 230px;
+            text-align: left;
+            padding-left: 12px;
+        }
+        th.col-week {
+            width: 56px;
+        }
+        td.cell-sprint {
+            text-align: left;
+            font-weight: 700;
+            color: #1e293b;
+            padding-left: 12px;
+            font-size: 11.5px;
+        }
+        td.cell-task {
+            text-align: left;
+            color: #334155;
+            padding-left: 12px;
+            font-size: 11px;
+        }
+        tr.sprint-group-1 { background-color: #ffffff; }
+        tr.sprint-group-2 { background-color: #f8fafc; }
+
+        /* Gantt bar styles */
+        .bar {
+            height: 20px;
+            border-radius: 4px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.25);
+        }
+        .bar-2w {
+            width: 100%;
+        }
+        .td-sprint-bg {
+            background-color: rgba(99, 102, 241, 0.04);
+        }
+    </style>
+</head>
+<body>
+
+<div class="gantt-container">
+    <div class="gantt-title">Cronograma de Desarrollo por Sprints — Metodología SCRUM (12 Semanas)</div>
+    <table>
+        <thead>
+            <tr>
+                <th class="col-sprint">Sprint</th>
+                <th class="col-task">Actividades Principales</th>
+                <th class="col-week">Sem 1</th>
+                <th class="col-week">Sem 2</th>
+                <th class="col-week">Sem 3</th>
+                <th class="col-week">Sem 4</th>
+                <th class="col-week">Sem 5</th>
+                <th class="col-week">Sem 6</th>
+                <th class="col-week">Sem 7</th>
+                <th class="col-week">Sem 8</th>
+                <th class="col-week">Sem 9</th>
+                <th class="col-week">Sem 10</th>
+                <th class="col-week">Sem 11</th>
+                <th class="col-week">Sem 12</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- SPRINT 1 -->
+            <tr class="sprint-group-1">
+                <td rowspan="2" class="cell-sprint">Sprint 1<br><span style="font-weight:400; color:#64748b; font-size:10px;">Cimientos</span></td>
+                <td class="cell-task">Estructura Monorepo y Docker</td>
+                <td><div class="bar"></div></td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr class="sprint-group-1">
+                <td class="cell-task">Autenticación JWT y Roles</td>
+                <td></td>
+                <td><div class="bar"></div></td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+
+            <!-- SPRINT 2 -->
+            <tr class="sprint-group-2">
+                <td rowspan="2" class="cell-sprint">Sprint 2<br><span style="font-weight:400; color:#64748b; font-size:10px;">CRUD Base</span></td>
+                <td class="cell-task">Entidades Académicas y CRUDs</td>
+                <td></td><td></td>
+                <td><div class="bar"></div></td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr class="sprint-group-2">
+                <td class="cell-task">Importación Excel con BullMQ</td>
+                <td></td><td></td><td></td>
+                <td><div class="bar"></div></td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+
+            <!-- SPRINT 3 -->
+            <tr class="sprint-group-1">
+                <td rowspan="2" class="cell-sprint">Sprint 3<br><span style="font-weight:400; color:#64748b; font-size:10px;">Prácticas</span></td>
+                <td class="cell-task">Gestión de Prácticas y Estados</td>
+                <td></td><td></td><td></td><td></td>
+                <td><div class="bar"></div></td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr class="sprint-group-1">
+                <td class="cell-task">Plantillas MinIO y Editor PDF</td>
+                <td></td><td></td><td></td><td></td><td></td>
+                <td><div class="bar"></div></td>
+                <td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+
+            <!-- SPRINT 4 -->
+            <tr class="sprint-group-2">
+                <td rowspan="2" class="cell-sprint">Sprint 4<br><span style="font-weight:400; color:#64748b; font-size:10px;">Generación</span></td>
+                <td class="cell-task">Inyección Word y PDF Headless</td>
+                <td></td><td></td><td></td><td></td><td></td><td></td>
+                <td><div class="bar"></div></td>
+                <td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr class="sprint-group-2">
+                <td class="cell-task">Generación Masiva y Secuencias</td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                <td><div class="bar"></div></td>
+                <td></td><td></td><td></td><td></td>
+            </tr>
+
+            <!-- SPRINT 5 -->
+            <tr class="sprint-group-1">
+                <td rowspan="2" class="cell-sprint">Sprint 5<br><span style="font-weight:400; color:#64748b; font-size:10px;">Firmas</span></td>
+                <td class="cell-task">Signer Dashboard e Invitaciones</td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                <td><div class="bar"></div></td>
+                <td></td><td></td><td></td>
+            </tr>
+            <tr class="sprint-group-1">
+                <td class="cell-task">Firma CAdES/FirmaEC y Auditoría</td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                <td><div class="bar"></div></td>
+                <td></td><td></td>
+            </tr>
+
+            <!-- SPRINT 6 -->
+            <tr class="sprint-group-2">
+                <td rowspan="2" class="cell-sprint">Sprint 6<br><span style="font-weight:400; color:#64748b; font-size:10px;">Cierre</span></td>
+                <td class="cell-task">Pruebas, Ajustes y UI/UX</td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                <td><div class="bar"></div></td>
+                <td></td>
+            </tr>
+            <tr class="sprint-group-2">
+                <td class="cell-task">Docker Prod y Documentación</td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                <td><div class="bar"></div></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>

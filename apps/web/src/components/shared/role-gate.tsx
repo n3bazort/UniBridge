@@ -35,9 +35,7 @@ export function RoleGate({ children, allowedRoles }: RoleGateProps) {
     
     if (!hasRole) {
       // Redirect based on their actual role to prevent infinite loops
-      if (user.role === 'STUDENT') {
-        router.replace('/student-dashboard')
-      } else if (user.role === 'SIGNER') {
+      if (user.role === 'SIGNER') {
         router.replace('/signer-dashboard')
       } else {
         router.replace('/overview')

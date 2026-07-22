@@ -16,7 +16,7 @@ export default function DashboardLayout({
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [hasHydrated, setHasHydrated] = useState(false)
-  const { isCollapsed } = useSidebarStore()
+  const { isCollapsed, isMobileOpen, closeMobileSidebar } = useSidebarStore()
 
   useEffect(() => {
     setMounted(true)
@@ -47,7 +47,15 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen bg-[#f7f7f8]">
       <Sidebar />
-      <div className={`flex flex-1 flex-col transition-all duration-300 ease-in-out ${isCollapsed ? 'pl-[80px]' : 'pl-[60px] md:pl-[240px]'}`}>
+      {isMobileOpen && (
+        <button
+          type="button"
+          aria-label="Cerrar menú de navegación"
+          onClick={closeMobileSidebar}
+          className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-[1px] md:hidden"
+        />
+      )}
+      <div className={`flex flex-1 flex-col transition-all duration-300 ease-in-out ${isCollapsed ? 'md:pl-[80px]' : 'md:pl-[240px]'}`}>
         <Topbar />
         <main className="flex-1 w-full relative">
           {children}

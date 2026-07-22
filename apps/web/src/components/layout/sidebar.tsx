@@ -16,7 +16,6 @@ import { useState } from 'react'
 
 const navItems = [
   { name: 'Dashboard', href: '/overview', icon: LayoutDashboard, roles: ['ADMIN', 'COORDINATOR'] },
-  { name: 'Mi Práctica', href: '/student-dashboard', icon: Briefcase, roles: ['STUDENT'] },
   { name: 'Prácticas', href: '/practices', icon: Briefcase, roles: ['ADMIN', 'COORDINATOR'] },
   { name: 'Estudiantes', href: '/students', icon: GraduationCap, roles: ['ADMIN', 'COORDINATOR'] },
   { name: 'Empresas', href: '/companies', icon: Building2, roles: ['ADMIN', 'COORDINATOR'] },
@@ -61,7 +60,7 @@ export function Sidebar() {
   const { data: missingAbbreviations } = useQuery({
     queryKey: ['missing-abbreviations'],
     queryFn: async () => {
-      const res = await api.get('/programs/missing-abbreviations')
+      const res = await api.get('/programs/misc/missing-abbreviations')
       return res.data
     },
     enabled: !!user && (user.role === 'ADMIN' || user.role === 'COORDINATOR'),
@@ -104,7 +103,7 @@ export function Sidebar() {
                 title={isCollapsed ? item.name : undefined}
                 className={cn(
                   "group flex items-center rounded-[12px] py-2.5 transition-all duration-180 ease-[cubic-bezier(.2,.8,.2,1)]",
-                  isCollapsed ? "justify-center px-0" : "gap-3 px-4",
+                  isCollapsed ? "justify-center px-0 relative" : "gap-3 px-4",
                   isActive 
                     ? "bg-[#111827] text-white shadow-soft" 
                     : "text-[#374151] hover:bg-[#f3f4f6] hover:translate-x-[2px]"
@@ -120,8 +119,10 @@ export function Sidebar() {
                 {!isCollapsed && <span className="text-[14px] font-medium truncate">{item.name}</span>}
                 {item.name === 'Configuraciones' && missingCount > 0 && (
                   <span className={cn(
-                    "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white px-1.5 shadow-sm",
-                    isCollapsed && "absolute -top-1 -right-1"
+                    "flex items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm",
+                    isCollapsed 
+                      ? "absolute -top-1 -right-1 h-4 min-w-4 px-1" 
+                      : "ml-auto h-5 min-w-5 px-1.5"
                   )}>
                     {missingCount > 99 ? '99+' : missingCount}
                   </span>
@@ -134,12 +135,12 @@ export function Sidebar() {
 
       <div className="mt-auto pt-4 flex flex-col gap-2">
         <div className={cn("flex items-center", isCollapsed ? "justify-center px-0" : "justify-between px-2")}>
-          <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
+          <div className={cn("flex items-center gap-3 min-w-0 flex-1", isCollapsed && "justify-center")}>
              <img src={`https://api.dicebear.com/9.x/notionists/svg?seed=${avatarSeed}`} alt="Avatar" className="w-9 h-9 rounded-full bg-white shadow-soft shrink-0" />
              {!isCollapsed && (
-               <div className="flex flex-col overflow-hidden">
-                  <span className="text-[13px] font-medium text-[#111827] leading-tight truncate">{userName}</span>
-                  <span className="text-[12px] text-[#6b7280] leading-tight truncate">{userRole}</span>
+               <div className="flex flex-col overflow-hidden min-w-0 flex-1">
+                  <span className="text-[13px] font-medium text-[#111827] leading-tight truncate block">{userName}</span>
+                  <span className="text-[12px] text-[#6b7280] leading-tight truncate block">{userRole}</span>
                </div>
              )}
           </div>

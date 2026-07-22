@@ -88,6 +88,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         role: user.role,
+        firstName: (user as any).firstName ?? null,
+        lastName: (user as any).lastName ?? null,
         facultyId
       }
     };

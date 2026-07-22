@@ -88,12 +88,23 @@ export default function PracticesPage() {
 
   // Modal previo a generar el oficio: formato (DOCX/PDF) + aviso de reemplazo
   const [solicitudModal, setSolicitudModal] = useState<{ items: Practice[]; companyName: string; existing: boolean } | null>(null)
-  const [solicitudAsPdf, setSolicitudAsPdf] = useState<boolean>(() =>
-    typeof window !== 'undefined' && localStorage.getItem('solicitud-as-pdf') === 'true'
-  )
+  const [solicitudAsPdf, setSolicitudAsPdf] = useState(false)
+  const [openInBrowser, setOpenInBrowser] = useState(false)
+
+  // Hydrate preferences from local storage
+  useEffect(() => {
+    const pref = localStorage.getItem('unibridge_solicitud_pdf')
+    if (pref !== null) {
+      setSolicitudAsPdf(pref === 'true')
+    }
+    const openPref = localStorage.getItem('unibridge_open_solicitud_in_browser')
+    if (openPref !== null) {
+      setOpenInBrowser(openPref === 'true')
+    }
+  }, [])
   const changeSolicitudFormat = (asPdf: boolean) => {
     setSolicitudAsPdf(asPdf)
-    localStorage.setItem('solicitud-as-pdf', String(asPdf))
+    localStorage.setItem('unibridge_solicitud_pdf', String(asPdf))
   }
 
   // Estados para la barra de progreso circular de generación de certificados
@@ -533,11 +544,12 @@ export default function PracticesPage() {
     if (!modal) return
     setSolicitudModal(null)
     setIsGenerating(true)
+    const toastId = toast.loading('Generando documento(s), por favor espera...')
     try {
       const templatesRes = await api.get('/document-templates')
       const docxTemplates = templatesRes.data.filter((t: any) => t.type === 'DOCX')
       if (docxTemplates.length === 0) {
-        toast.error('No se encontró ninguna plantilla DOCX subida.')
+        toast.error('No se encontró ninguna plantilla DOCX subida.', { id: toastId })
         return
       }
       const defaultDocxTemplate = docxTemplates.find((t: any) => typeof t.content === 'object' && t.content?.isDefault === true)
@@ -554,31 +566,37 @@ export default function PracticesPage() {
       queryClient.invalidateQueries({ queryKey: ['practices-all'] })
       queryClient.invalidateQueries({ queryKey: ['generated-documents'] })
 
+      const actionPayload = { label: 'Ir a Repositorio', onClick: () => router.push('/documents') }
+
       if (solicitudAsPdf) {
-        // PDF: se VISUALIZA en pestaña nueva (política: nada se descarga solo)
-        toast.success(`Oficio ${response.data?.documentCode || ''} generado en PDF`)
+        toast.success(`Oficio ${response.data?.documentCode || ''} generado en PDF`, { id: toastId, action: actionPayload })
         const docCode = response.data?.documentCode
         try {
           const docs = await api.get('/generated-documents')
           const doc = (docs.data || []).find((d: any) => d.documentCode === docCode && d.status === 'VALID')
-          if (doc) {
+          if (doc && openInBrowser) {
             const v = await api.get(`/generated-documents/${doc.id}/view`)
             window.open(v.data.url, '_blank')
           }
         } catch {}
       } else if (response.data?.downloadUrl) {
-        // DOCX: única descarga automática permitida (Word no se ve en el navegador)
-        toast.success(`Oficio ${response.data?.documentCode || ''} generado — descargando DOCX`)
-        const a = document.createElement('a')
-        a.href = response.data.downloadUrl
-        a.download = (response.data.fileUrl || 'documento').split('/').pop() || 'documento'
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
+        toast.success(`Oficio ${response.data?.documentCode || ''} generado — descargando DOCX`, { id: toastId, action: actionPayload })
+        if (openInBrowser) {
+          const a = document.createElement('a')
+          a.href = response.data.downloadUrl
+          a.download = (response.data.fileUrl || 'documento').split('/').pop() || 'documento'
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+        }
       }
     } catch (error: any) {
-      console.error(error)
-      toast.error(error.response?.data?.message || 'Error en la generación del Oficio.')
+      let msg = 'Error en la generación del Oficio.'
+      const resMsg = error.response?.data?.message
+      if (resMsg) {
+        msg = Array.isArray(resMsg) ? resMsg.join(', ') : typeof resMsg === 'string' ? resMsg : JSON.stringify(resMsg)
+      }
+      toast.error(msg, { id: toastId })
     } finally {
       setIsGenerating(false)
     }
@@ -1081,21 +1099,37 @@ export default function PracticesPage() {
               )}
 
               {/* Formato de entrega */}
-              <div className="mx-6 mb-5 grid grid-cols-2 gap-2">
+              <div className="mx-6 mb-4 grid grid-cols-2 gap-2">
                 <button
                   onClick={() => changeSolicitudFormat(false)}
                   className={`flex flex-col items-start gap-0.5 p-3 rounded-[12px] border text-left transition-colors ${!solicitudAsPdf ? 'border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/10' : 'border-slate-200 hover:border-slate-300'}`}
                 >
                   <span className="text-[13px] font-bold text-[#111827]">Word (DOCX)</span>
-                  <span className="text-[11px] text-slate-500 leading-snug">Editable. Se descarga al generar.</span>
+                  <span className="text-[11px] text-slate-500 leading-snug">Editable.</span>
                 </button>
                 <button
                   onClick={() => changeSolicitudFormat(true)}
                   className={`flex flex-col items-start gap-0.5 p-3 rounded-[12px] border text-left transition-colors ${solicitudAsPdf ? 'border-rose-500 bg-rose-50/60 ring-2 ring-rose-500/10' : 'border-slate-200 hover:border-slate-300'}`}
                 >
                   <span className="text-[13px] font-bold text-[#111827]">PDF</span>
-                  <span className="text-[11px] text-slate-500 leading-snug">Listo para enviar. Se abre para visualizar.</span>
+                  <span className="text-[11px] text-slate-500 leading-snug">Listo para enviar.</span>
                 </button>
+              </div>
+
+              <div className="mx-6 mb-5 flex items-center gap-2">
+                <input 
+                  type="checkbox" 
+                  id="openBrowser"
+                  checked={openInBrowser}
+                  onChange={(e) => {
+                    setOpenInBrowser(e.target.checked);
+                    localStorage.setItem('unibridge_open_solicitud_in_browser', String(e.target.checked));
+                  }}
+                  className="rounded border-slate-300 text-[#111827] focus:ring-[#111827] w-4 h-4 cursor-pointer"
+                />
+                <label htmlFor="openBrowser" className="text-[13px] text-slate-700 cursor-pointer select-none">
+                  Visualizar / Descargar al finalizar
+                </label>
               </div>
 
               <div className="flex justify-end gap-2 px-6 py-4 bg-slate-50 border-t border-slate-100">
