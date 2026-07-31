@@ -57,7 +57,7 @@ export default function UsersPage() {
     fullName: '',
     title: '',
     role: 'SIGNER' as 'ADMIN' | 'COORDINATOR' | 'SIGNER',
-    signerRole: 'DEAN' as 'DEAN' | 'DIRECTOR',
+    signerRole: 'DIRECTOR' as 'DEAN' | 'DIRECTOR',
     facultyId: '',
     programId: '',
   })
@@ -229,8 +229,8 @@ export default function UsersPage() {
                           onChange={(e) => setForm({ ...form, signerRole: e.target.value as any })}
                           className={inputCls + ' cursor-pointer'}
                         >
-                          <option value="DEAN">Decano (firma primero)</option>
-                          <option value="DIRECTOR">Responsable de Prácticas (firma después)</option>
+                          <option value="DIRECTOR">Responsable de Prácticas (firma primero)</option>
+                          <option value="DEAN">Decano (firma después)</option>
                         </select>
                       </div>
                       <div className="col-span-2">
