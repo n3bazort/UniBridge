@@ -50,6 +50,8 @@ import { ReportsModule } from './modules/reports/reports.module';
         connection: {
           host: configService.get('REDIS_HOST'),
           port: configService.get('REDIS_PORT'),
+          maxRetriesPerRequest: null,
+          enableOfflineQueue: false,
         },
       }),
       inject: [ConfigService],
