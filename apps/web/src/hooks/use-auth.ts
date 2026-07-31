@@ -53,7 +53,16 @@ export function useAuth() {
         return
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al iniciar sesión. Verifica tus credenciales.')
+      console.error('[LOGIN ERROR]', err?.message, err?.code, err?.response?.status, err?.response?.data)
+      if (err.code === 'ERR_NETWORK' || !err.response) {
+        setError('No se pudo conectar con el servidor. El backend puede estar iniciando, intenta de nuevo en 30 segundos.')
+      } else if (err.response?.status === 401) {
+        setError(err.response?.data?.message || 'Credenciales inválidas. Verifica tu correo y contraseña.')
+      } else if (err.response?.status >= 500) {
+        setError(`Error del servidor (${err.response.status}). El backend puede estar reiniciando.`)
+      } else {
+        setError(err.response?.data?.message || 'Error al iniciar sesión. Verifica tus credenciales.')
+      }
       throw err
     } finally {
       setIsLoading(false)
