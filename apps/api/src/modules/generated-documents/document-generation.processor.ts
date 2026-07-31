@@ -6,8 +6,8 @@ import { GeneratedDocumentsService, DocumentGenerationJob } from './generated-do
 /**
  * Worker de generación masiva de documentos.
  *
- * Concurrencia 4: procesa 4 documentos en paralelo (Puppeteer reutiliza
- * una única instancia de navegador con varias páginas). BullMQ maneja
+ * Concurrencia 4: procesa 4 documentos en paralelo (pdf-lib genera cada
+ * PDF en memoria, sin proceso externo). BullMQ maneja
  * reintentos con backoff exponencial y persiste la cola en Redis, por lo
  * que un reinicio del servidor NO pierde los trabajos pendientes.
  */

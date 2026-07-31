@@ -21,13 +21,15 @@ type LoginFormValues = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
   const { login, isLoading, error } = useAuth()
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated, user, _hasHydrated: hasHydrated } = useAuthStore()
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
+    if (!hasHydrated) return
+
     // Check if the session cookie actually exists to avoid stale localStorage loop
-    const hasCookie = document.cookie.includes('unibridge-session=')
+    const hasCookie = typeof document !== 'undefined' && document.cookie.includes('unibridge-session=')
 
     if (isAuthenticated && user && hasCookie) {
       if (user.role === 'ADMIN') {
@@ -41,7 +43,7 @@ export default function LoginPage() {
       // Stale Zustand state without valid cookie: clear it
       useAuthStore.getState().logout()
     }
-  }, [isAuthenticated, user, router])
+  }, [isAuthenticated, user, router, hasHydrated])
 
   const {
     register,

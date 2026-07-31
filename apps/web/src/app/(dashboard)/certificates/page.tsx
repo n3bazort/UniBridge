@@ -7,6 +7,7 @@ import { api } from '@/lib/axios'
 import { RoleGate } from '@/components/shared/role-gate'
 import {
   FileText,
+  UserCheck,
   Search,
   Download,
   ExternalLink,
@@ -16,6 +17,10 @@ import {
   List,
   LayoutGrid,
   Archive,
+  Upload,
+  FileOutput,
+  Printer,
+  Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -50,7 +55,7 @@ interface GeneratedDocument {
 
 interface SignatureBatchItem {
   id: string
-  status: 'PENDING' | 'SIGNED_BY_DEAN' | 'SIGNED' | 'REJECTED'
+  status: 'PENDING' | 'SIGNED_BY_DIRECTOR' | 'SIGNED_BY_DEAN' | 'SIGNED' | 'REJECTED'
   rejectReason?: string
   document: {
     id: string
@@ -73,14 +78,15 @@ interface SignatureBatch {
 }
 
 const BATCH_STATUS_META: Record<SignatureBatch['status'], { label: string; cls: string }> = {
-  PENDING_DEAN: { label: 'Esperando Decano (1 de 2)', cls: 'text-amber-700 bg-amber-50 border-amber-200' },
-  PENDING_DIRECTOR: { label: 'Decano ✓ · Esperando Responsable de Prácticas (2 de 2)', cls: 'text-blue-700 bg-blue-50 border-blue-200' },
+  PENDING_DIRECTOR: { label: 'Esperando Responsable de Prácticas (1 de 2)', cls: 'text-amber-700 bg-amber-50 border-amber-200' },
+  PENDING_DEAN: { label: 'Responsable ✓ · Esperando Decano (2 de 2)', cls: 'text-blue-700 bg-blue-50 border-blue-200' },
   COMPLETED: { label: 'Firmado y publicado', cls: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
   CANCELLED: { label: 'Cancelado', cls: 'text-slate-500 bg-slate-100 border-slate-200' },
 }
 
 const BATCH_ITEM_BADGE: Record<SignatureBatchItem['status'], { label: string; cls: string }> = {
   PENDING: { label: 'Sin firmas', cls: 'text-amber-600 bg-amber-50 border-amber-100' },
+  SIGNED_BY_DIRECTOR: { label: 'Responsable ✓', cls: 'text-blue-600 bg-blue-50 border-blue-100' },
   SIGNED_BY_DEAN: { label: 'Decano ✓', cls: 'text-blue-600 bg-blue-50 border-blue-100' },
   SIGNED: { label: 'Firmado ✓✓', cls: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
   REJECTED: { label: 'Rechazado', cls: 'text-red-600 bg-red-50 border-red-100' },
@@ -98,12 +104,23 @@ function docState(doc: GeneratedDocument): { label: string; cls: string; dot: st
     return { label: 'Vigente', cls: 'text-emerald-700 bg-emerald-50 border-emerald-100', dot: 'bg-emerald-500' }
   }
   switch (doc.signatureStatus) {
-    case 'IN_SIGNING': return { label: 'Esperando Decano', cls: 'text-amber-700 bg-amber-50 border-amber-100', dot: 'bg-amber-500' }
-    case 'PARTIALLY_SIGNED': return { label: 'Esperando Responsable', cls: 'text-blue-700 bg-blue-50 border-blue-100', dot: 'bg-blue-500' }
+    case 'IN_SIGNING': return { label: 'Esperando Responsable de Prácticas', cls: 'text-amber-700 bg-amber-50 border-amber-100', dot: 'bg-amber-500' }
+    case 'PARTIALLY_SIGNED': return { label: 'Esperando Decano', cls: 'text-blue-700 bg-blue-50 border-blue-100', dot: 'bg-blue-500' }
     case 'SIGNED': return { label: 'Firmado ✓✓', cls: 'text-emerald-700 bg-emerald-50 border-emerald-100', dot: 'bg-emerald-500' }
     case 'REJECTED': return { label: 'Firma rechazada', cls: 'text-red-700 bg-red-50 border-red-100', dot: 'bg-red-500' }
     default: return { label: 'Listo para enviar', cls: 'text-slate-600 bg-slate-50 border-slate-200', dot: 'bg-slate-300' }
   }
+}
+
+/**
+ * Un documento admite revisión manual mientras siga vigente, conserve el
+ * formato Word y no haya entrado al circuito de firma: una vez firmado,
+ * cualquier cambio invalidaría la rúbrica de las autoridades.
+ */
+function isEditable(doc: GeneratedDocument): boolean {
+  return doc.status === 'VALID'
+    && (doc.fileUrl || '').toLowerCase().endsWith('.docx')
+    && (!doc.signatureStatus || doc.signatureStatus === 'NONE')
 }
 
 const formatShortDate = (d?: string | null) =>
@@ -112,21 +129,21 @@ const formatShortDate = (d?: string | null) =>
 const formatDate = (d: string) =>
   new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
 
-/** Stepper horizontal: Enviado → Firma Decano → Firma Responsable → Publicado */
+/** Stepper horizontal: Enviado → Firma Responsable → Firma Decano → Publicado */
 function BatchStepper({ batch }: { batch: SignatureBatch }) {
   const steps = [
     { label: 'Enviado a firma', date: batch.createdAt, done: true },
     {
-      label: 'Firma del Decano',
-      date: batch.deanSignedAt,
-      done: !!batch.deanSignedAt || batch.status === 'PENDING_DIRECTOR' || batch.status === 'COMPLETED',
-    },
-    {
       label: 'Firma del Responsable',
       date: batch.directorSignedAt,
-      done: !!batch.directorSignedAt || batch.status === 'COMPLETED',
+      done: !!batch.directorSignedAt || batch.status === 'PENDING_DEAN' || batch.status === 'COMPLETED',
     },
-    { label: 'Publicado', date: batch.directorSignedAt, done: batch.status === 'COMPLETED' },
+    {
+      label: 'Firma del Decano',
+      date: batch.deanSignedAt,
+      done: !!batch.deanSignedAt || batch.status === 'COMPLETED',
+    },
+    { label: 'Publicado', date: batch.deanSignedAt, done: batch.status === 'COMPLETED' },
   ]
   const currentIdx = steps.findIndex(s => !s.done)
 
@@ -167,6 +184,20 @@ function BatchStepper({ batch }: { batch: SignatureBatch }) {
   )
 }
 
+function getDocTypeName(type: string): string {
+  if (type === 'DESIGNACION') return 'Designación'
+  if (type === 'SOLICITUD') return 'Solicitud'
+  if (type === 'CERTIFICADO') return 'Certificado'
+  return type
+}
+
+function getClusterTypeName(type: string): string {
+  if (type === 'DESIGNACION') return 'Designación grupal'
+  if (type === 'SOLICITUD') return 'Solicitud grupal'
+  if (type === 'CERTIFICADO') return 'Certificado'
+  return `${type} grupal`
+}
+
 function CertificatesPageInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -201,6 +232,11 @@ function CertificatesPageInner() {
   // junto con los DOCX: un ZIP no se puede "visualizar")
   const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set())
   const [downloadingZip, setDownloadingZip] = useState(false)
+  // Revisión manual del oficio: reemplazo del Word, conversión a PDF e impresión
+  const replaceInputRef = useRef<HTMLInputElement>(null)
+  const [docToReplace, setDocToReplace] = useState<string | null>(null)
+  const [busyDocId, setBusyDocId] = useState<string | null>(null)
+  const [printing, setPrinting] = useState(false)
 
   const handleDownloadSignedZip = async (ids?: string[]) => {
     setDownloadingZip(true)
@@ -326,7 +362,10 @@ function CertificatesPageInner() {
         case 'IN_SIGNATURE': return isCert && doc.status === 'VALID' && (doc.signatureStatus === 'IN_SIGNING' || doc.signatureStatus === 'PARTIALLY_SIGNED')
         case 'SIGNED': return isCert && doc.status === 'VALID' && doc.signatureStatus === 'SIGNED'
         case 'ARCHIVED': return doc.status !== 'VALID'
-        default: return true
+        // Por defecto solo lo vigente: las versiones invalidadas o reemplazadas
+        // estorban en la agrupación por empresa y ya tienen su propia vista
+        // en el filtro de archivados.
+        default: return doc.status === 'VALID'
       }
     })
     return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -384,6 +423,72 @@ function CertificatesPageInner() {
       window.open(res.data.url, '_blank')
     } catch {
       toast.error('No se pudo previsualizar el archivo')
+    }
+  }
+
+  /**
+   * Flujo de revisión del oficio: se descarga el Word, se corrige fuera del
+   * sistema y se vuelve a subir. El documento conserva su código y suma una
+   * versión, de modo que la numeración oficial no se altera.
+   */
+  const handleReplaceFile = (docId: string) => {
+    setDocToReplace(docId)
+    replaceInputRef.current?.click()
+  }
+
+  const onReplaceSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !docToReplace) return
+    setBusyDocId(docToReplace)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await api.post(`/generated-documents/${docToReplace}/replace-file`, fd)
+      toast.success(res.data.message || 'Documento actualizado')
+      refetch()
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'No se pudo reemplazar el documento')
+    } finally {
+      setBusyDocId(null)
+      setDocToReplace(null)
+    }
+  }
+
+  const handleConvertToPdf = async (docId: string) => {
+    setBusyDocId(docId)
+    try {
+      const res = await api.post(`/generated-documents/${docId}/convert-to-pdf`)
+      toast.success(res.data.message || 'Documento convertido a PDF')
+      refetch()
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'No se pudo convertir a PDF')
+    } finally {
+      setBusyDocId(null)
+    }
+  }
+
+  /** Une los documentos indicados en un PDF y abre el diálogo de impresión. */
+  const handlePrint = async (ids: string[]) => {
+    if (!ids.length) return
+    setPrinting(true)
+    try {
+      const res = await api.post('/generated-documents/print',
+        { ids },
+        { responseType: 'blob' })
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const frame = document.createElement('iframe')
+      frame.style.display = 'none'
+      frame.src = url
+      document.body.appendChild(frame)
+      frame.onload = () => { frame.contentWindow?.focus(); frame.contentWindow?.print() }
+      const omitidos = res.headers['x-documentos-omitidos']
+      toast.success(`${res.headers['x-documentos-incluidos'] || ''} documento(s) listos para imprimir`)
+      if (omitidos) toast.warning(`No se pudieron incluir: ${omitidos}`)
+    } catch {
+      toast.error('No se pudo preparar la impresión')
+    } finally {
+      setPrinting(false)
     }
   }
 
@@ -451,9 +556,20 @@ function CertificatesPageInner() {
         )}
 
         {/* Identidad del documento: tipo + código + estudiante en un bloque */}
-        <div className={cn('w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0', isPdf ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-blue-500')}>
-          <FileText className="w-4 h-4" />
-        </div>
+        {(() => {
+          const isDesignacion = doc.documentType === 'DESIGNACION'
+          const isCert = doc.documentType === 'CERTIFICADO'
+          const iconBoxCls = isCert
+            ? 'bg-rose-50 text-rose-500'
+            : isDesignacion
+            ? 'bg-violet-50 text-violet-600'
+            : 'bg-blue-50 text-blue-500'
+          return (
+            <div className={cn('w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0', iconBoxCls)}>
+              {isDesignacion ? <UserCheck className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+            </div>
+          )
+        })()}
 
         <div className="flex flex-col min-w-0 flex-1">
           <div className="flex items-center gap-2 min-w-0">
@@ -463,7 +579,7 @@ function CertificatesPageInner() {
             <span className="text-[10.5px] font-bold text-slate-400 font-mono shrink-0">{doc.documentCode}</span>
           </div>
           <span className="text-[11.5px] text-[#9ca3af] truncate">
-            {doc.documentType === 'CERTIFICADO' ? 'Certificado' : 'Solicitud'} · {formatDate(doc.createdAt)}
+            {getDocTypeName(doc.documentType)} · {formatDate(doc.createdAt)}
             {doc.invalidReason && <span className="text-amber-600"> · {doc.invalidReason}</span>}
           </span>
         </div>
@@ -493,6 +609,40 @@ function CertificatesPageInner() {
             >
               <ExternalLink className="w-4 h-4" />
             </button>
+          )}
+          {isEditable(doc) && (
+            <>
+              <button
+                onClick={() => handleReplaceFile(doc.id)}
+                disabled={busyDocId === doc.id}
+                className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors disabled:opacity-50"
+                title="Subir el Word corregido (conserva el código y suma una versión)"
+              >
+                {busyDocId === doc.id
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Upload className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={() => handleConvertToPdf(doc.id)}
+                disabled={busyDocId === doc.id}
+                className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors disabled:opacity-50"
+                title="Convertir a PDF cuando el documento ya esté conforme"
+              >
+                <FileOutput className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          {doc.status === 'VALID' && (
+            <>
+              <button
+                onClick={() => handlePrint([doc.id])}
+                disabled={printing}
+                className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors disabled:opacity-50"
+                title="Imprimir este documento"
+              >
+                <Printer className="w-4 h-4" />
+              </button>
+            </>
           )}
           {doc.status === 'VALID' && (
             <button
@@ -546,16 +696,21 @@ function CertificatesPageInner() {
         <span className="w-4 shrink-0" />
 
         {/* Ícono "apilado": comunica que es UN documento de varios */}
-        <div className="relative shrink-0 w-9 h-8">
-          <div className="absolute left-1.5 top-0 w-8 h-8 rounded-[9px] bg-blue-100/70 rotate-3" />
-          <div className="absolute left-0 top-0 w-8 h-8 rounded-[9px] bg-blue-50 text-blue-500 flex items-center justify-center border border-blue-100">
-            <FileText className="w-4 h-4" />
-          </div>
-        </div>
+        {(() => {
+          const isDesignacion = doc.documentType === 'DESIGNACION'
+          return (
+            <div className="relative shrink-0 w-9 h-8">
+              <div className={cn('absolute left-1.5 top-0 w-8 h-8 rounded-[9px] rotate-3', isDesignacion ? 'bg-violet-100/70' : 'bg-blue-100/70')} />
+              <div className={cn('absolute left-0 top-0 w-8 h-8 rounded-[9px] flex items-center justify-center border', isDesignacion ? 'bg-violet-50 text-violet-600 border-violet-100' : 'bg-blue-50 text-blue-500 border-blue-100')}>
+                {isDesignacion ? <UserCheck className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+              </div>
+            </div>
+          )
+        })()}
 
         <div className="flex flex-col min-w-0 flex-1 gap-0.5">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[13px] font-semibold text-[#111827] shrink-0">Solicitud grupal</span>
+            <span className="text-[13px] font-semibold text-[#111827] shrink-0">{getClusterTypeName(doc.documentType)}</span>
             <span className="text-[10.5px] font-bold text-slate-400 font-mono truncate">{doc.documentCode}</span>
             <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full shrink-0">
               {cluster.length} estudiantes
@@ -579,7 +734,7 @@ function CertificatesPageInner() {
             <button
               onClick={() => handleDownload(doc.id)}
               className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-              title="Descargar DOCX"
+              title="Descargar el Word para revisarlo"
             >
               <Download className="w-4 h-4" />
             </button>
@@ -591,6 +746,43 @@ function CertificatesPageInner() {
             >
               <ExternalLink className="w-4 h-4" />
             </button>
+          )}
+
+          {/* Revisión manual: solo mientras el oficio siga en Word y fuera del circuito de firma */}
+          {isEditable(doc) && (
+            <>
+              <button
+                onClick={() => handleReplaceFile(doc.id)}
+                disabled={busyDocId === doc.id}
+                className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors disabled:opacity-50"
+                title="Subir el Word corregido (conserva el código y suma una versión)"
+              >
+                {busyDocId === doc.id
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Upload className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={() => handleConvertToPdf(doc.id)}
+                disabled={busyDocId === doc.id}
+                className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors disabled:opacity-50"
+                title="Convertir a PDF cuando el oficio ya esté conforme"
+              >
+                <FileOutput className="w-4 h-4" />
+              </button>
+            </>
+          )}
+
+          {doc.status === 'VALID' && (
+            <>
+              <button
+                onClick={() => handlePrint([doc.id])}
+                disabled={printing}
+                className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors disabled:opacity-50"
+                title="Imprimir este documento"
+              >
+                <Printer className="w-4 h-4" />
+              </button>
+            </>
           )}
           {doc.status === 'VALID' && (
             <button
@@ -636,15 +828,27 @@ function CertificatesPageInner() {
             className="absolute top-2 left-2 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer opacity-0 group-hover:opacity-100 checked:opacity-100 transition-opacity"
           />
         )}
-        <div
-          className={cn(
-            'flex items-center justify-center rounded-[14px]',
-            doc.template?.type === 'PDF' ? 'bg-rose-50 text-rose-400' : 'bg-blue-50 text-blue-400'
-          )}
-          style={{ width: iconSize, height: iconSize * 0.78 }}
-        >
-          <FileText style={{ width: iconSize * 0.42, height: iconSize * 0.42 }} strokeWidth={1.5} />
-        </div>
+        {(() => {
+          const isDesignacion = doc.documentType === 'DESIGNACION'
+          const isCert = doc.documentType === 'CERTIFICADO'
+          const iconBoxCls = isCert
+            ? 'bg-rose-50 text-rose-400'
+            : isDesignacion
+            ? 'bg-violet-50 text-violet-600'
+            : 'bg-blue-50 text-blue-400'
+          return (
+            <div
+              className={cn('flex items-center justify-center rounded-[14px]', iconBoxCls)}
+              style={{ width: iconSize, height: iconSize * 0.78 }}
+            >
+              {isDesignacion ? (
+                <UserCheck style={{ width: iconSize * 0.42, height: iconSize * 0.42 }} strokeWidth={1.5} />
+              ) : (
+                <FileText style={{ width: iconSize * 0.42, height: iconSize * 0.42 }} strokeWidth={1.5} />
+              )}
+            </div>
+          )
+        })()}
         <span
           className="text-[11px] font-semibold text-[#111827] text-center leading-tight line-clamp-2"
           style={{ maxWidth: iconSize + 24 }}
@@ -667,6 +871,14 @@ function CertificatesPageInner() {
 
   return (
     <RoleGate allowedRoles={['ADMIN', 'COORDINATOR']}>
+      {/* Entrada oculta para subir el Word corregido */}
+      <input
+        ref={replaceInputRef}
+        type="file"
+        accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        hidden
+        onChange={onReplaceSelected}
+      />
       <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8] pt-6 pb-12 px-4 lg:px-8">
         <div className="w-full max-w-[1200px] mx-auto flex flex-col gap-5">
 
@@ -826,6 +1038,17 @@ function CertificatesPageInner() {
                     {sendingToSignature ? 'Enviando...' : 'Enviar a firma'}
                   </button>
                   <button
+                    onClick={() => handlePrint(Array.from(selectedIds))}
+                    disabled={printing}
+                    className="h-[34px] px-4 flex items-center gap-2 rounded-[10px] bg-white/10 hover:bg-white/20 text-white text-[12.5px] font-bold transition-colors disabled:opacity-60 whitespace-nowrap"
+                    title="Une los documentos elegidos en un solo PDF y abre el diálogo de impresión"
+                  >
+                    {printing
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Printer className="w-4 h-4" />}
+                    {printing ? 'Preparando...' : 'Imprimir'}
+                  </button>
+                  <button
                     onClick={() => setSelectedIds(new Set())}
                     className="flex items-center justify-center w-7 h-7 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
                     title="Limpiar selección"
@@ -890,19 +1113,28 @@ function CertificatesPageInner() {
                                 id={`doc-${cluster[0].id}`}
                                 onClick={() => ((cluster[0].signedFileKey || cluster[0].fileUrl || '').endsWith('.docx') ? handleDownload(cluster[0].id) : handleView(cluster[0].id))}
                                 className="relative flex flex-col items-center gap-1.5 p-3 rounded-[12px] border border-transparent cursor-pointer transition-colors hover:bg-slate-50 hover:border-[#eef2f7]"
-                                title={`Solicitud grupal ${cluster[0].documentCode} — ${cluster.length} estudiantes`}
+                                title={`${getClusterTypeName(cluster[0].documentType)} ${cluster[0].documentCode} — ${cluster.length} estudiantes`}
                               >
-                                <div className="relative" style={{ width: iconSize, height: iconSize * 0.78 }}>
-                                  <div className="absolute left-1.5 top-1 w-full h-full rounded-[14px] bg-blue-100/60 rotate-2" />
-                                  <div className="absolute inset-0 rounded-[14px] bg-blue-50 text-blue-400 flex items-center justify-center border border-blue-100">
-                                    <FileText style={{ width: iconSize * 0.42, height: iconSize * 0.42 }} strokeWidth={1.5} />
-                                  </div>
-                                  <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
-                                    {cluster.length}
-                                  </span>
-                                </div>
+                                {(() => {
+                                  const isDesignacion = cluster[0].documentType === 'DESIGNACION'
+                                  return (
+                                    <div className="relative" style={{ width: iconSize, height: iconSize * 0.78 }}>
+                                      <div className={cn('absolute left-1.5 top-1 w-full h-full rounded-[14px] rotate-2', isDesignacion ? 'bg-violet-100/60' : 'bg-blue-100/60')} />
+                                      <div className={cn('absolute inset-0 rounded-[14px] flex items-center justify-center border', isDesignacion ? 'bg-violet-50 text-violet-600 border-violet-100' : 'bg-blue-50 text-blue-400 border-blue-100')}>
+                                        {isDesignacion ? (
+                                          <UserCheck style={{ width: iconSize * 0.42, height: iconSize * 0.42 }} strokeWidth={1.5} />
+                                        ) : (
+                                          <FileText style={{ width: iconSize * 0.42, height: iconSize * 0.42 }} strokeWidth={1.5} />
+                                        )}
+                                      </div>
+                                      <span className={cn('absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full text-white text-[10px] font-bold flex items-center justify-center', isDesignacion ? 'bg-violet-600' : 'bg-blue-600')}>
+                                        {cluster.length}
+                                      </span>
+                                    </div>
+                                  )
+                                })()}
                                 <span className="text-[11px] font-semibold text-[#111827] text-center leading-tight" style={{ maxWidth: iconSize + 24 }}>
-                                  Solicitud grupal
+                                  {getClusterTypeName(cluster[0].documentType)}
                                 </span>
                                 <span className="text-[9.5px] font-mono text-slate-400 truncate" style={{ maxWidth: iconSize + 24 }}>
                                   {cluster[0].documentCode}

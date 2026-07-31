@@ -54,4 +54,12 @@ export class CreatePracticeDto {
   @IsString()
   @IsOptional()
   academicLevel?: string;
+
+  @ApiPropertyOptional({
+    description: 'Área de la empresa donde se desempeñará. La solicitud oficial la imprime: "en el área de: ___"',
+    example: 'TI',
+  })
+  @IsString()
+  @IsOptional()
+  workArea?: string;
 }

@@ -116,17 +116,38 @@ export class MinioService implements OnModuleInit {
    */
   async getPresignedUrl(objectKey: string, expirySeconds = 900, downloadName?: string, inline = false): Promise<string> {
     if (this.isDisabled) return `/mock-uploads/${objectKey}`;
-    
+
     let respHeaders: Record<string, string> | undefined = undefined;
-    
-    if (inline) {
-      respHeaders = { 'response-content-disposition': `inline; filename="${encodeURIComponent(downloadName || 'documento')}"` };
+
+    if (inline || downloadName) {
+      const disposicion = inline ? 'inline' : 'attachment';
+      respHeaders = {
+        'response-content-disposition': this.contentDisposition(disposicion, downloadName || 'documento'),
+      };
       // Minio/S3 a veces requiere explícitamente el Content-Type correcto para visualizar PDF o DOCX en línea si no se fijó al subir.
-    } else if (downloadName) {
-      respHeaders = { 'response-content-disposition': `attachment; filename="${encodeURIComponent(downloadName)}"` };
     }
-    
+
     return this.minioClient.presignedGetObject(this.bucketName, objectKey, expirySeconds, respHeaders);
+  }
+
+  /**
+   * Content-Disposition con nombre de archivo legible.
+   *
+   * Los oficios se archivan con nombres que llevan espacios y acentos
+   * («Designación de estudiantes Fish Ecuador 055.docx»). El parámetro
+   * `filename` solo admite ASCII y los navegadores NO deshacen el
+   * porcentaje-escapado ahí, así que percent-encodearlo dejaba nombres como
+   * «Designaci%C3%B3n%20de...». La forma correcta es la de la RFC 5987: un
+   * `filename` ASCII de reserva más un `filename*` en UTF-8, que es el que los
+   * navegadores actuales prefieren.
+   */
+  private contentDisposition(disposicion: 'inline' | 'attachment', nombre: string): string {
+    const ascii = nombre
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')     // quita los acentos, no la letra
+      .replace(/[^\x20-\x7E]/g, '_')
+      .replace(/["\\]/g, '');
+    return `${disposicion}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(nombre)}`;
   }
 
   /** Stream de lectura de un objeto (para empaquetar ZIPs en el servidor). */

@@ -66,6 +66,31 @@ export class SignersService {
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existing) throw new ConflictException('Ya existe un usuario con ese correo');
 
+    // Validación de Decano Único por Facultad
+    if (dto.role === 'SIGNER' && dto.signerRole === 'DEAN') {
+      if (!dto.facultyId) {
+        throw new BadRequestException('Debe seleccionar la Facultad a la que pertenece el Decano.');
+      }
+      const activeDean = await this.prisma.user.findFirst({
+        where: {
+          role: 'SIGNER',
+          suspendedAt: null,
+          deletedAt: null,
+          signerProfile: {
+            signerRole: 'DEAN',
+            facultyId: dto.facultyId,
+          },
+        },
+        include: { signerProfile: true },
+      });
+      if (activeDean) {
+        const name = activeDean.signerProfile?.fullName || activeDean.email;
+        throw new ConflictException(
+          `Ya existe un Decano activo (${name}) para la facultad seleccionada. Debe inhabilitar la cuenta del decano actual antes de crear o asignar uno nuevo.`
+        );
+      }
+    }
+
     const tempPassword = dto.password || crypto.randomBytes(6).toString('base64url');
     const hashed = await bcrypt.hash(tempPassword, 10);
 
@@ -82,6 +107,7 @@ export class SignersService {
           signerRole: dto.signerRole,
           fullName: dto.fullName,
           title: dto.title,
+          facultyId: dto.facultyId || null,
         },
       };
     } else if (dto.role === 'COORDINATOR') {
@@ -100,7 +126,7 @@ export class SignersService {
 
     const user = await this.prisma.user.create({
       data: userData,
-      include: { signerProfile: true, coordinator: true },
+      include: { signerProfile: { include: { faculty: true } }, coordinator: { include: { faculty: true, program: true } } },
     });
 
     return {
@@ -109,6 +135,8 @@ export class SignersService {
       role: user.role,
       signerRole: user.signerProfile?.signerRole,
       fullName: user.signerProfile?.fullName,
+      facultyId: user.coordinator?.facultyId || user.signerProfile?.facultyId,
+      facultyName: user.coordinator?.faculty?.name || user.signerProfile?.faculty?.name,
       temporaryPassword: dto.password ? undefined : tempPassword,
     };
   }
@@ -116,7 +144,7 @@ export class SignersService {
   async listSigners() {
     const users = await this.prisma.user.findMany({
       where: { role: { in: ['ADMIN', 'COORDINATOR', 'SIGNER'] }, deletedAt: null },
-      include: { signerProfile: true, coordinator: { include: { faculty: true, program: true } } },
+      include: { signerProfile: { include: { faculty: true } }, coordinator: { include: { faculty: true, program: true } } },
       orderBy: { createdAt: 'desc' },
     });
     return users.map(user => ({
@@ -129,8 +157,8 @@ export class SignersService {
       signerRole: user.signerProfile?.signerRole,
       fullName: user.signerProfile?.fullName || user.email.split('@')[0],
       title: user.signerProfile?.title,
-      facultyName: user.coordinator?.faculty?.name,
-      programName: user.coordinator?.program?.name,
+      facultyId: user.coordinator?.facultyId || user.signerProfile?.facultyId,
+      facultyName: user.coordinator?.faculty?.name || user.signerProfile?.faculty?.name,
     }));
   }
 
@@ -165,6 +193,31 @@ export class SignersService {
         throw new ConflictException(
           `No se puede inhabilitar: es el único activo y hay ${pending} lote(s) esperando firma.`
         );
+      }
+    }
+
+    // Validación al REACTIVAR a un Decano: no debe existir otro decano activo en la misma facultad
+    if (!suspended && user.role === 'SIGNER' && user.signerProfile?.signerRole === 'DEAN') {
+      if (user.signerProfile.facultyId) {
+        const otherActiveDean = await this.prisma.user.findFirst({
+          where: {
+            id: { not: userId },
+            role: 'SIGNER',
+            suspendedAt: null,
+            deletedAt: null,
+            signerProfile: {
+              signerRole: 'DEAN',
+              facultyId: user.signerProfile.facultyId,
+            },
+          },
+          include: { signerProfile: true },
+        });
+        if (otherActiveDean) {
+          const name = otherActiveDean.signerProfile?.fullName || otherActiveDean.email;
+          throw new ConflictException(
+            `No se puede reactivar esta cuenta: ya existe un Decano activo (${name}) en la misma facultad. Debe inhabilitar la cuenta del decano actual primero.`
+          );
+        }
       }
     }
 
@@ -262,12 +315,36 @@ export class SignersService {
     // Una invitación de ADMIN es otra vía de escalar privilegios: mismo candado.
     await this.assertCanGrantRole(createdById, dto.role);
 
+    if (dto.role === 'SIGNER' && dto.signerRole === 'DEAN') {
+      if (!dto.facultyId) {
+        throw new BadRequestException('Debe seleccionar la Facultad a la que corresponderá el Decano.');
+      }
+      const activeDean = await this.prisma.user.findFirst({
+        where: {
+          role: 'SIGNER',
+          suspendedAt: null,
+          deletedAt: null,
+          signerProfile: {
+            signerRole: 'DEAN',
+            facultyId: dto.facultyId,
+          },
+        },
+        include: { signerProfile: true },
+      });
+      if (activeDean) {
+        const name = activeDean.signerProfile?.fullName || activeDean.email;
+        throw new ConflictException(
+          `Ya existe un Decano activo (${name}) para la facultad seleccionada. Debe inhabilitar la cuenta del decano actual antes de emitir una nueva invitación.`
+        );
+      }
+    }
+
     const token = crypto.randomBytes(32).toString('base64url');
     const days = Math.min(Math.max(dto.expiresInDays ?? 7, 1), 30);
 
-    let coordFaculty: string | null = null;
+    let invitationFaculty: string | null = dto.facultyId || null;
     if (dto.role === 'COORDINATOR') {
-      coordFaculty = dto.facultyId || (dto.programId
+      invitationFaculty = dto.facultyId || (dto.programId
         ? (await this.prisma.program.findUnique({ where: { id: dto.programId }, select: { facultyId: true } }))?.facultyId || null
         : null);
     }
@@ -277,7 +354,7 @@ export class SignersService {
         token,
         role: dto.role,
         signerRole: dto.role === 'SIGNER' ? dto.signerRole : null,
-        facultyId: coordFaculty,
+        facultyId: invitationFaculty,
         programId: dto.role === 'COORDINATOR' ? dto.programId : null,
         email: dto.email,
         fullName: dto.fullName,
@@ -373,6 +450,26 @@ export class SignersService {
       throw new BadRequestException('La contraseña debe tener al menos 8 caracteres');
     }
 
+    if (invitation.role === 'SIGNER' && invitation.signerRole === 'DEAN' && invitation.facultyId) {
+      const activeDean = await this.prisma.user.findFirst({
+        where: {
+          role: 'SIGNER',
+          suspendedAt: null,
+          deletedAt: null,
+          signerProfile: {
+            signerRole: 'DEAN',
+            facultyId: invitation.facultyId,
+          },
+        },
+        include: { signerProfile: true },
+      });
+      if (activeDean) {
+        throw new ConflictException(
+          'Ya existe un Decano activo para la facultad asignada. Debe contactar al administrador para inhabilitar la cuenta previa antes de activar su registro.'
+        );
+      }
+    }
+
     const hashed = await bcrypt.hash(dto.password, 10);
 
     const userData: any = {
@@ -387,6 +484,7 @@ export class SignersService {
           signerRole: invitation.signerRole,
           fullName: dto.fullName || 'Autoridad',
           title: dto.title,
+          facultyId: invitation.facultyId || null,
         },
       };
     } else if (invitation.role === 'COORDINATOR') {

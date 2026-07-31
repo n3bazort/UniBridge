@@ -53,11 +53,31 @@ export class DocumentEngineService {
     }
 
     const outDir = path.dirname(docxPath);
-    // 120s de margen: el primer arranque de soffice es lento
-    await execFileAsync(soffice, ['--headless', '--convert-to', 'pdf', '--outdir', outDir, docxPath], {
-      timeout: 120_000,
-      windowsHide: true,
-    });
+    const profileDir = path.join(os.tmpdir(), 'soffice_profile');
+    if (!fs.existsSync(profileDir)) {
+      try { fs.mkdirSync(profileDir, { recursive: true }); } catch {}
+    }
+    const userInstArg = `-env:UserInstallation=file:///${profileDir.replace(/\\/g, '/')}`;
+
+    // Banderas optimizadas: evitan wizards, splash logo, chequeos de restauración y locks de perfil
+    await execFileAsync(
+      soffice,
+      [
+        userInstArg,
+        '--headless',
+        '--norestore',
+        '--nofirststartwizard',
+        '--nologo',
+        '--nodefault',
+        '--convert-to', 'pdf',
+        '--outdir', outDir,
+        docxPath,
+      ],
+      {
+        timeout: 120_000,
+        windowsHide: true,
+      },
+    );
 
     const pdfPath = docxPath.replace(/\.docx$/i, '.pdf');
     if (!fs.existsSync(pdfPath)) {
@@ -94,7 +114,7 @@ export class DocumentEngineService {
     if (type === 'PDF') {
       // Si el fondo del template vive en MinIO (key "templates/backgrounds/..."),
       // lo descargamos y lo incrustamos como data URI antes de renderizar,
-      // así Puppeteer no depende de red ni de credenciales al generar el PDF.
+      // así el motor no depende de red ni de credenciales al generar el PDF.
       let tpl = templateContent as KonvaTemplateJson;
       const bg = (tpl as any)?.background;
       if (typeof bg === 'string' && bg.startsWith('templates/backgrounds/')) {

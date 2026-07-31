@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
-import { ChevronDown, ChevronRight, MoreHorizontal, Building2, CheckSquare, Printer, AlertCircle, FileText, ArrowLeftRight, Loader2, Check } from 'lucide-react'
+import { ChevronDown, ChevronRight, MoreHorizontal, Building2, CheckSquare, Printer, AlertCircle, FileText, ArrowLeftRight, Loader2, Check, PenLine, UserCheck } from 'lucide-react'
 import { api } from '@/lib/axios'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -10,10 +9,34 @@ import { cn } from '@/lib/utils'
 export interface GeneratedDoc {
   id: string
   status?: 'VALID' | 'SUPERSEDED' | 'INVALIDATED'
+  signatureStatus?: 'NONE' | 'IN_SIGNING' | 'PARTIALLY_SIGNED' | 'SIGNED' | 'REJECTED'
   documentCode?: string
   documentType?: string
   invalidReason?: string
   template: { type: string, name: string }
+}
+
+/**
+ * Cómo debe verse el sello de firma de un certificado. Solo se colorea del todo
+ * cuando las dos autoridades ya suscribieron; en los pasos intermedios avisa de
+ * en qué punto del circuito está, y si aún no se ha enviado, lo dice.
+ */
+function getFirmaState(pdf?: GeneratedDoc) {
+  if (!pdf) {
+    return { cls: 'bg-slate-50 text-slate-300 cursor-default', title: 'Sin certificado emitido: primero hay que generarlo', activo: false }
+  }
+  switch (pdf.signatureStatus) {
+    case 'SIGNED':
+      return { cls: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 cursor-pointer', title: `Firmado por ambas autoridades — ver en Certificados`, activo: true }
+    case 'PARTIALLY_SIGNED':
+      return { cls: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-500 cursor-pointer', title: 'En circuito de firma: falta el Responsable de Prácticas — ver en Certificados', activo: true }
+    case 'IN_SIGNING':
+      return { cls: 'bg-blue-50 hover:bg-blue-100 text-blue-500 cursor-pointer', title: 'En circuito de firma: pendiente del Decano — ver en Certificados', activo: true }
+    case 'REJECTED':
+      return { cls: 'bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer', title: 'Firma rechazada: hay que revisarlo — ver en Certificados', activo: true }
+    default:
+      return { cls: 'bg-amber-50 hover:bg-amber-100 text-amber-500 cursor-pointer', title: 'Sin enviar a firma: mándalo al circuito desde Certificados', activo: true }
+  }
 }
 
 export interface Practice {
@@ -32,10 +55,17 @@ export interface Practice {
     id?: string
     name: string
     contactName: string
+    /** Cargo del contacto: es el que los oficios imprimen como destinatario */
+    recipientName?: string
+    email?: string
+    phone?: string
   }
   tutorName: string
   academicLevel: string
   practiceLevel: string
+  /** Área de la empresa donde se desempeña; la solicitud oficial la imprime */
+  workArea?: string
+  academicPeriod?: string
   status: string
   totalHours: number
 }
@@ -54,12 +84,13 @@ interface EntityListProps {
   onToggleSelection?: (id: string) => void
   onToggleAll: (groupId: string, items: Practice[]) => void
   onGenerateSolicitud?: (items: Practice[]) => void
+  /** Emite la designación del grupo: solo se ofrece si la solicitud ya está vigente */
+  onGenerateDesignacion?: (items: Practice[]) => void
   isGenerating?: boolean
   onSelectPractice?: (p: Practice) => void
   activePracticeId?: string | null
   isGrouped?: boolean
   onUpdateStatus?: (id: string, newStatus: string) => void
-  onEditPhone?: (studentId: string, phone: string) => void
   /** Abre el buscador de reasignación de empresa para esta práctica */
   onReassign?: (p: Practice) => void
   /** Docs recién invalidados por una reasignación: disparan la animación de "quiebre" */
@@ -70,14 +101,25 @@ interface EntityListProps {
   generatingCertIds?: Set<string>
 }
 
-/** Estado efectivo del ícono de solicitud (DOCX) de un estudiante. */
-function getDocxState(docs: GeneratedDoc[]) {
-  const docx = docs.filter(d => d.template.type === 'DOCX')
-  const valid = docx.find(d => (d.status ?? 'VALID') === 'VALID')
+/**
+ * Estado efectivo de un oficio en Word de un estudiante.
+ *
+ * Se filtra por `documentType`, no por el formato del archivo: la solicitud y la
+ * designación son las dos DOCX, así que filtrar por tipo de archivo encendería
+ * el ícono de una con el documento de la otra.
+ */
+function getOficioState(docs: GeneratedDoc[], tipo: 'SOLICITUD' | 'DESIGNACION') {
+  const propios = docs.filter(d => (d.documentType || 'SOLICITUD') === tipo)
+  const valid = propios.find(d => (d.status ?? 'VALID') === 'VALID')
   if (valid) return { state: 'valid' as const, doc: valid }
-  const stale = docx.find(d => d.status === 'SUPERSEDED' || d.status === 'INVALIDATED')
+  const stale = propios.find(d => d.status === 'SUPERSEDED' || d.status === 'INVALIDATED')
   if (stale) return { state: 'stale' as const, doc: stale }
   return { state: 'none' as const, doc: undefined }
+}
+
+/** Estado efectivo del ícono de solicitud de un estudiante. */
+function getDocxState(docs: GeneratedDoc[]) {
+  return getOficioState(docs, 'SOLICITUD')
 }
 
 /** Estado efectivo del certificado (PDF) de un estudiante. */
@@ -97,12 +139,12 @@ type SolicitudAction =
   | { kind: 'regenerate' }                  // quedó invalidada (p.ej. reasignación)
 
 /**
- * Qué acción de solicitud tiene sentido ofrecer para una empresa.
+ * Qué acción tiene sentido ofrecer para un oficio de esta empresa.
  * Solo se ofrece cuando hay algo real que hacer: si todos los estudiantes
  * ya están cubiertos por un oficio vigente, no se muestra nada.
  */
-function getSolicitudAction(items: Practice[]): SolicitudAction {
-  const states = items.map(p => getDocxState(p.student.generatedDocs || []).state)
+function getOficioAction(items: Practice[], tipo: 'SOLICITUD' | 'DESIGNACION'): SolicitudAction {
+  const states = items.map(p => getOficioState(p.student.generatedDocs || [], tipo).state)
   const validCount = states.filter(s => s === 'valid').length
   const staleCount = states.filter(s => s === 'stale').length
 
@@ -112,28 +154,29 @@ function getSolicitudAction(items: Practice[]): SolicitudAction {
   return { kind: 'create' }
 }
 
+function getSolicitudAction(items: Practice[]): SolicitudAction {
+  return getOficioAction(items, 'SOLICITUD')
+}
+
 export function EntityList({ 
   groups, 
   selectedIds, 
   onToggleSelection, 
   onToggleAll, 
-  onGenerateSolicitud, 
+  onGenerateSolicitud,
+  onGenerateDesignacion,
   isGenerating,
   onSelectPractice,
   activePracticeId,
   isGrouped,
   onUpdateStatus,
-  onEditPhone,
   onReassign,
   recentlyInvalidatedDocIds,
   onDocumentClick,
   generatingCertIds
 }: EntityListProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
-  const [contextMenu, setContextMenu] = useState<{ id: string, studentId: string, currentPhone: string, x: number, y: number } | null>(null)
-  const [editingPhoneStudentId, setEditingPhoneStudentId] = useState<{id: string, phone: string} | null>(null)
-  const [hoveredPhoneAlert, setHoveredPhoneAlert] = useState<string | null>(null)
-  const [tooltipPos, setTooltipPos] = useState<{x: number, y: number}>({x:0,y:0})
+  const [contextMenu, setContextMenu] = useState<{ id: string, x: number, y: number } | null>(null)
 
   useEffect(() => {
     const closeMenu = (e: MouseEvent) => {
@@ -161,7 +204,7 @@ export function EntityList({
       setContextMenu(null)
       return
     }
-    setContextMenu({ id: practice.id, studentId: practice.studentId, currentPhone: practice.student.phone || '', x: e.clientX, y: e.clientY })
+    setContextMenu({ id: practice.id, x: e.clientX, y: e.clientY })
   }
 
   const changeStatus = (id: string, status: string) => {
@@ -181,6 +224,10 @@ export function EntityList({
         // si el grupo entero ya tiene un oficio vigente, no se muestra nada.
         const solicitudAction = getSolicitudAction(group.items)
         const needsAttention = solicitudAction.kind === 'regenerate' || solicitudAction.kind === 'update'
+        // La designación se emite cuando la empresa ya aceptó, es decir, cuando
+        // la solicitud del grupo está vigente. Antes de eso no procede.
+        const designacionAction = getOficioAction(group.items, 'DESIGNACION')
+        const puedeDesignar = solicitudAction.kind === 'none'
 
         // Campos que TODO el grupo comparte se dicen UNA vez en la cabecera;
         // las filas solo muestran lo que varía entre estudiantes.
@@ -262,13 +309,54 @@ export function EntityList({
               {/* Solo se ofrece la acción si hay algo que hacer. Si el grupo ya
                   tiene su oficio vigente, se informa y no se invita a rehacerlo. */}
               {onGenerateSolicitud && solicitudAction.kind === 'none' ? (
-                <span
-                  className="flex items-center gap-1.5 text-[12px] font-medium text-emerald-600 shrink-0 pr-1"
-                  title="Todos los estudiantes de esta empresa ya están incluidos en un oficio vigente"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  Solicitud vigente
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span
+                    className="flex items-center gap-1.5 text-[12px] font-medium text-emerald-600 pr-1"
+                    title="Todos los estudiantes de esta empresa ya están incluidos en un oficio vigente"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    Solicitud vigente
+                  </span>
+                  {onGenerateDesignacion && puedeDesignar && (
+                    designacionAction.kind === 'none' ? (
+                      <span
+                        className="flex items-center gap-1.5 text-[12px] font-medium text-violet-600"
+                        title="Todos los estudiantes de esta empresa ya tienen designación vigente"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" />
+                        Designación vigente
+                      </span>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onGenerateDesignacion(group.items)
+                        }}
+                        disabled={isGenerating}
+                        className={cn(
+                          "h-8 flex items-center gap-1.5 rounded-lg text-[12.5px] font-medium transition-all disabled:opacity-50",
+                          allGroupSelected
+                            ? "px-3.5 bg-violet-600 hover:bg-violet-700 text-white shadow-soft shadow-violet-500/20"
+                            : "px-2.5 text-violet-600 hover:bg-violet-50"
+                        )}
+                        title={
+                          designacionAction.kind === 'update'
+                            ? `La designación actual no incluye a ${designacionAction.missing} estudiante(s). Se rehará con el grupo completo.`
+                            : designacionAction.kind === 'regenerate'
+                              ? 'La designación quedó invalidada. Se generará una nueva para el grupo.'
+                              : `Designa a los ${group.count} estudiantes de ${group.name} con su tutor académico`
+                        }
+                      >
+                        <UserCheck className="w-3.5 h-3.5" />
+                        {designacionAction.kind === 'update'
+                          ? `Actualizar designación · incluir ${designacionAction.missing}`
+                          : designacionAction.kind === 'regenerate'
+                            ? 'Regenerar designación'
+                            : 'Generar designación'}
+                      </button>
+                    )
+                  )}
+                </div>
               ) : onGenerateSolicitud ? (
                 <button
                   onClick={(e) => {
@@ -354,22 +442,6 @@ export function EntityList({
                         <div className="flex flex-col flex-1 min-w-[180px] truncate pr-4">
                           <span className="text-[13.5px] font-semibold text-[#111827] truncate flex items-center gap-1.5">
                             {practice.student.firstName} {practice.student.lastName}
-                            {!practice.student.phone && (
-                              <span
-                                className="relative flex items-center"
-                                onMouseEnter={(e) => {
-                                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                                  setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top })
-                                  setHoveredPhoneAlert(practice.id)
-                                }}
-                                onMouseLeave={() => setHoveredPhoneAlert(null)}
-                              >
-                                <AlertCircle className="w-3.5 h-3.5 text-red-500 cursor-pointer shrink-0" onClick={(e) => {
-                                  e.stopPropagation()
-                                  setEditingPhoneStudentId({ id: practice.studentId, phone: '' })
-                                }} />
-                              </span>
-                            )}
                           </span>
                           {/* Solo lo que VARÍA entre compañeros; lo común vive en
                               la cabecera. Si nada varía, la cédula da identidad. */}
@@ -385,11 +457,12 @@ export function EntityList({
                         </div>
 
                         {/* Document Icons */}
-                        <div className="flex items-center gap-2 w-[80px] shrink-0">
+                        <div className="flex items-center gap-2 w-[144px] shrink-0">
                           {(() => {
                             const docs = practice.student.generatedDocs || []
                             const docxState = getDocxState(docs)
-                            const pdf = docs.find(d => d.template.type === 'PDF' && (d.status ?? 'VALID') === 'VALID')
+                            const designacionState = getOficioState(docs, 'DESIGNACION')
+                            const pdf = docs.find(d => d.documentType === 'CERTIFICADO' && (d.status ?? 'VALID') === 'VALID')
 
                             // El ícono no abre el archivo: lleva a la ficha del
                             // documento en /certificates, donde se ve su estado
@@ -407,6 +480,16 @@ export function EntityList({
                               : docxState.state === 'stale'
                                 ? `Solicitud invalidada: ${docxState.doc?.invalidReason || 'requiere regenerarse'}`
                                 : 'Sin solicitud — requisito para el certificado'
+
+                            // La designación se emite después de que la empresa
+                            // acepta, así que antes de la solicitud no procede.
+                            const designacionTitle = designacionState.state === 'valid'
+                              ? `Designación ${designacionState.doc?.documentCode || ''} — ver en Certificados`
+                              : designacionState.state === 'stale'
+                                ? `Designación invalidada: ${designacionState.doc?.invalidReason || 'requiere regenerarse'}`
+                                : docxState.state === 'valid'
+                                  ? 'Sin designación — emítela desde el grupo de la empresa'
+                                  : 'Sin designación: primero hace falta la solicitud'
 
                             const isGeneratingCert = generatingCertIds?.has(practice.id)
 
@@ -429,6 +512,22 @@ export function EntityList({
                                     <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">!</span>
                                   )}
                                 </motion.button>
+                                {/* Designación del estudiante y su tutor */}
+                                <button
+                                  onClick={(e) => designacionState.doc ? handleDocClick(e, designacionState.doc.id) : e.stopPropagation()}
+                                  className={cn(
+                                    "relative w-[28px] h-[28px] rounded-[8px] flex items-center justify-center transition-all",
+                                    designacionState.state === 'valid' ? "bg-violet-50 hover:bg-violet-100 text-violet-500 cursor-pointer" :
+                                    designacionState.state === 'stale' ? "bg-amber-50 hover:bg-amber-100 text-amber-500 cursor-pointer" :
+                                    "bg-slate-50 text-slate-300 cursor-default",
+                                  )}
+                                  title={designacionTitle}
+                                >
+                                  <UserCheck className="w-4 h-4" />
+                                  {designacionState.state === 'stale' && (
+                                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">!</span>
+                                  )}
+                                </button>
                                 <button
                                   onClick={(e) => pdf && !isGeneratingCert ? handleDocClick(e, pdf.id) : e.stopPropagation()}
                                   className={cn(
@@ -449,6 +548,26 @@ export function EntityList({
                                     <FileText className="w-4 h-4" />
                                   )}
                                 </button>
+                                {(() => {
+                                  const firma = getFirmaState(pdf)
+                                  return (
+                                    <button
+                                      onClick={(e) => (pdf && firma.activo) ? handleDocClick(e, pdf.id) : e.stopPropagation()}
+                                      className={cn(
+                                        "relative w-[28px] h-[28px] rounded-[8px] flex items-center justify-center transition-all",
+                                        firma.cls,
+                                      )}
+                                      title={firma.title}
+                                    >
+                                      <PenLine className="w-4 h-4" />
+                                      {pdf?.signatureStatus === 'SIGNED' && (
+                                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 text-white flex items-center justify-center leading-none">
+                                          <Check className="w-2 h-2" strokeWidth={4} />
+                                        </span>
+                                      )}
+                                    </button>
+                                  )
+                                })()}
                               </>
                             )
                           })()}
@@ -486,7 +605,7 @@ export function EntityList({
                             practice.status === 'CANCELED' || practice.status === 'REJECTED' ? "text-slate-400" :
                             "text-amber-700"
                           )}>
-                            {practice.status === 'COMPLETED' ? 'Finalizado'
+                            {practice.status === 'COMPLETED' ? 'Horas cumplidas'
                               : practice.status === 'IN_PROGRESS' ? 'En curso'
                               : practice.status === 'DELAYED' ? 'Atrasado'
                               : practice.status === 'CANCELED' ? 'Cancelado'
@@ -528,19 +647,6 @@ export function EntityList({
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="text-[11px] font-medium text-[#9ca3af] px-3 py-1.5 uppercase tracking-wider">Acciones</div>
-          <button 
-            onClick={() => {
-              setEditingPhoneStudentId({ id: contextMenu.studentId, phone: contextMenu.currentPhone })
-              setContextMenu(null)
-            }}
-            className="w-full text-left px-3 py-2 text-[13px] font-medium text-[#374151] hover:bg-[#f8fafc] hover:text-blue-600 rounded-md transition-colors"
-          >
-            Editar Celular
-          </button>
-          
-          <div className="h-[1px] bg-gray-100 my-1 w-full" />
-          
           <div className="text-[11px] font-medium text-[#9ca3af] px-3 py-1.5 uppercase tracking-wider">Cambiar Estado</div>
           <button 
             onClick={() => changeStatus(contextMenu.id, 'PENDING')}
@@ -582,87 +688,8 @@ export function EntityList({
         </div>
       )}
 
-      {/* Phone Edit Modal */}
-      {editingPhoneStudentId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#111827]/20 backdrop-blur-sm" onClick={() => setEditingPhoneStudentId(null)}>
-          <div className="bg-white rounded-[16px] shadow-2xl w-[340px] p-6 border border-slate-100" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-[16px] font-bold text-[#111827] mb-2">Editar Celular</h3>
-            <p className="text-[13px] text-gray-500 mb-5 leading-relaxed">
-              Ingresa el número de celular del estudiante para poder generar las solicitudes grupales de manera correcta.
-            </p>
-            <input 
-              autoFocus
-              type="text" 
-              className="w-full h-11 px-4 rounded-[10px] border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-[14px] font-medium text-gray-900 transition-all"
-              placeholder="Ej: 0991234567"
-              value={editingPhoneStudentId.phone}
-              onChange={(e) => setEditingPhoneStudentId({ ...editingPhoneStudentId, phone: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && onEditPhone) {
-                  onEditPhone(editingPhoneStudentId.id, editingPhoneStudentId.phone)
-                  setEditingPhoneStudentId(null)
-                } else if (e.key === 'Escape') {
-                  setEditingPhoneStudentId(null)
-                }
-              }}
-            />
-            <div className="flex items-center justify-end gap-3 mt-6">
-              <button 
-                onClick={() => setEditingPhoneStudentId(null)} 
-                className="px-4 py-2 text-[13px] font-semibold text-gray-600 hover:bg-gray-100 rounded-[10px] transition-colors"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={() => {
-                  if (onEditPhone) onEditPhone(editingPhoneStudentId.id, editingPhoneStudentId.phone)
-                  setEditingPhoneStudentId(null)
-                }}
-                className="px-4 py-2 text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-[10px] shadow-sm shadow-blue-600/20 transition-colors"
-              >
-                Guardar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
 
-      {/* Phone Alert Tooltip - rendered via Portal to avoid overflow clipping */}
-      {hoveredPhoneAlert && typeof document !== 'undefined' && createPortal(
-        <div 
-          className="flex flex-col items-center w-max pointer-events-auto"
-          style={{ 
-            position: 'fixed', 
-            left: tooltipPos.x, 
-            top: tooltipPos.y - 8,
-            transform: 'translate(-50%, -100%)',
-            zIndex: 99999 
-          }}
-          onMouseEnter={() => {}} 
-          onMouseLeave={() => setHoveredPhoneAlert(null)}
-        >
-          <div className="bg-[#1e293b] text-white text-[12px] px-3.5 py-2.5 rounded-lg shadow-2xl max-w-[230px] text-center leading-snug">
-            <span className="font-semibold">⚠ Falta número de celular</span>
-            <br />
-            <button 
-              className="text-blue-300 hover:text-blue-100 underline mt-1.5 font-semibold cursor-pointer text-[12px]"
-              onClick={(e) => {
-                e.stopPropagation()
-                const practiceWithAlert = groups.flatMap(g => g.items).find(p => p.id === hoveredPhoneAlert)
-                if (practiceWithAlert) {
-                  setEditingPhoneStudentId({ id: practiceWithAlert.studentId, phone: '' })
-                }
-                setHoveredPhoneAlert(null)
-              }}
-            >
-              Editarlo aquí →
-            </button>
-          </div>
-          <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-[#1e293b]" />
-        </div>,
-        document.body
-      )}
     </>
   )
 }

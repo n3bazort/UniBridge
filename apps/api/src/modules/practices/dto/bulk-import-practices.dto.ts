@@ -43,6 +43,11 @@ export class BulkImportStudentRowDto {
   @IsOptional()
   companyTutor?: string;
 
+  @ApiPropertyOptional({ example: 'Ing. Patricia Solórzano Cedeño' })
+  @IsString()
+  @IsOptional()
+  companyContactName?: string;
+
   @ApiPropertyOptional({ example: 'empresa@correo.com' })
   @IsString()
   @IsOptional()
@@ -57,6 +62,11 @@ export class BulkImportStudentRowDto {
   @IsString()
   @IsOptional()
   destinatarioOficio?: string;
+
+  @ApiPropertyOptional({ example: 'Directora de Tecnologías de la Información' })
+  @IsString()
+  @IsOptional()
+  companyPosition?: string;
 
   @ApiPropertyOptional({ example: 'Dr. Tutor Académico' })
   @IsString()
@@ -82,6 +92,11 @@ export class BulkImportStudentRowDto {
   @IsString()
   @IsOptional()
   academicPeriod?: string;
+
+  @ApiPropertyOptional({ example: 'TI', description: 'Área de desempeño que imprime la solicitud oficial' })
+  @IsString()
+  @IsOptional()
+  workArea?: string;
 }
 
 export class BulkImportPracticesDto {

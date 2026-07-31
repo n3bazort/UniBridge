@@ -208,7 +208,7 @@ async function main() {
   }
   console.log(`✅ ${plan.length} prácticas creadas (estados variados)`);
 
-  // ─── Plantilla oficial de certificado (editor visual → Puppeteer) ───
+  // ─── Plantilla oficial de certificado (editor visual → pdf-lib) ───
   await prisma.documentTemplate.create({
     data: {
       name: 'Certificado de Prácticas Oficial',

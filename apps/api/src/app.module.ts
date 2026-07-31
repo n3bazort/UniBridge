@@ -23,7 +23,6 @@ import { GeneratedDocumentsModule } from './modules/generated-documents/generate
 import { TenancyInterceptor } from './common/interceptors/tenancy.interceptor';
 import { AcademicPeriodsModule } from './modules/academic-periods/academic-periods.module';
 import { MinioModule } from './modules/minio/minio.module';
-import { OpenSearchModule } from './modules/opensearch/opensearch.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { SignaturesModule } from './modules/signatures/signatures.module';
 import { ReportsModule } from './modules/reports/reports.module';
@@ -40,14 +39,9 @@ import { ReportsModule } from './modules/reports/reports.module';
     }),
     ThrottlerModule.forRoot([
       {
-        name: 'global',
+        name: 'default',
         ttl: 60000,   // 1 minuto
-        limit: 3000,  // máx 3000 requests por minuto por IP (aumentado para evitar 429 en desarrollo)
-      },
-      {
-        name: 'auth',
-        ttl: 900000,  // 15 minutos
-        limit: 10,    // máx 10 intentos de login por 15 minutos
+        limit: 10000, // máx 10000 requests por minuto por IP
       },
     ]),
     BullModule.forRootAsync({
@@ -76,7 +70,6 @@ import { ReportsModule } from './modules/reports/reports.module';
     GeneratedDocumentsModule,
     AcademicPeriodsModule,
     MinioModule,
-    OpenSearchModule,
     AuditLogsModule,
     SignaturesModule,
     ReportsModule,

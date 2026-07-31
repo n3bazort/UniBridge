@@ -12,7 +12,7 @@ import { useSidebarStore } from '@/store/sidebar'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const navItems = [
   { name: 'Dashboard', href: '/overview', icon: LayoutDashboard, roles: ['ADMIN', 'COORDINATOR'] },
@@ -33,6 +33,19 @@ export function Sidebar() {
   const { logout } = useAuth()
   const { isCollapsed, toggleSidebar } = useSidebarStore()
   const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isUserMenuOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isUserMenuOpen])
 
   const userName = user?.firstName && user?.lastName 
     ? `${user.firstName} ${user.lastName}` 
@@ -133,63 +146,79 @@ export function Sidebar() {
         </nav>
       </div>
 
-      <div className="mt-auto pt-4 flex flex-col gap-2">
-        <div className={cn("flex items-center", isCollapsed ? "justify-center px-0" : "justify-between px-2")}>
+      <div className="mt-auto pt-4 flex flex-col gap-2 relative" ref={userMenuRef}>
+        {/* Desplegable de usuario */}
+        {isUserMenuOpen && (
+          <div className={cn(
+            "absolute bottom-full mb-2 z-50 rounded-xl border border-gray-200 bg-white p-2 shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-150",
+            isCollapsed ? "left-12 w-56" : "left-0 right-0 w-full"
+          )}>
+            <div className="flex items-center gap-3 p-2 border-b border-gray-100 mb-1">
+              <img src={`https://api.dicebear.com/9.x/notionists/svg?seed=${avatarSeed}`} alt="Avatar" className="w-9 h-9 rounded-full bg-slate-100 shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[13px] font-semibold text-gray-900 truncate">{userName}</span>
+                <span className="text-[11px] text-gray-500 truncate">{user?.email || userRole}</span>
+                <span className="mt-0.5 inline-flex items-center w-fit rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                  {userRole}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => { setIsUserMenuOpen(false); setShowPasswordModal(true) }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <Lock className="h-4 w-4 text-gray-500" />
+              <span>Cambiar contraseña</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setIsUserMenuOpen(false); logout() }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+            >
+              <LogOut className="h-4 w-4 text-rose-600" />
+              <span>Cerrar sesión</span>
+            </button>
+          </div>
+        )}
+
+        {/* User Card Button */}
+        <button
+          type="button"
+          onClick={() => setIsUserMenuOpen((prev) => !prev)}
+          className={cn(
+            "flex items-center rounded-xl p-2 text-left hover:bg-[#f3f4f6] transition-all select-none group border border-transparent hover:border-gray-200/60 cursor-pointer",
+            isCollapsed ? "justify-center" : "justify-between"
+          )}
+        >
           <div className={cn("flex items-center gap-3 min-w-0 flex-1", isCollapsed && "justify-center")}>
-             <img src={`https://api.dicebear.com/9.x/notionists/svg?seed=${avatarSeed}`} alt="Avatar" className="w-9 h-9 rounded-full bg-white shadow-soft shrink-0" />
-             {!isCollapsed && (
-               <div className="flex flex-col overflow-hidden min-w-0 flex-1">
-                  <span className="text-[13px] font-medium text-[#111827] leading-tight truncate block">{userName}</span>
-                  <span className="text-[12px] text-[#6b7280] leading-tight truncate block">{userRole}</span>
-               </div>
-             )}
+            <img src={`https://api.dicebear.com/9.x/notionists/svg?seed=${avatarSeed}`} alt="Avatar" className="w-9 h-9 rounded-full bg-white shadow-soft shrink-0" />
+            {!isCollapsed && (
+              <div className="flex flex-col overflow-hidden min-w-0 flex-1">
+                <span className="text-[13px] font-medium text-[#111827] leading-tight truncate block">{userName}</span>
+                <span className="text-[12px] text-[#6b7280] leading-tight truncate block">{userRole}</span>
+              </div>
+            )}
           </div>
           {!isCollapsed && (
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={() => setShowPasswordModal(true)}
-                title="Cambiar contraseña"
-                className="p-2 text-[#6b7280] hover:bg-[#f3f4f6] hover:text-blue-600 rounded-[10px] transition-all"
-              >
-                <Lock className="h-4 w-4" />
-              </button>
-              <button
-                onClick={logout}
-                title="Cerrar sesión"
-                className="p-2 text-[#6b7280] hover:bg-[#f3f4f6] hover:text-red-500 rounded-[10px] transition-all"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
+            <div className="text-gray-400 group-hover:text-gray-700 transition-colors shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cn("transition-transform duration-200", isUserMenuOpen && "rotate-180")}>
+                <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
             </div>
           )}
-        </div>
+        </button>
 
         {/* Toggle Button */}
         <button
           onClick={toggleSidebar}
-          className="mt-2 mx-auto flex items-center justify-center w-8 h-8 rounded-full border border-[#e5e7eb] bg-white text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#111827] shadow-sm transition-all"
+          title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+          className="mt-1 mx-auto flex items-center justify-center w-8 h-8 rounded-full border border-[#e5e7eb] bg-white text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#111827] shadow-sm transition-all"
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
-
-        {isCollapsed && (
-          <div className="flex flex-col gap-1 mx-auto mt-2">
-            <button
-              onClick={() => setShowPasswordModal(true)}
-              title="Cambiar contraseña"
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-white text-[#6b7280] hover:bg-blue-50 hover:text-blue-600 transition-all"
-            >
-              <Lock className="h-4 w-4" />
-            </button>
-            <button
-              onClick={logout}
-              title="Cerrar sesión"
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-white text-[#6b7280] hover:bg-red-50 hover:text-red-500 transition-all"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        )}
       </div>
 
       {showPasswordModal && (

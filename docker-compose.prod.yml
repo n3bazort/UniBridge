@@ -45,41 +45,6 @@ services:
     command: server /data --console-address ":9001"
     restart: always
 
-  opensearch-node:
-    image: opensearchproject/opensearch:latest
-    container_name: ppp_opensearch
-    environment:
-      - cluster.name=ppp-cluster
-      - node.name=ppp-node
-      - discovery.type=single-node
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD:?Define OPENSEARCH_PASSWORD en el archivo .env}
-      - bootstrap.memory_lock=true
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    ports:
-      - '9200:9200'
-      - '9600:9600'
-    volumes:
-      - ppp_osdata:/usr/share/opensearch/data
-    restart: always
-
-  opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:latest
-    container_name: ppp_os_dashboards
-    ports:
-      - '5601:5601'
-    environment:
-      - OPENSEARCH_HOSTS=["https://opensearch-node:9200"]
-    depends_on:
-      - opensearch-node
-    restart: always
-
   api:
     build:
       context: .
@@ -102,12 +67,6 @@ services:
       - MINIO_USE_SSL=false
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      # Conexión a OpenSearch
-      - DISABLE_OPENSEARCH=${DISABLE_OPENSEARCH:-false}
-      - OPENSEARCH_URL=https://opensearch-node:9200
-      - OPENSEARCH_USERNAME=admin
-      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
-      - OPENSEARCH_INDEX_PREFIX=ppp_
       # Seguridad (obligatorios: el API valida su presencia al arrancar)
       - JWT_SECRET=${JWT_SECRET:?Define JWT_SECRET en el archivo .env}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:?Define JWT_REFRESH_SECRET en el archivo .env}
@@ -118,11 +77,9 @@ services:
       - db
       - redis
       - minio
-      - opensearch-node
     restart: always
 
 volumes:
   ppp_pgdata:
   ppp_redisdata:
   ppp_miniodata:
-  ppp_osdata:

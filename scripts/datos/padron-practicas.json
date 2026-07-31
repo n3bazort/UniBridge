@@ -1,0 +1,2929 @@
+{
+  "origen": "Plantilla Importacion de datos.xlsx",
+  "extraido": "2026-07-30",
+  "estudiantes": [
+    {
+      "cedula": "1315900520",
+      "nombre": "Aguilar Aguilera Isabella Verónica",
+      "correo": "e1315900520@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0926492538",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900538",
+      "nombre": "Alava Moreira Luis Alejandro",
+      "correo": "e1315900538@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0979224043",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900546",
+      "nombre": "Alcivar Franco Nancy Paola",
+      "correo": "e1315900546@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0961953426",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900553",
+      "nombre": "Alcívar Córdova Pedro Luis",
+      "correo": "e1315900553@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0914781158",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900561",
+      "nombre": "Alonzo Pico Devis Yonaikel",
+      "correo": "e1315900561@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0991742507",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900579",
+      "nombre": "Alvarado Chavez Jimmy Santiago",
+      "correo": "e1315900579@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0981077349",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900587",
+      "nombre": "Anchundia Anchundia Liliana Margarita",
+      "correo": "e1315900587@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0958709236",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900595",
+      "nombre": "Anchundia Chavez Belinda Yusmeli",
+      "correo": "e1315900595@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0918387442",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900603",
+      "nombre": "Anchundia Parraga Diego Ariel",
+      "correo": "e1315900603@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0997713211",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900611",
+      "nombre": "Andrade Mera Maholy Abigail",
+      "correo": "e1315900611@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0928113920",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900629",
+      "nombre": "Anzules Reyes Luis Manuel",
+      "correo": "e1315900629@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0941064188",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900637",
+      "nombre": "Arteaga Santana Bryan Steven",
+      "correo": "e1315900637@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0983439218",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900645",
+      "nombre": "Artiles Enriquez Marcos Javier",
+      "correo": "e1315900645@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0933098303",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900652",
+      "nombre": "Ayala Mendoza Jennyffer Carolina",
+      "correo": "e1315900652@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0958623958",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900660",
+      "nombre": "Bailon Anchundia Genesis Aracely",
+      "correo": "e1315900660@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0900332996",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900678",
+      "nombre": "Bailon Quijije Jerick Abraham",
+      "correo": "e1315900678@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0927944824",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900686",
+      "nombre": "Bajaña Loor Hillary Julexy",
+      "correo": "e1315900686@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0980616981",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900694",
+      "nombre": "Baque Barcia Josthin Ariel",
+      "correo": "e1315900694@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0995370405",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900702",
+      "nombre": "Baque Rodríguez Victor Jesús",
+      "correo": "e1315900702@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0973638004",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900710",
+      "nombre": "Barberan Barberan Juan Carlos",
+      "correo": "e1315900710@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0904347482",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900728",
+      "nombre": "Barberan Barberan Leydi Estefania",
+      "correo": "e1315900728@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0937569163",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900736",
+      "nombre": "Barcia Landa Carlos Josue",
+      "correo": "e1315900736@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0969107185",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900744",
+      "nombre": "Barreto Soledispa Darly Jahir",
+      "correo": "e1315900744@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0920361553",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900751",
+      "nombre": "Bautista Quintero Cecia Jemima",
+      "correo": "e1315900751@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0935393343",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900769",
+      "nombre": "Bodero Flores Luis Joel",
+      "correo": "e1315900769@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0924301198",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900777",
+      "nombre": "Bosada Bosada Jesús Andrés",
+      "correo": "e1315900777@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0976981563",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900785",
+      "nombre": "Bravo Zambrano Luis Alexander",
+      "correo": "e1315900785@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0904151641",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900793",
+      "nombre": "Briones Cantos Nayeli Maritza",
+      "correo": "e1315900793@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0976593292",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900801",
+      "nombre": "Briones Santana Ramón Steven",
+      "correo": "e1315900801@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0990058173",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900819",
+      "nombre": "Burbano Loor Anthony Stewart",
+      "correo": "e1315900819@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0934158330",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900827",
+      "nombre": "Burgos Rodríguez Jean Carlos",
+      "correo": "e1315900827@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0924270517",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900835",
+      "nombre": "Castillo Alonso Luis David",
+      "correo": "e1315900835@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0910754745",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900843",
+      "nombre": "Castillo Vera Ariel Alexander",
+      "correo": "e1315900843@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0938417199",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900850",
+      "nombre": "Castro Carranza Andrés David",
+      "correo": "e1315900850@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0999142676",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900868",
+      "nombre": "Cañarte Chancay Diego Valentino",
+      "correo": "e1315900868@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0955855251",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900876",
+      "nombre": "Cedeño Mejía Francisco Rafael",
+      "correo": "e1315900876@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0902774959",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900884",
+      "nombre": "Cedeño Mosquera Jostin Abraham",
+      "correo": "e1315900884@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0912004442",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900892",
+      "nombre": "Cedeño Parrales Ambar Samantha",
+      "correo": "e1315900892@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0965131661",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900900",
+      "nombre": "Cedeño Rivera Joseline Malena",
+      "correo": "e1315900900@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0959089138",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900918",
+      "nombre": "Cedeño Rodríguez Carlos Luis",
+      "correo": "e1315900918@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0925415163",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900926",
+      "nombre": "Cedeño Sornoza Daniel Josué",
+      "correo": "e1315900926@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0942054936",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900934",
+      "nombre": "Cedeño Vera Helion Maximiliano",
+      "correo": "e1315900934@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0978876172",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900942",
+      "nombre": "Cevallos Macias Kelly Juleidy",
+      "correo": "e1315900942@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0968736994",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900959",
+      "nombre": "Cevallos Pihuave Douglas Juliot",
+      "correo": "e1315900959@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0960203528",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900967",
+      "nombre": "Chaluisa Candelejo Lilia Diana",
+      "correo": "e1315900967@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0942535869",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900975",
+      "nombre": "Chancay Moreira Grace Liseth",
+      "correo": "e1315900975@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0975958457",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900983",
+      "nombre": "Chavez Bailon Johan Steven",
+      "correo": "e1315900983@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0978957264",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315900991",
+      "nombre": "Chavez Vinces Yimmy Gabriel",
+      "correo": "e1315900991@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0914599146",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901007",
+      "nombre": "Chinga Guerrero Anthony Simon",
+      "correo": "e1315901007@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0919751332",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901015",
+      "nombre": "Choez Rivera David Alejandro",
+      "correo": "e1315901015@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0976135526",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901023",
+      "nombre": "Conforme Yacue Cristhian Javier",
+      "correo": "e1315901023@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0909608577",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901031",
+      "nombre": "Cornejo Macías Luis Fernando",
+      "correo": "e1315901031@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0982708275",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901049",
+      "nombre": "Delgado Anchundia Naomi Carolina",
+      "correo": "e1315901049@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0943627496",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901056",
+      "nombre": "Delgado Carreño Bryan Daniel",
+      "correo": "e1315901056@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0921935540",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901064",
+      "nombre": "Delgado Mendoza Kevin Jossue",
+      "correo": "e1315901064@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0960075590",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901072",
+      "nombre": "Delgado Meza Victor Alexander",
+      "correo": "e1315901072@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0920932921",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901080",
+      "nombre": "España Zambrano Estefani Nicole",
+      "correo": "e1315901080@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0906376884",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901098",
+      "nombre": "Franco Anchundia Carlos Andrés",
+      "correo": "e1315901098@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0981153797",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901106",
+      "nombre": "González Segovia Keyra Yelenny",
+      "correo": "e1315901106@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0959613576",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901114",
+      "nombre": "Gudiño Avila Anthony Raúl",
+      "correo": "e1315901114@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0967997765",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901122",
+      "nombre": "Gómez Palma Dania Vanessa",
+      "correo": "e1315901122@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0905691185",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901130",
+      "nombre": "Herrera Holguín Andrés Wilfrido",
+      "correo": "e1315901130@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0955490638",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901148",
+      "nombre": "Holguin Baque Jonathan Alexander",
+      "correo": "e1315901148@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0994543915",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901155",
+      "nombre": "Holguin Demera Jose Javier",
+      "correo": "e1315901155@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0959815775",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901163",
+      "nombre": "Iñiguez Romero Alisson Oswaldo",
+      "correo": "e1315901163@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0963629135",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901171",
+      "nombre": "Loor Vera Jordy Lenin",
+      "correo": "e1315901171@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0908069660",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901189",
+      "nombre": "Lopez Chilan Angel David",
+      "correo": "e1315901189@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0960418178",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901197",
+      "nombre": "Lorente Tello Ericka Dayana",
+      "correo": "e1315901197@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0915406282",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901205",
+      "nombre": "Lucas Anchundia Luis Diego",
+      "correo": "e1315901205@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0933832894",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901213",
+      "nombre": "Lucas Zambrano Gabriele",
+      "correo": "e1315901213@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0900625317",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901221",
+      "nombre": "Luzardo Alcivar Guillermo Andres",
+      "correo": "e1315901221@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0916280800",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901239",
+      "nombre": "López Lascano Anthony Agustín",
+      "correo": "e1315901239@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0949013678",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901247",
+      "nombre": "Macias Bravo Melina Lissette",
+      "correo": "e1315901247@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0980272479",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901254",
+      "nombre": "Macias Faubla Bryan José",
+      "correo": "e1315901254@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0946497652",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901262",
+      "nombre": "Macias Lugo Jesus Fernando",
+      "correo": "e1315901262@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0974315309",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901270",
+      "nombre": "Macías Sosa Carlos Johan",
+      "correo": "e1315901270@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0932575113",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901288",
+      "nombre": "Mejía Párraga Yender David",
+      "correo": "e1315901288@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0962008982",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901296",
+      "nombre": "Mendoza Bazurto Fabricio Jesús",
+      "correo": "e1315901296@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0952585474",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901304",
+      "nombre": "Mendoza Mendoza Michael Steven",
+      "correo": "e1315901304@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0999355684",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901312",
+      "nombre": "Mera Mendoza Rubén Darío",
+      "correo": "e1315901312@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0989701695",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901320",
+      "nombre": "Mero Figueroa Jeremy Alan",
+      "correo": "e1315901320@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0946094732",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901338",
+      "nombre": "Mero Vélez Jordy Adrian",
+      "correo": "e1315901338@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0958286917",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901346",
+      "nombre": "Meza Bolaños Jordan Isidro",
+      "correo": "e1315901346@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0901137803",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901353",
+      "nombre": "Meza Guerrero Jordan Alexis",
+      "correo": "e1315901353@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0929619239",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901361",
+      "nombre": "Mieles Pita Silvia Marina",
+      "correo": "e1315901361@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0909086255",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901379",
+      "nombre": "Milazzo Cedeño Lizzardi Anthoni",
+      "correo": "e1315901379@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0940039267",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901387",
+      "nombre": "Mina Quijije Jennifer Ana",
+      "correo": "e1315901387@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0996693927",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901395",
+      "nombre": "Morán Mero Juan Carlos",
+      "correo": "e1315901395@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0909644157",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901403",
+      "nombre": "Muentes Roca Jostyn Fabricio",
+      "correo": "e1315901403@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0915204593",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901411",
+      "nombre": "Navarrete Franco Luis Anthony",
+      "correo": "e1315901411@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0985367594",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901429",
+      "nombre": "Ortega Giler Miguel Ángel",
+      "correo": "e1315901429@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0906235503",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901437",
+      "nombre": "Pacheco Bermeo Kevin Jair",
+      "correo": "e1315901437@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0993339565",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901445",
+      "nombre": "Padilla Parrales Marcos Antonio",
+      "correo": "e1315901445@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0973617999",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901452",
+      "nombre": "Palma Palma Johan Xavier",
+      "correo": "e1315901452@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0959421298",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901460",
+      "nombre": "Palma Tejena Michael Javier",
+      "correo": "e1315901460@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0966623658",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901478",
+      "nombre": "Palma Zamora Jordi José",
+      "correo": "e1315901478@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0920580315",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901486",
+      "nombre": "Panta Franco Julissa Stephanía",
+      "correo": "e1315901486@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0970256843",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901494",
+      "nombre": "Parrales Pico Douglas Andres",
+      "correo": "e1315901494@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0994140666",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901502",
+      "nombre": "Patiño Angulo Alex Agustin",
+      "correo": "e1315901502@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0970242177",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901510",
+      "nombre": "Pazmiño García Bryan Josué",
+      "correo": "e1315901510@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0919130986",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901528",
+      "nombre": "Perez Castro Cristopher David",
+      "correo": "e1315901528@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0972040918",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901536",
+      "nombre": "Perez Villarroel Ricardo Joshu",
+      "correo": "e1315901536@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0985478059",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901544",
+      "nombre": "Pico Reyes Kevin David",
+      "correo": "e1315901544@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0997192878",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901551",
+      "nombre": "Pinto Rivero Jandry Alejandro",
+      "correo": "e1315901551@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0980714880",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901569",
+      "nombre": "Plaza Chiquito Kevin David",
+      "correo": "e1315901569@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0919545388",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901577",
+      "nombre": "Ponce Urdanigo Manuel Alexander",
+      "correo": "e1315901577@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0908351265",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901585",
+      "nombre": "Prado Góngora Luis Manuel",
+      "correo": "e1315901585@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0983723222",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901593",
+      "nombre": "Pérez Castro Jeremy Gabriel",
+      "correo": "e1315901593@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0968054824",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901601",
+      "nombre": "Pérez Molina Cristhian Fabian",
+      "correo": "e1315901601@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0970395419",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901619",
+      "nombre": "Quiroz Bailon Verónica Susana",
+      "correo": "e1315901619@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0973580916",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901627",
+      "nombre": "Ramirez Bravo Angie Nicole",
+      "correo": "e1315901627@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0967602487",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901635",
+      "nombre": "Rendón Calderón María Fernanda",
+      "correo": "e1315901635@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0994668267",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901643",
+      "nombre": "Rezavala Bailon Bryan David",
+      "correo": "e1315901643@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0939692285",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901650",
+      "nombre": "Rodriguez Bravo Erick Rodrigo",
+      "correo": "e1315901650@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0942844581",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901668",
+      "nombre": "Rodriguez Salvatierra Enis Anderi",
+      "correo": "e1315901668@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0922096397",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901676",
+      "nombre": "Saltos Garcia Anthony Josue",
+      "correo": "e1315901676@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0994552345",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901684",
+      "nombre": "Salvatierra Vasquez Amelia Beatriz",
+      "correo": "e1315901684@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0972813432",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901692",
+      "nombre": "Sanchez Mero Johan Francisco",
+      "correo": "e1315901692@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0928652060",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901700",
+      "nombre": "Santana Zambrano Jose Luis",
+      "correo": "e1315901700@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0972127274",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901718",
+      "nombre": "Santos Toala Jose Sebastian",
+      "correo": "e1315901718@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0906852072",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901726",
+      "nombre": "Solorzano Macias Nayely Andreina",
+      "correo": "e1315901726@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0926402113",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901734",
+      "nombre": "Tomala Fernandez Narcisa Esperanza",
+      "correo": "e1315901734@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0952311537",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901742",
+      "nombre": "Tumbaco Arana Diego Armando",
+      "correo": "e1315901742@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0920603405",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901759",
+      "nombre": "Valencia Diaz Ramon Jonaiker",
+      "correo": "e1315901759@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0925041281",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901767",
+      "nombre": "Valencia Ramírez John Robert",
+      "correo": "e1315901767@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0983545251",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901775",
+      "nombre": "Valeriano Delgado Carmen Annabel",
+      "correo": "e1315901775@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0979430167",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901783",
+      "nombre": "Villigua Soledispa Cristhian Alexander",
+      "correo": "e1315901783@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0975635360",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901791",
+      "nombre": "Vinces Cevallos John Cristhian",
+      "correo": "e1315901791@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0998368512",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901809",
+      "nombre": "Vásquez Tomalá Francisco Guillermo",
+      "correo": "e1315901809@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0919440532",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901817",
+      "nombre": "Vázquez Espinosa Jennifer",
+      "correo": "e1315901817@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0928780764",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901825",
+      "nombre": "Vélez Núñez Gabriel Alexander",
+      "correo": "e1315901825@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0933828916",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901833",
+      "nombre": "Véliz Vergara Génesis Gabriela",
+      "correo": "e1315901833@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0926696268",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901841",
+      "nombre": "Zambrano Menéndez Jeremi Paul",
+      "correo": "e1315901841@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0943332260",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901858",
+      "nombre": "Zambrano Mero Jonathan Leonardo",
+      "correo": "e1315901858@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0973935313",
+      "tipo": "Prácticas Laborales II",
+      "nivel": "Octavo Nivel",
+      "horas": 120,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901866",
+      "nombre": "Zambrano Salazar Janina Aracely",
+      "correo": "e1315901866@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0905300699",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 180,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901874",
+      "nombre": "Zambrano Vergara Irving Ariel",
+      "correo": "e1315901874@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0966990972",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    },
+    {
+      "cedula": "1315901882",
+      "nombre": "Zamora Piguave Miguel Ignacio",
+      "correo": "e1315901882@live.uleam.edu.ec",
+      "carrera": "Tecnologías de la Información",
+      "celular": "0995588056",
+      "tipo": "Prácticas Laborales I",
+      "nivel": "Séptimo Nivel",
+      "horas": 192,
+      "periodo": "2024-1"
+    }
+  ],
+  "empresas": [
+    {
+      "nombre": "ADMINISTRADOR DE FCVT",
+      "contacto": "Ing. Mike Machuca",
+      "cargo": "Administrador de la Facultad de Ciencias de la Vida y Tecnología",
+      "email": "mike.machuca@uleam.edu.ec",
+      "telefono": "993419854",
+      "generada": false
+    },
+    {
+      "nombre": "ALTURA S.A.",
+      "contacto": "Ing. Byron Macías Alcívar",
+      "cargo": "Gerente General",
+      "email": "gerencia@altura.com.ec",
+      "telefono": "0960048753",
+      "generada": true
+    },
+    {
+      "nombre": "ANDICOM",
+      "contacto": "Sra. Jessica Anchundia",
+      "cargo": "Gerente Andicom",
+      "email": "jessica.anchundiaa@gmail.com",
+      "telefono": "982485536",
+      "generada": false
+    },
+    {
+      "nombre": "ASETECSA S.A.",
+      "contacto": "Ing. Martha Villamil",
+      "cargo": "Gerente General",
+      "email": "nino1511@hotmail.com",
+      "telefono": "997480006",
+      "generada": false
+    },
+    {
+      "nombre": "ATUKHOSTING",
+      "contacto": "Ing. Fabián Zambrano Loor",
+      "cargo": "Jefe de Tecnologías de la Información",
+      "email": "soporte@atukhosting.com",
+      "telefono": "0960124591",
+      "generada": true
+    },
+    {
+      "nombre": "AUTORIDAD PORTUARIA DE MANTA",
+      "contacto": "Lcda. Elena Bailón Santana",
+      "cargo": "Jefe de Sistemas",
+      "email": "sistemas@autoridadportuaria.gob.ec",
+      "telefono": "052610867",
+      "generada": true
+    },
+    {
+      "nombre": "AYUDANTIA DE CATEDRA (ALGEBRA LINEAL)",
+      "contacto": "Ing. Mero Henry",
+      "cargo": "Docente ULEAM",
+      "email": "henry.mero@uleam.edu.ec",
+      "telefono": "989170708",
+      "generada": false
+    },
+    {
+      "nombre": "AYUDANTIA DE CATEDRA (FUNDAMENTOS DE PROGRAMACIÓN)",
+      "contacto": "Ing. Armando Franco Pico",
+      "cargo": "Docente ULEAM",
+      "email": "armando.franco@uleam.edu.ec",
+      "telefono": "984579272",
+      "generada": false
+    },
+    {
+      "nombre": "AYUDANTIA DE CATEDRA (ING. SOFTWARE I)",
+      "contacto": "Ing. William Delgado",
+      "cargo": "Docente ULEAM",
+      "email": "william.delgado@uleam.edu.ec",
+      "telefono": "980778865",
+      "generada": false
+    },
+    {
+      "nombre": "AYUDANTIA DE CATEDRA (ING. WILLIAM ZAMORA)",
+      "contacto": "Sr. Pico Santana Milton Ramiro",
+      "cargo": "Gerente General",
+      "email": "miltonsantana78@hotmail.com",
+      "telefono": "984142004",
+      "generada": false
+    },
+    {
+      "nombre": "BENEMÉRITO CUERPO DE BOMBEROS DE MANTA",
+      "contacto": "Lcda. Mariana Vélez Cedeño",
+      "cargo": "Jefe de Sistemas",
+      "email": "sistemas@benemeritocuerpo.gob.ec",
+      "telefono": "052674219",
+      "generada": true
+    },
+    {
+      "nombre": "BIENESTAR UNIVERSITARIO",
+      "contacto": "Ing. Harol Ormaza",
+      "cargo": "Director Bienestar Universitario",
+      "email": "douglas.anzules@uleam.edu.ec",
+      "telefono": "985149072",
+      "generada": false
+    },
+    {
+      "nombre": "CELEC - Unidad de Negocio Termomanabí",
+      "contacto": "Abg. Julio Cesar Chica Santana",
+      "cargo": "Gerente CELEC EP-Termomanabí (encargado)",
+      "email": "julio.chica@celec.gob.com",
+      "telefono": "984799986",
+      "generada": false
+    },
+    {
+      "nombre": "CLIC HERE PC",
+      "contacto": "Ing. Gabriela Mendoza Pico",
+      "cargo": "Jefe de Tecnologías de la Información",
+      "email": "soporte@clichere.com",
+      "telefono": "0960130008",
+      "generada": true
+    },
+    {
+      "nombre": "CNEL",
+      "contacto": "Ing. Hugo Palacios Zambrano",
+      "cargo": "Analista de Sistemas",
+      "email": "sistemas@cnel.gob.ec",
+      "telefono": "052661329",
+      "generada": true
+    },
+    {
+      "nombre": "COFARVE",
+      "contacto": "Lcda. Victoria Bravo Espinales",
+      "cargo": "Coordinadora de Talento Humano",
+      "email": "victoria.bravo@cofarve.com.ec",
+      "telefono": "996671785",
+      "generada": false
+    },
+    {
+      "nombre": "COLEGIO DE BIOLOGOS",
+      "contacto": "Ing. Patricia Solórzano Cedeño",
+      "cargo": "Rector",
+      "email": "rectorado@colegiobiologos.edu.ec",
+      "telefono": "052600000",
+      "generada": true
+    },
+    {
+      "nombre": "COMISION ACADEMICA ING. EDGARDO",
+      "contacto": "Ing. Edgardo Panchana",
+      "cargo": "Miembro de Comisión Académica",
+      "email": "edgardo.panchana@uleam.edu.ec",
+      "telefono": "994617762",
+      "generada": false
+    },
+    {
+      "nombre": "COMISION DE PRACTICAS PREPROFESIONALES",
+      "contacto": "Ing. Viviana García Macías",
+      "cargo": "Coordinadora de Prácticas",
+      "email": "viviana.garcia@uleam.edu.ec",
+      "telefono": "995621767",
+      "generada": false
+    },
+    {
+      "nombre": "COMISION DE SEGUIMIENTO A GRADUADOS",
+      "contacto": "Ing. William Delgado",
+      "cargo": "Miembro de la Comisión de Seguimiento a Graduados",
+      "email": "william.delgado@uleam.edu.ec",
+      "telefono": "980778865",
+      "generada": false
+    },
+    {
+      "nombre": "COMISIÓN DE TITULACIÓN Y SEGUIMIENTO A GRADUADOS",
+      "contacto": "Ing. Johnny Larrea Pula, PhD",
+      "cargo": "Coordinador de Titulación",
+      "email": "johnny.larrea@uleam.edu.ec",
+      "telefono": "984496002",
+      "generada": false
+    },
+    {
+      "nombre": "COMPUSTOCK",
+      "contacto": "Sr. Pico Santana Milton Ramiro",
+      "cargo": "Gerente General",
+      "email": "miltonsantana78@hotmail.com",
+      "telefono": "984142004",
+      "generada": false
+    },
+    {
+      "nombre": "CONSERVAS ISABEL S.A",
+      "contacto": "Lcda. Verónica Loor Anchundia",
+      "cargo": "Jefe de Recursos Humanos",
+      "email": "talentohumano@conservasisabel.com.ec",
+      "telefono": "0960043336",
+      "generada": true
+    },
+    {
+      "nombre": "COOPERATIVA CALCETA LTDA",
+      "contacto": "Ing. Byron Macías Alcívar",
+      "cargo": "Jefe de Tecnología",
+      "email": "tecnologia@cooperativacalceta.fin.ec",
+      "telefono": "052629653",
+      "generada": true
+    },
+    {
+      "nombre": "CORPORACION MARZAM",
+      "contacto": "Lcda. Verónica Loor Anchundia",
+      "cargo": "Jefe de Recursos Humanos",
+      "email": "talentohumano@corporacionmarzam.com.ec",
+      "telefono": "0960151676",
+      "generada": true
+    },
+    {
+      "nombre": "DIIT ULEAM",
+      "contacto": "Ing. César Cedeño Cedeño",
+      "cargo": "Director de Informática e Innovación Tecnológica",
+      "email": "cesar.cedeno@uleam.edu.ec",
+      "telefono": "995976115",
+      "generada": false
+    },
+    {
+      "nombre": "DISTRITO DE EDUCACION 13D02",
+      "contacto": "Econ. Edgar Vinicio Rivadeneira Gonzáles",
+      "cargo": "Director Distrital de Educación 13D02 Jaramijó-Manta-Montecristi",
+      "email": "ingrid.alava@educacion.gob.ec",
+      "telefono": "984887304",
+      "generada": false
+    },
+    {
+      "nombre": "DISTRITO DE SALUD D1302",
+      "contacto": "Ing. Silvia Ponce Rodríguez",
+      "cargo": "Coordinador de Informática",
+      "email": "informatica@distritosalud.gob.ec",
+      "telefono": "052695028",
+      "generada": true
+    },
+    {
+      "nombre": "EMPRESA PUBLICA ULEAM (EPULEAM)",
+      "contacto": "Sr. Armando Anchundia",
+      "cargo": "Gerente Empresa Pública ULEAM",
+      "email": "gerente@ep-uleam.gob.ec",
+      "telefono": "958852859",
+      "generada": false
+    },
+    {
+      "nombre": "EPAM",
+      "contacto": "Ing. Ricardo Andrade Moreira",
+      "cargo": "Analista de Sistemas",
+      "email": "sistemas@epam.gob.ec",
+      "telefono": "052607919",
+      "generada": true
+    },
+    {
+      "nombre": "EPAM Aguas de Manta",
+      "contacto": "Ing. Miguel Cevallos",
+      "cargo": "Gerente General de Aguas de Manta",
+      "email": "miguelcevallos@epam.gob.ec",
+      "telefono": "997067998",
+      "generada": false
+    },
+    {
+      "nombre": "EPESPO",
+      "contacto": "Ing. Gabriela Mendoza Pico",
+      "cargo": "Analista de Sistemas",
+      "email": "sistemas@epespo.gob.ec",
+      "telefono": "052631676",
+      "generada": true
+    },
+    {
+      "nombre": "EPULEAM",
+      "contacto": "Ing. Ricardo Andrade Moreira",
+      "cargo": "Responsable de la Unidad",
+      "email": "coordinacion@epuleam.uleam.edu.ec",
+      "telefono": "052666300",
+      "generada": true
+    },
+    {
+      "nombre": "ESCUELA DE PESCA DEL PACÍFICO ORIENTAL",
+      "contacto": "Ing. Marjorie Ortega",
+      "cargo": "Directora Académica",
+      "email": "marjorieom@hotmail.com",
+      "telefono": "994563393",
+      "generada": false
+    },
+    {
+      "nombre": "FACULTAD DE CIENCIAS DE LA EDUCACIÓN - PROYECTO DIAC",
+      "contacto": "Dra. Beatriz Moreira Macías, Ph.D",
+      "cargo": "Decana Facultad de Ciencias de la Educación",
+      "email": "arturo.rodriguez@uleam.edu.ec",
+      "telefono": "988500314",
+      "generada": false
+    },
+    {
+      "nombre": "FIBRAPOINT",
+      "contacto": "Sr. Carlos Julio Aguilar",
+      "cargo": "Gerente General",
+      "email": "info@fibrapoint.net",
+      "telefono": "939819093",
+      "generada": false
+    },
+    {
+      "nombre": "FISHCORP",
+      "contacto": "Lcdo. Jorge Intriago Bravo",
+      "cargo": "Jefe de Recursos Humanos",
+      "email": "talentohumano@fishcorp.com.ec",
+      "telefono": "0960027085",
+      "generada": true
+    },
+    {
+      "nombre": "GAD MANTA",
+      "contacto": "Ing. Guillermo Calvache Erazo",
+      "cargo": "Dirección de Educación Complementaria GAD MANTA",
+      "email": "guillermo_calvache@manta.gob.ec",
+      "telefono": "996375187",
+      "generada": false
+    },
+    {
+      "nombre": "GAD MONTECRISTI",
+      "contacto": "Ing. Rubén Giler Menéndez",
+      "cargo": "Jefe de Sistemas",
+      "email": "sistemas@gadmontecristi.gob.ec",
+      "telefono": "052650462",
+      "generada": true
+    },
+    {
+      "nombre": "GALDECUN S.A.",
+      "contacto": "Ing. Silvia Ponce Rodríguez",
+      "cargo": "Gerente General",
+      "email": "gerencia@galdecun.com.ec",
+      "telefono": "0960173344",
+      "generada": true
+    },
+    {
+      "nombre": "HOSPITAL IESS MANTA",
+      "contacto": "Ing. Nathaly Pico Cedeño",
+      "cargo": "Coordinador de Informática",
+      "email": "informatica@hospitaliess.gob.ec",
+      "telefono": "052642543",
+      "generada": true
+    },
+    {
+      "nombre": "HOSPITAL RODRIGUEZ ZAMBRANO",
+      "contacto": "Ing. Andrea Cañarte Delgado",
+      "cargo": "Coordinador de Informática",
+      "email": "informatica@hospitalrodriguez.gob.ec",
+      "telefono": "052647514",
+      "generada": true
+    },
+    {
+      "nombre": "HOTEL POSEIDÓN",
+      "contacto": "Ing. Marcelo Chávez Pinargote",
+      "cargo": "Administrador",
+      "email": "administracion@hotelposeidon.com",
+      "telefono": "0960146259",
+      "generada": true
+    },
+    {
+      "nombre": "INSTITUTO DE NEUROCIENCIAS",
+      "contacto": "Ing. Fabián Zambrano Loor",
+      "cargo": "Coordinador de Informática",
+      "email": "informatica@institutoneurociencias.gob.ec",
+      "telefono": "052623757",
+      "generada": true
+    },
+    {
+      "nombre": "KAIROSIG",
+      "contacto": "Ing. Jacqueline Palma Ramos",
+      "cargo": "Gerente General",
+      "email": "gerente@kairosig.com",
+      "telefono": "996434136",
+      "generada": false
+    },
+    {
+      "nombre": "KONTIKI EXPEDITIONS",
+      "contacto": "Abg. Daniel Cevallos Vera",
+      "cargo": "Administrador",
+      "email": "administracion@kontikiexpeditions.com",
+      "telefono": "0960167927",
+      "generada": true
+    },
+    {
+      "nombre": "LABORATORIO DE MEDICINA ULEAM",
+      "contacto": "Dra. Jacqueline Mera Chica",
+      "cargo": "Coordinadora de Laboratorio - Medicina",
+      "email": "jacqueline.mera@uleam.edu.ec",
+      "telefono": "997564528",
+      "generada": false
+    },
+    {
+      "nombre": "MANABI PRODUCE",
+      "contacto": "Lcdo. Jorge Intriago Bravo",
+      "cargo": "Jefe de Recursos Humanos",
+      "email": "talentohumano@manabiproduce.com.ec",
+      "telefono": "0960135425",
+      "generada": true
+    },
+    {
+      "nombre": "MANACLOUDS",
+      "contacto": "Ing. Óscar Quiroz Delgado",
+      "cargo": "Jefe de Tecnologías de la Información",
+      "email": "soporte@manaclouds.com",
+      "telefono": "0960081255",
+      "generada": true
+    },
+    {
+      "nombre": "MINISTERIO DE PRODUCCIÓN COMERCIO EXTERIOR INVERSIONES Y PESCA",
+      "contacto": "Abg. Daniel Cevallos Vera",
+      "cargo": "Director Distrital de Tecnologías",
+      "email": "tics@ministerioproduccion.gob.ec",
+      "telefono": "052687109",
+      "generada": true
+    },
+    {
+      "nombre": "MINISTERIO DEL INTERIOR",
+      "contacto": "Ing. Tatiana Farías Moreira",
+      "cargo": "Director Distrital de Tecnologías",
+      "email": "tics@ministeriointerior.gob.ec",
+      "telefono": "052626705",
+      "generada": true
+    },
+    {
+      "nombre": "MOVILIDAD DE MANTA-EP",
+      "contacto": "Ing. Patricia Solórzano Cedeño",
+      "cargo": "Jefe de Sistemas",
+      "email": "sistemas@movilidadmantaep.gob.ec",
+      "telefono": "052658381",
+      "generada": true
+    },
+    {
+      "nombre": "OBSERVATORIO TERRITORIAL MULTIDISCIPLINARIO ULEAM",
+      "contacto": "Soc. Wilmer Ivan Suárez V., MSc",
+      "cargo": "Director Observatorio Territorial Multidisciplinario",
+      "email": "observatorio@uleam.edu.ec",
+      "telefono": "998472531",
+      "generada": false
+    },
+    {
+      "nombre": "PICKING S.A.",
+      "contacto": "Ing. Gilberth Choez Mendoza",
+      "cargo": "Representante Legal",
+      "email": "info@picking.com.ec",
+      "telefono": "985872769",
+      "generada": false
+    },
+    {
+      "nombre": "PROMOPESCA",
+      "contacto": "Ing. Fabricio Reyes Flores",
+      "cargo": "Jefe de Tecnología",
+      "email": "freyes@promopesca.com.ec",
+      "telefono": "959730549",
+      "generada": false
+    },
+    {
+      "nombre": "PROYECTO DE INVESTIGACIÓN EL ROL DE LAS TECNOLOGÍAS EN LA EDUCACIÓN SUPERIOR",
+      "contacto": "Lcda. Elena Bailón Santana",
+      "cargo": "Responsable de la Unidad",
+      "email": "coordinacion@proyectoinvestigacion.uleam.edu.ec",
+      "telefono": "052669248",
+      "generada": true
+    },
+    {
+      "nombre": "PROYECTO IOT",
+      "contacto": "Ing. Andrea Cañarte Delgado",
+      "cargo": "Responsable de la Unidad",
+      "email": "coordinacion@proyectoiot.uleam.edu.ec",
+      "telefono": "052605896",
+      "generada": true
+    },
+    {
+      "nombre": "QUOTECH",
+      "contacto": "Ing. José Stalin Proaño Molina",
+      "cargo": "Presidente",
+      "email": "info@quotech.ec",
+      "telefono": "979925170",
+      "generada": false
+    },
+    {
+      "nombre": "RUNACHAY",
+      "contacto": "Ing. Pablo Saltos",
+      "cargo": "Coordinador de Soporte Operativo",
+      "email": "—",
+      "telefono": "960839348",
+      "generada": false
+    },
+    {
+      "nombre": "SEAFMAN",
+      "contacto": "Lcda. Martha Alvarado",
+      "cargo": "Gerente de RRHH",
+      "email": "kvalderrama@seafman.com",
+      "telefono": "985768206",
+      "generada": false
+    },
+    {
+      "nombre": "SEGUIMIENTO A GRADUADOS FCVT",
+      "contacto": "Ing. Karina Briones Mera",
+      "cargo": "Responsable de la Unidad",
+      "email": "coordinacion@seguimientograduados.uleam.edu.ec",
+      "telefono": "052679190",
+      "generada": true
+    },
+    {
+      "nombre": "SHELLCATCH",
+      "contacto": "Ing. Stahl Suárez Castellanos",
+      "cargo": "Gerente & Representante para Ecuador",
+      "email": "stahl.suarez@shellcatch.com",
+      "telefono": "992928775",
+      "generada": false
+    },
+    {
+      "nombre": "SUBDECANATO FCVT",
+      "contacto": "Ing. Karina Briones Mera",
+      "cargo": "Responsable de la Unidad",
+      "email": "coordinacion@subdecanatofcvt.uleam.edu.ec",
+      "telefono": "052637572",
+      "generada": true
+    },
+    {
+      "nombre": "TELANDWEB",
+      "contacto": "Ing. Dario Cedeño Viteri",
+      "cargo": "Gerente General",
+      "email": "gerencia@tawsa.com",
+      "telefono": "999178014",
+      "generada": false
+    },
+    {
+      "nombre": "TERMINAL PORTUARIA DE MANTA",
+      "contacto": "Ing. Hugo Palacios Zambrano",
+      "cargo": "Jefe de Sistemas",
+      "email": "sistemas@terminalportuaria.gob.ec",
+      "telefono": "052602948",
+      "generada": true
+    },
+    {
+      "nombre": "TERMINAL PORTUARIO DE MANTA TMP S.A.",
+      "contacto": "S/N",
+      "cargo": "—",
+      "email": "Palmeida@tpm.ec",
+      "telefono": "—",
+      "generada": false
+    },
+    {
+      "nombre": "ULEAM-EP",
+      "contacto": "Ing. Marcelo Chávez Pinargote",
+      "cargo": "Responsable de la Unidad",
+      "email": "coordinacion@uleamep.uleam.edu.ec",
+      "telefono": "052655433",
+      "generada": true
+    },
+    {
+      "nombre": "UNIDAD EDUCATIVA ISRAEL",
+      "contacto": "Lcda. Mariana Vélez Cedeño",
+      "cargo": "Rector",
+      "email": "rectorado@unidadeducativa.edu.ec",
+      "telefono": "052615838",
+      "generada": true
+    },
+    {
+      "nombre": "UNIDAD EDUCATIVA JUAN MONTALVO",
+      "contacto": "Lcda. Martha Cedeño Alcivar",
+      "cargo": "Rectora",
+      "email": "—",
+      "telefono": "982737396",
+      "generada": false
+    },
+    {
+      "nombre": "UNIDAD EDUCATIVA TALENTOS",
+      "contacto": "Dr. Julio Mero Villavicencio",
+      "cargo": "Rector",
+      "email": "rectorado@unidadeducativa.edu.ec",
+      "telefono": "052634624",
+      "generada": true
+    },
+    {
+      "nombre": "WION",
+      "contacto": "Ing. José Intriago Rengifo / Jonathan Moreira",
+      "cargo": "Gerente General",
+      "email": "galo_jose@hotmail.com",
+      "telefono": "983313131",
+      "generada": false
+    },
+    {
+      "nombre": "ZGAMES",
+      "contacto": "Ing. Elizabeth Rodríguez",
+      "cargo": "Product Manager",
+      "email": "oficaldecumplimiento@zgameslatam.com",
+      "telefono": "994283082",
+      "generada": false
+    }
+  ],
+  "tutores": [
+    "Ing. Juan Carlos Sendón Varela. Mg.",
+    "Ing. José Jacinto Reyes Cárdenas. Mg.",
+    "Ing. Carlos Manosalvas García. Mg.",
+    "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+    "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+    "Ing. Walter Colón García Vélez. Mg.",
+    "Ing. Robert Wilfrido Moreira Centeno, Mg",
+    "Ing. Hiraida Monserrate Santana Cedeño. Mg.",
+    "Ing. Willian Jesus Zamora Mero. PhD.",
+    "Ing. Luigi Fabian Pihuave Calderon. Mg.",
+    "Ing. Marco Wellington Ayovi Ramirez. PhD.",
+    "Ing. Walter Daniel Parraga Andrade. Mg."
+  ],
+  "practicas": [
+    {
+      "estudiante": "Aguilar Aguilera Isabella Verónica",
+      "empresa": "COLEGIO DE BIOLOGOS",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Alava Moreira Luis Alejandro",
+      "empresa": "EPAM",
+      "tutor": "Ing. Willian Jesus Zamora Mero. PhD.",
+      "area": "Sistemas"
+    },
+    {
+      "estudiante": "Alcivar Franco Nancy Paola",
+      "empresa": "UNIDAD EDUCATIVA ISRAEL",
+      "tutor": "Ing. Walter Colón García Vélez. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Alcívar Córdova Pedro Luis",
+      "empresa": "INSTITUTO DE NEUROCIENCIAS",
+      "tutor": "Ing. Walter Daniel Parraga Andrade. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Alonzo Pico Devis Yonaikel",
+      "empresa": "EPESPO",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Alvarado Chavez Jimmy Santiago",
+      "empresa": "FISHCORP",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Anchundia Anchundia Liliana Margarita",
+      "empresa": "HOSPITAL RODRIGUEZ ZAMBRANO",
+      "tutor": "Ing. Robert Wilfrido Moreira Centeno, Mg",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Anchundia Chavez Belinda Yusmeli",
+      "empresa": "ULEAM-EP",
+      "tutor": "Ing. Robert Wilfrido Moreira Centeno, Mg",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Anchundia Parraga Diego Ariel",
+      "empresa": "HOSPITAL RODRIGUEZ ZAMBRANO",
+      "tutor": "Ing. Robert Wilfrido Moreira Centeno, Mg",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Andrade Mera Maholy Abigail",
+      "empresa": "CONSERVAS ISABEL S.A",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Anzules Reyes Luis Manuel",
+      "empresa": "GAD MANTA",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Arteaga Santana Bryan Steven",
+      "empresa": "PROMOPESCA",
+      "tutor": "Ing. Luigi Fabian Pihuave Calderon. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Artiles Enriquez Marcos Javier",
+      "empresa": "ALTURA S.A.",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Ayala Mendoza Jennyffer Carolina",
+      "empresa": "SEGUIMIENTO A GRADUADOS FCVT",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Bailon Anchundia Genesis Aracely",
+      "empresa": "MINISTERIO DE PRODUCCIÓN COMERCIO EXTERIOR INVERSIONES Y PESCA",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Bailon Quijije Jerick Abraham",
+      "empresa": "EPESPO",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Bajaña Loor Hillary Julexy",
+      "empresa": "DISTRITO DE SALUD D1302",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Baque Barcia Josthin Ariel",
+      "empresa": "ALTURA S.A.",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Baque Rodríguez Victor Jesús",
+      "empresa": "TERMINAL PORTUARIA DE MANTA",
+      "tutor": "Ing. Willian Jesus Zamora Mero. PhD.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Barberan Barberan Juan Carlos",
+      "empresa": "AUTORIDAD PORTUARIA DE MANTA",
+      "tutor": "Ing. Luigi Fabian Pihuave Calderon. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Barberan Barberan Leydi Estefania",
+      "empresa": "MANACLOUDS",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Barcia Landa Carlos Josue",
+      "empresa": "FISHCORP",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Barreto Soledispa Darly Jahir",
+      "empresa": "MINISTERIO DEL INTERIOR",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Bautista Quintero Cecia Jemima",
+      "empresa": "MANACLOUDS",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Bodero Flores Luis Joel",
+      "empresa": "UNIDAD EDUCATIVA TALENTOS",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Bosada Bosada Jesús Andrés",
+      "empresa": "INSTITUTO DE NEUROCIENCIAS",
+      "tutor": "Ing. Walter Daniel Parraga Andrade. Mg.",
+      "area": "Sistemas"
+    },
+    {
+      "estudiante": "Bravo Zambrano Luis Alexander",
+      "empresa": "DIIT ULEAM",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Gestión Académica"
+    },
+    {
+      "estudiante": "Briones Cantos Nayeli Maritza",
+      "empresa": "HOSPITAL IESS MANTA",
+      "tutor": "Ing. Robert Wilfrido Moreira Centeno, Mg",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Briones Santana Ramón Steven",
+      "empresa": "ZGAMES",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Burbano Loor Anthony Stewart",
+      "empresa": "UNIDAD EDUCATIVA ISRAEL",
+      "tutor": "Ing. Walter Colón García Vélez. Mg.",
+      "area": "Laboratorio de Cómputo"
+    },
+    {
+      "estudiante": "Burgos Rodríguez Jean Carlos",
+      "empresa": "ZGAMES",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Castillo Alonso Luis David",
+      "empresa": "EPESPO",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Castillo Vera Ariel Alexander",
+      "empresa": "ZGAMES",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Castro Carranza Andrés David",
+      "empresa": "GAD MONTECRISTI",
+      "tutor": "Ing. Willian Jesus Zamora Mero. PhD.",
+      "area": "Sistemas"
+    },
+    {
+      "estudiante": "Cañarte Chancay Diego Valentino",
+      "empresa": "MOVILIDAD DE MANTA-EP",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Cedeño Mejía Francisco Rafael",
+      "empresa": "RUNACHAY",
+      "tutor": "Ing. Hiraida Monserrate Santana Cedeño. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Cedeño Mosquera Jostin Abraham",
+      "empresa": "ALTURA S.A.",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Cedeño Parrales Ambar Samantha",
+      "empresa": "DISTRITO DE EDUCACION 13D02",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Cedeño Rivera Joseline Malena",
+      "empresa": "OBSERVATORIO TERRITORIAL MULTIDISCIPLINARIO ULEAM",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Gestión Académica"
+    },
+    {
+      "estudiante": "Cedeño Rodríguez Carlos Luis",
+      "empresa": "EPULEAM",
+      "tutor": "Ing. Marco Wellington Ayovi Ramirez. PhD.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Cedeño Sornoza Daniel Josué",
+      "empresa": "KAIROSIG",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Cedeño Vera Helion Maximiliano",
+      "empresa": "OBSERVATORIO TERRITORIAL MULTIDISCIPLINARIO ULEAM",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Gestión Académica"
+    },
+    {
+      "estudiante": "Cevallos Macias Kelly Juleidy",
+      "empresa": "BENEMÉRITO CUERPO DE BOMBEROS DE MANTA",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Cevallos Pihuave Douglas Juliot",
+      "empresa": "EPAM",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Chaluisa Candelejo Lilia Diana",
+      "empresa": "BENEMÉRITO CUERPO DE BOMBEROS DE MANTA",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Chancay Moreira Grace Liseth",
+      "empresa": "OBSERVATORIO TERRITORIAL MULTIDISCIPLINARIO ULEAM",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Chavez Bailon Johan Steven",
+      "empresa": "EPULEAM",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Chavez Vinces Yimmy Gabriel",
+      "empresa": "HOSPITAL IESS MANTA",
+      "tutor": "Ing. Hiraida Monserrate Santana Cedeño. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Chinga Guerrero Anthony Simon",
+      "empresa": "HOSPITAL IESS MANTA",
+      "tutor": "Ing. Robert Wilfrido Moreira Centeno, Mg",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Choez Rivera David Alejandro",
+      "empresa": "GAD MANTA",
+      "tutor": "Ing. Hiraida Monserrate Santana Cedeño. Mg.",
+      "area": "Sistemas"
+    },
+    {
+      "estudiante": "Conforme Yacue Cristhian Javier",
+      "empresa": "INSTITUTO DE NEUROCIENCIAS",
+      "tutor": "Ing. Walter Daniel Parraga Andrade. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Cornejo Macías Luis Fernando",
+      "empresa": "MINISTERIO DEL INTERIOR",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Delgado Anchundia Naomi Carolina",
+      "empresa": "DIIT ULEAM",
+      "tutor": "Ing. Walter Daniel Parraga Andrade. Mg.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Delgado Carreño Bryan Daniel",
+      "empresa": "SHELLCATCH",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Delgado Mendoza Kevin Jossue",
+      "empresa": "MANACLOUDS",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Delgado Meza Victor Alexander",
+      "empresa": "EPAM",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "España Zambrano Estefani Nicole",
+      "empresa": "SEGUIMIENTO A GRADUADOS FCVT",
+      "tutor": "Ing. Hiraida Monserrate Santana Cedeño. Mg.",
+      "area": "Gestión Académica"
+    },
+    {
+      "estudiante": "Franco Anchundia Carlos Andrés",
+      "empresa": "ATUKHOSTING",
+      "tutor": "Ing. Willian Jesus Zamora Mero. PhD.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "González Segovia Keyra Yelenny",
+      "empresa": "HOSPITAL RODRIGUEZ ZAMBRANO",
+      "tutor": "Ing. Robert Wilfrido Moreira Centeno, Mg",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Gudiño Avila Anthony Raúl",
+      "empresa": "HOSPITAL RODRIGUEZ ZAMBRANO",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Gómez Palma Dania Vanessa",
+      "empresa": "ZGAMES",
+      "tutor": "Ing. Walter Colón García Vélez. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Herrera Holguín Andrés Wilfrido",
+      "empresa": "INSTITUTO DE NEUROCIENCIAS",
+      "tutor": "Ing. Walter Daniel Parraga Andrade. Mg.",
+      "area": "Sistemas"
+    },
+    {
+      "estudiante": "Holguin Baque Jonathan Alexander",
+      "empresa": "EPESPO",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Holguin Demera Jose Javier",
+      "empresa": "PROMOPESCA",
+      "tutor": "Ing. Luigi Fabian Pihuave Calderon. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Iñiguez Romero Alisson Oswaldo",
+      "empresa": "BENEMÉRITO CUERPO DE BOMBEROS DE MANTA",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Loor Vera Jordy Lenin",
+      "empresa": "DIIT ULEAM",
+      "tutor": "Ing. Walter Daniel Parraga Andrade. Mg.",
+      "area": "Gestión Académica"
+    },
+    {
+      "estudiante": "Lopez Chilan Angel David",
+      "empresa": "SEAFMAN",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Lorente Tello Ericka Dayana",
+      "empresa": "CLIC HERE PC",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Infraestructura y Servidores"
+    },
+    {
+      "estudiante": "Lucas Anchundia Luis Diego",
+      "empresa": "DISTRITO DE EDUCACION 13D02",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Lucas Zambrano Gabriele",
+      "empresa": "MOVILIDAD DE MANTA-EP",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "Sistemas"
+    },
+    {
+      "estudiante": "Luzardo Alcivar Guillermo Andres",
+      "empresa": "GAD MANTA",
+      "tutor": "Ing. Hiraida Monserrate Santana Cedeño. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "López Lascano Anthony Agustín",
+      "empresa": "MANABI PRODUCE",
+      "tutor": "Ing. Walter Colón García Vélez. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Macias Bravo Melina Lissette",
+      "empresa": "MOVILIDAD DE MANTA-EP",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Macias Faubla Bryan José",
+      "empresa": "ATUKHOSTING",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Infraestructura y Servidores"
+    },
+    {
+      "estudiante": "Macias Lugo Jesus Fernando",
+      "empresa": "ZGAMES",
+      "tutor": "Ing. Walter Colón García Vélez. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Macías Sosa Carlos Johan",
+      "empresa": "DISTRITO DE SALUD D1302",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Mejía Párraga Yender David",
+      "empresa": "ATUKHOSTING",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Infraestructura y Servidores"
+    },
+    {
+      "estudiante": "Mendoza Bazurto Fabricio Jesús",
+      "empresa": "HOSPITAL RODRIGUEZ ZAMBRANO",
+      "tutor": "Ing. Marco Wellington Ayovi Ramirez. PhD.",
+      "area": "Sistemas"
+    },
+    {
+      "estudiante": "Mendoza Mendoza Michael Steven",
+      "empresa": "ULEAM-EP",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Mera Mendoza Rubén Darío",
+      "empresa": "DIIT ULEAM",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Mero Figueroa Jeremy Alan",
+      "empresa": "EPAM",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Mero Vélez Jordy Adrian",
+      "empresa": "DISTRITO DE EDUCACION 13D02",
+      "tutor": "Ing. Walter Colón García Vélez. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Meza Bolaños Jordan Isidro",
+      "empresa": "DISTRITO DE EDUCACION 13D02",
+      "tutor": "Ing. Walter Colón García Vélez. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Meza Guerrero Jordan Alexis",
+      "empresa": "HOSPITAL IESS MANTA",
+      "tutor": "Ing. Robert Wilfrido Moreira Centeno, Mg",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Mieles Pita Silvia Marina",
+      "empresa": "CONSERVAS ISABEL S.A",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Milazzo Cedeño Lizzardi Anthoni",
+      "empresa": "ZGAMES",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Mina Quijije Jennifer Ana",
+      "empresa": "GAD MONTECRISTI",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Morán Mero Juan Carlos",
+      "empresa": "FIBRAPOINT",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Muentes Roca Jostyn Fabricio",
+      "empresa": "HOSPITAL IESS MANTA",
+      "tutor": "Ing. Hiraida Monserrate Santana Cedeño. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Navarrete Franco Luis Anthony",
+      "empresa": "GAD MANTA",
+      "tutor": "Ing. Hiraida Monserrate Santana Cedeño. Mg.",
+      "area": "Sistemas"
+    },
+    {
+      "estudiante": "Ortega Giler Miguel Ángel",
+      "empresa": "ALTURA S.A.",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Pacheco Bermeo Kevin Jair",
+      "empresa": "SHELLCATCH",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Padilla Parrales Marcos Antonio",
+      "empresa": "HOSPITAL RODRIGUEZ ZAMBRANO",
+      "tutor": "Ing. Marco Wellington Ayovi Ramirez. PhD.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Palma Palma Johan Xavier",
+      "empresa": "DISTRITO DE EDUCACION 13D02",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Palma Tejena Michael Javier",
+      "empresa": "AUTORIDAD PORTUARIA DE MANTA",
+      "tutor": "Ing. Walter Colón García Vélez. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Palma Zamora Jordi José",
+      "empresa": "PROYECTO IOT",
+      "tutor": "Ing. Willian Jesus Zamora Mero. PhD.",
+      "area": "Gestión Académica"
+    },
+    {
+      "estudiante": "Panta Franco Julissa Stephanía",
+      "empresa": "DIIT ULEAM",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Parrales Pico Douglas Andres",
+      "empresa": "HOTEL POSEIDÓN",
+      "tutor": "Ing. Luigi Fabian Pihuave Calderon. Mg.",
+      "area": "Infraestructura y Servidores"
+    },
+    {
+      "estudiante": "Patiño Angulo Alex Agustin",
+      "empresa": "CORPORACION MARZAM",
+      "tutor": "Ing. Marco Wellington Ayovi Ramirez. PhD.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Pazmiño García Bryan Josué",
+      "empresa": "MOVILIDAD DE MANTA-EP",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Perez Castro Cristopher David",
+      "empresa": "HOSPITAL RODRIGUEZ ZAMBRANO",
+      "tutor": "Ing. Robert Wilfrido Moreira Centeno, Mg",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Perez Villarroel Ricardo Joshu",
+      "empresa": "FIBRAPOINT",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Pico Reyes Kevin David",
+      "empresa": "SHELLCATCH",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Pinto Rivero Jandry Alejandro",
+      "empresa": "GAD MANTA",
+      "tutor": "Ing. Hiraida Monserrate Santana Cedeño. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Plaza Chiquito Kevin David",
+      "empresa": "MANABI PRODUCE",
+      "tutor": "Ing. Walter Colón García Vélez. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Ponce Urdanigo Manuel Alexander",
+      "empresa": "KAIROSIG",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Prado Góngora Luis Manuel",
+      "empresa": "DIIT ULEAM",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Pérez Castro Jeremy Gabriel",
+      "empresa": "HOSPITAL RODRIGUEZ ZAMBRANO",
+      "tutor": "Ing. Marco Wellington Ayovi Ramirez. PhD.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Pérez Molina Cristhian Fabian",
+      "empresa": "COOPERATIVA CALCETA LTDA",
+      "tutor": "Ing. Walter Colón García Vélez. Mg.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Quiroz Bailon Verónica Susana",
+      "empresa": "SUBDECANATO FCVT",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Ramirez Bravo Angie Nicole",
+      "empresa": "DISTRITO DE EDUCACION 13D02",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Rendón Calderón María Fernanda",
+      "empresa": "KONTIKI EXPEDITIONS",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Rezavala Bailon Bryan David",
+      "empresa": "DIIT ULEAM",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Rodriguez Bravo Erick Rodrigo",
+      "empresa": "ALTURA S.A.",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Rodriguez Salvatierra Enis Anderi",
+      "empresa": "EPULEAM",
+      "tutor": "Ing. Marco Wellington Ayovi Ramirez. PhD.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Saltos Garcia Anthony Josue",
+      "empresa": "UNIDAD EDUCATIVA TALENTOS",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Laboratorio de Cómputo"
+    },
+    {
+      "estudiante": "Salvatierra Vasquez Amelia Beatriz",
+      "empresa": "AUTORIDAD PORTUARIA DE MANTA",
+      "tutor": "Ing. Luigi Fabian Pihuave Calderon. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Sanchez Mero Johan Francisco",
+      "empresa": "GALDECUN S.A.",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Santana Zambrano Jose Luis",
+      "empresa": "DISTRITO DE EDUCACION 13D02",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Santos Toala Jose Sebastian",
+      "empresa": "ATUKHOSTING",
+      "tutor": "Ing. Willian Jesus Zamora Mero. PhD.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Solorzano Macias Nayely Andreina",
+      "empresa": "DISTRITO DE EDUCACION 13D02",
+      "tutor": "Ing. Walter Colón García Vélez. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Tomala Fernandez Narcisa Esperanza",
+      "empresa": "BENEMÉRITO CUERPO DE BOMBEROS DE MANTA",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Sistemas"
+    },
+    {
+      "estudiante": "Tumbaco Arana Diego Armando",
+      "empresa": "EPULEAM",
+      "tutor": "Ing. Juan Carlos Sendón Varela. Mg.",
+      "area": "Gestión Académica"
+    },
+    {
+      "estudiante": "Valencia Diaz Ramon Jonaiker",
+      "empresa": "MANACLOUDS",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Valencia Ramírez John Robert",
+      "empresa": "EPAM",
+      "tutor": "Ing. Willian Jesus Zamora Mero. PhD.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Valeriano Delgado Carmen Annabel",
+      "empresa": "AUTORIDAD PORTUARIA DE MANTA",
+      "tutor": "Ing. Luigi Fabian Pihuave Calderon. Mg.",
+      "area": "Sistemas"
+    },
+    {
+      "estudiante": "Villigua Soledispa Cristhian Alexander",
+      "empresa": "RUNACHAY",
+      "tutor": "Ing. Hiraida Monserrate Santana Cedeño. Mg.",
+      "area": "TI"
+    },
+    {
+      "estudiante": "Vinces Cevallos John Cristhian",
+      "empresa": "HOTEL POSEIDÓN",
+      "tutor": "Ing. Luigi Fabian Pihuave Calderon. Mg.",
+      "area": "Infraestructura y Servidores"
+    },
+    {
+      "estudiante": "Vásquez Tomalá Francisco Guillermo",
+      "empresa": "FISHCORP",
+      "tutor": "Ing. Luis Jacinto Mendoza Cuzme. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Vázquez Espinosa Jennifer",
+      "empresa": "PROYECTO IOT",
+      "tutor": "Ing. Fabricio Javier Rivadeneira Zambrano. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Vélez Núñez Gabriel Alexander",
+      "empresa": "CORPORACION MARZAM",
+      "tutor": "Ing. Marco Wellington Ayovi Ramirez. PhD.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Véliz Vergara Génesis Gabriela",
+      "empresa": "CNEL",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Zambrano Menéndez Jeremi Paul",
+      "empresa": "HOTEL POSEIDÓN",
+      "tutor": "Ing. Walter Colón García Vélez. Mg.",
+      "area": "Desarrollo de Software"
+    },
+    {
+      "estudiante": "Zambrano Mero Jonathan Leonardo",
+      "empresa": "HOSPITAL RODRIGUEZ ZAMBRANO",
+      "tutor": "Ing. José Jacinto Reyes Cárdenas. Mg.",
+      "area": "Sistemas"
+    },
+    {
+      "estudiante": "Zambrano Salazar Janina Aracely",
+      "empresa": "MOVILIDAD DE MANTA-EP",
+      "tutor": "Ing. Carlos Manosalvas García. Mg.",
+      "area": "Redes y Comunicaciones"
+    },
+    {
+      "estudiante": "Zambrano Vergara Irving Ariel",
+      "empresa": "HOSPITAL IESS MANTA",
+      "tutor": "Ing. Robert Wilfrido Moreira Centeno, Mg",
+      "area": "Soporte Técnico"
+    },
+    {
+      "estudiante": "Zamora Piguave Miguel Ignacio",
+      "empresa": "PROYECTO DE INVESTIGACIÓN EL ROL DE LAS TECNOLOGÍAS EN LA EDUCACIÓN SUPERIOR",
+      "tutor": "Ing. Robert Wilfrido Moreira Centeno, Mg",
+      "area": "Desarrollo de Software"
+    }
+  ]
+}

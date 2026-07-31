@@ -27,9 +27,4 @@ export const envValidationSchema = Joi.object({
     then: Joi.string().optional(),
     otherwise: Joi.string().required(),
   }),
-  // OpenSearch
-  DISABLE_OPENSEARCH: Joi.string().valid('true', 'false').default('false'),
-  OPENSEARCH_URL: Joi.string().default('https://localhost:9200'),
-  OPENSEARCH_USERNAME: Joi.string().default('admin'),
-  OPENSEARCH_PASSWORD: Joi.string().optional(),
 });

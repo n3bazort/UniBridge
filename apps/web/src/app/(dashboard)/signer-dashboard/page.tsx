@@ -16,7 +16,7 @@ import {
 
 interface BatchItem {
   id: string
-  status: 'PENDING' | 'SIGNED_BY_DEAN' | 'SIGNED' | 'REJECTED'
+  status: 'PENDING' | 'SIGNED_BY_DIRECTOR' | 'SIGNED_BY_DEAN' | 'SIGNED' | 'REJECTED'
   rejectReason?: string
   document: {
     id: string
@@ -37,6 +37,7 @@ interface SignatureBatch {
 
 const ITEM_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   PENDING: { label: 'Pendiente', cls: 'text-amber-600 bg-amber-50 border-amber-100' },
+  SIGNED_BY_DIRECTOR: { label: 'Firmado por Responsable', cls: 'text-blue-600 bg-blue-50 border-blue-100' },
   SIGNED_BY_DEAN: { label: 'Firmado por Decano', cls: 'text-blue-600 bg-blue-50 border-blue-100' },
   SIGNED: { label: 'Firmado', cls: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
   REJECTED: { label: 'Rechazado', cls: 'text-red-600 bg-red-50 border-red-100' },
@@ -48,6 +49,7 @@ export default function SignerDashboardPage() {
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null)
   const [downloading, setDownloading] = useState<string | null>(null)
   const [dragOverBatchId, setDragOverBatchId] = useState<string | null>(null)
+
 
   const { data: batches = [], isLoading } = useQuery<SignatureBatch[]>({
     queryKey: ['signer-pending-batches'],
@@ -69,7 +71,7 @@ export default function SignerDashboardPage() {
       } else {
         toast.success(`${data.uploaded} documento(s) firmados subidos y verificados`)
       }
-      if (data.batchStatus === 'PENDING_DIRECTOR') toast.info('Lote completo: pasa al Responsable de Prácticas para la segunda firma')
+      if (data.batchStatus === 'PENDING_DEAN') toast.info('Lote completo: pasa al Decano de la Facultad para la segunda firma')
       if (data.batchStatus === 'COMPLETED') toast.success('Lote completado: documentos publicados a los estudiantes')
       queryClient.invalidateQueries({ queryKey: ['signer-pending-batches'] })
     },
@@ -153,7 +155,7 @@ export default function SignerDashboardPage() {
               <div>
                 <h1 className="text-[20px] font-bold text-[#111827]">Documentos Pendientes de Firma</h1>
                 <p className="text-[13px] text-[#6b7280]">
-                  Descarga el lote, firma los PDF con FirmaEC y vuelve a subirlos. El sistema verifica cada firma automáticamente.
+                  Firma el lote en la app con tu token, o descárgalo, fírmalo con FirmaEC y vuelve a subirlo. El sistema verifica cada firma automáticamente.
                 </p>
               </div>
             </div>
@@ -274,6 +276,7 @@ export default function SignerDashboardPage() {
           )}
         </div>
       </div>
+
     </RoleGate>
   )
 }

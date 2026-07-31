@@ -93,8 +93,7 @@ export default function UsersPage() {
       title: form.title || undefined,
       role: form.role,
       signerRole: form.role === 'SIGNER' ? form.signerRole : undefined,
-      // El coordinador se declara por carrera; la facultad se deriva de ella
-      facultyId: form.role === 'COORDINATOR' ? facultyIdOfProgram(form.programId) : undefined,
+      facultyId: form.role === 'SIGNER' ? form.facultyId : (form.role === 'COORDINATOR' ? facultyIdOfProgram(form.programId) : undefined),
       programId: form.role === 'COORDINATOR' ? form.programId : undefined,
     })).data,
     onSuccess: (data) => {
@@ -112,7 +111,7 @@ export default function UsersPage() {
       signerRole: form.role === 'SIGNER' ? form.signerRole : undefined,
       email: form.email || undefined,
       fullName: form.fullName || undefined,
-      facultyId: form.role === 'COORDINATOR' ? facultyIdOfProgram(form.programId) : undefined,
+      facultyId: form.role === 'SIGNER' ? form.facultyId : (form.role === 'COORDINATOR' ? facultyIdOfProgram(form.programId) : undefined),
       programId: form.role === 'COORDINATOR' ? form.programId : undefined,
     })).data,
     onSuccess: (data) => {
@@ -170,8 +169,8 @@ export default function UsersPage() {
 
   return (
     <RoleGate allowedRoles={['ADMIN']}>
-      <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8] pt-6 pb-12 px-4 lg:px-8">
-        <div className="w-full max-w-[1400px] mx-auto flex flex-col gap-6">
+      <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8] pt-6 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-6xl mx-auto flex flex-col gap-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-[#eef2f7]">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-[12px] bg-white border border-[#eef2f7] flex items-center justify-center text-[#111827] shadow-sm">
@@ -222,17 +221,34 @@ export default function UsersPage() {
                   </div>
                   
                   {form.role === 'SIGNER' && (
-                    <div className="col-span-2">
-                      <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Tipo de Autoridad</label>
-                      <select
-                        value={form.signerRole}
-                        onChange={(e) => setForm({ ...form, signerRole: e.target.value as any })}
-                        className={inputCls + ' cursor-pointer'}
-                      >
-                        <option value="DEAN">Decano (firma primero)</option>
-                        <option value="DIRECTOR">Responsable de Prácticas (firma después)</option>
-                      </select>
-                    </div>
+                    <>
+                      <div className="col-span-2">
+                        <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Tipo de Autoridad</label>
+                        <select
+                          value={form.signerRole}
+                          onChange={(e) => setForm({ ...form, signerRole: e.target.value as any })}
+                          className={inputCls + ' cursor-pointer'}
+                        >
+                          <option value="DEAN">Decano (firma primero)</option>
+                          <option value="DIRECTOR">Responsable de Prácticas (firma después)</option>
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">
+                          Facultad {form.signerRole === 'DEAN' ? '(requerida - solo 1 decano activo por facultad)' : '(opcional)'}
+                        </label>
+                        <select
+                          value={form.facultyId}
+                          onChange={(e) => setForm({ ...form, facultyId: e.target.value })}
+                          className={inputCls + ' cursor-pointer'}
+                        >
+                          <option value="">Selecciona una facultad...</option>
+                          {faculties.map((f) => (
+                            <option key={f.id} value={f.id}>{f.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
                   )}
 
                   {form.role === 'COORDINATOR' && (
@@ -297,8 +313,8 @@ export default function UsersPage() {
                 <button
                   onClick={() => (mode === 'direct' ? createUser.mutate() : createInvitation.mutate())}
                   disabled={isPending ||
-                    (mode === 'direct' && (!form.email || (form.role === 'SIGNER' && !form.fullName) || (form.role === 'COORDINATOR' && !form.programId))) ||
-                    (mode === 'invite' && form.role === 'COORDINATOR' && !form.programId)
+                    (mode === 'direct' && (!form.email || (form.role === 'SIGNER' && (!form.fullName || (form.signerRole === 'DEAN' && !form.facultyId))) || (form.role === 'COORDINATOR' && !form.programId))) ||
+                    (mode === 'invite' && ((form.role === 'SIGNER' && form.signerRole === 'DEAN' && !form.facultyId) || (form.role === 'COORDINATOR' && !form.programId)))
                   }
                   className="w-full flex items-center justify-center gap-2 h-[42px] bg-[#111827] hover:bg-[#1f2937] rounded-[12px] text-[13px] font-semibold text-white shadow-sm transition-colors disabled:opacity-50"
                 >

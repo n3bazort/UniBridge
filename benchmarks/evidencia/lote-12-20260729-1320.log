@@ -1,0 +1,18 @@
+✔ Autenticado como Josué David Bazurto Zambrano
+✔ Plantilla certificado (PDF): Certificado de Prácticas Oficial
+✔ Plantilla solicitud (DOCX): Solicitud de Prácticas Oficial
+✔ Estudiantes disponibles: 10 (excluidos 133 con certificado vigente)
+
+── Generando solicitudes (docxtemplater) ──
+  solicitudes: 1.0 s
+
+── Encolando certificados (BullMQ + pdf-lib) ──
+  encolados 10 jobs en 187 ms  (batch 6e3bd5c2-2a96-4823-903d-9dce955f114f)
+  0/10  (0%)     9/10  (90%)     10/10  (100%)   
+
+═══ RESULTADO (10 documentos) ═══
+  Completados : 10   Fallidos: 0
+  Tiempo total: 4.05 s
+  Rendimiento : 2.47 doc/s  (405 ms/doc)
+  Guardado en : C:\dev\New Tesis\benchmarks\resultado-10.json
+  (proceso completo desde login: 5.6 s)

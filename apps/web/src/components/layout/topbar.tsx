@@ -1,12 +1,12 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { Bell, HelpCircle, Search, X, Menu, KeyRound, LogOut } from 'lucide-react'
+import { Search, X, Menu, KeyRound, LogOut } from 'lucide-react'
 import { useSearchStore } from '@/store/search'
 import { useAuthStore } from '@/store/auth-store'
 import { useSidebarStore } from '@/store/sidebar'
 import { useAuth } from '@/hooks/use-auth'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal'
 
 export function Topbar() {
@@ -17,154 +17,137 @@ export function Topbar() {
   const { logout } = useAuth()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const isPractices = pathname === '/practices'
 
+  /* ── Close user menu on outside click ── */
+  useEffect(() => {
+    if (!isUserMenuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [isUserMenuOpen])
+
+  /* ── Page titles ── */
   const titles: Record<string, string> = {
     '/practices': 'Registro de Prácticas',
     '/documents': 'Documentos y Plantillas',
-    '/documents/designer': '',
+    '/documents/designer': 'Diseñador de Certificados',
     '/certificates': 'Certificados Emitidos',
     '/companies': 'Empresas e Instituciones',
     '/students': 'Estudiantes',
     '/overview': 'Resumen General',
     '/imports': 'Importación de Datos',
-    '/settings': 'Configuraciones del Sistema'
-  }
-
-  const fallbackTitles: Record<string, string> = {
+    '/settings': 'Configuraciones del Sistema',
     '/users': 'Gestión de Usuarios',
     '/signer-dashboard': 'Firma de Documentos',
-    '/documents/designer': 'Diseñador de Certificados',
   }
-  const currentTitle = titles[pathname] ?? fallbackTitles[pathname] ?? ''
+  const currentTitle = titles[pathname] ?? ''
 
-  // Generar iniciales o abreviación del nombre dinámicamente
+  /* ── User display name ── */
   const fullName = user?.firstName && user?.lastName
     ? `${user.firstName} ${user.lastName}`
     : (user?.email ? user.email.split('@')[0] : '')
 
-  const getDisplayName = (): string => {
+  const displayName = (() => {
     if (!fullName) return 'Usuario'
     const parts = fullName.trim().split(' ')
     if (parts.length === 1) return parts[0]
-    // "Juan Carlos Pérez García" → "J. Pérez"
-    const firstName = parts[0]
-    const lastName = parts[parts.length - 1]
-    return `${firstName.charAt(0)}. ${lastName}`
-  }
+    return `${parts[0].charAt(0)}. ${parts[parts.length - 1]}`
+  })()
 
   return (
-    <header className="sticky top-0 z-[100] flex h-[72px] items-center justify-between bg-white px-4 md:px-[32px] border-b border-[#eef2f7]">
-      <div className="flex items-center min-w-0 gap-2 md:min-w-[200px]">
-        <button
-          type="button"
-          onClick={openMobileSidebar}
-          aria-label="Abrir menú de navegación"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[#374151] transition-colors hover:bg-[#f3f4f6] focus:outline-none focus:ring-2 focus:ring-[#2563eb] md:hidden"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-        <h1 className="text-lg md:text-[24px] font-semibold text-[#111827] truncate max-w-[120px] sm:max-w-none">{currentTitle}</h1>
-      </div>
+    <>
+      {/*
+        TOPBAR — not sticky, not fixed.
+        It's the first child of a flex-col parent, so it sits naturally
+        at the top without needing position hacks. The main content below
+        scrolls independently because it has overflow-auto + flex-1.
+      */}
+      <header className="flex h-14 shrink-0 items-center justify-between bg-white px-4 md:px-6 border-b border-gray-200/80">
 
-      <div className="flex-1 flex justify-end md:justify-center px-2 md:px-4">
-        {isPractices && (
-          <div className="relative flex items-center w-full max-w-[200px] md:max-w-[520px]">
-            <Search className="absolute left-3 md:left-3.5 h-[16px] w-[16px] md:h-[18px] md:w-[18px] text-[#9ca3af]" strokeWidth={1.8} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar..."
-              className="h-[36px] md:h-[44px] w-full rounded-[10px] md:rounded-[14px] border border-[#f1f5f9] bg-[#f9fafb] pl-9 md:pl-10 pr-8 md:pr-10 text-[13px] md:text-[14px] text-[#111827] placeholder:text-[#9ca3af] outline-none transition-all focus:border-[#2563eb] focus:ring-[4px] focus:ring-[#2563eb]/10"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 flex items-center justify-center text-[#9ca3af] hover:text-[#111827] transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center justify-end gap-3 md:gap-5 min-w-fit md:min-w-[200px]">
-        <button className="text-[#6b7280] hover:text-[#111827] transition-colors relative hidden sm:block" aria-label="Notificaciones">
-          <div className="absolute top-0 right-0 h-1.5 w-1.5 rounded-full bg-red-500" />
-          <Bell className="h-[20px] w-[20px]" strokeWidth={1.8} />
-        </button>
-        <button className="text-[#6b7280] hover:text-[#111827] transition-colors hidden sm:block" aria-label="Ayuda">
-          <HelpCircle className="h-[20px] w-[20px]" strokeWidth={1.8} />
-        </button>
-        <div className="relative ml-2 flex h-[40px] items-center justify-center rounded-[12px] group transition-all hover:scale-[0.98] active:scale-[0.95] select-none">
-          <style>{`
-            @keyframes led-rotate {
-              0% { transform: translate(-50%, -50%) rotate(0deg); }
-              100% { transform: translate(-50%, -50%) rotate(360deg); }
-            }
-            .beam-container-top {
-              position: absolute;
-              inset: 0;
-              border-radius: 12px;
-              padding: 5px;
-              pointer-events: none;
-              -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-              -webkit-mask-composite: xor;
-              mask-composite: exclude;
-              overflow: hidden;
-              z-index: 20;
-            }
-            .beam-light-top {
-              position: absolute;
-              top: 50%;
-              left: 50%;
-              width: 250%;
-              aspect-ratio: 1 / 1;
-              background: conic-gradient(
-                from 0deg,
-                #fef08a 0%,
-                #eab308 6%,
-                #d97706 12%,
-                transparent 16%,
-                transparent 100%
-              );
-              animation: led-rotate 4s linear infinite;
-              filter: blur(1px);
-            }
-          `}</style>
-
+        {/* LEFT: mobile menu + title */}
+        <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
-            onClick={() => setIsUserMenuOpen((value) => !value)}
-            className="relative z-10 flex h-[40px] w-full items-center justify-center rounded-[12px] bg-[#111827] px-5 text-[14px] font-semibold text-white transition-all duration-200 group-hover:bg-[#1a2235]"
-            style={{ filter: 'drop-shadow(0 0 6px rgba(234, 179, 8, 0.45))' }}
-            aria-label={`Usuario: ${fullName || 'Usuario'}`}
-            aria-expanded={isUserMenuOpen}
+            onClick={openMobileSidebar}
+            aria-label="Abrir menú"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 md:hidden"
           >
-            {getDisplayName()}
+            <Menu className="h-5 w-5" />
           </button>
+          <h1 className="text-sm md:text-[15px] font-semibold text-gray-900 truncate">
+            {currentTitle}
+          </h1>
+        </div>
 
-          <div className="beam-container-top">
-            <div className="beam-light-top" />
-          </div>
-          {isUserMenuOpen && (
-            <div className="absolute right-0 top-12 z-50 w-56 rounded-[14px] border border-[#eef2f7] bg-white p-2 shadow-lg">
-              <p className="px-3 py-2 text-xs font-medium text-[#6b7280]">{fullName || 'Usuario'}</p>
-              <button type="button" onClick={() => { setIsUserMenuOpen(false); setShowPasswordModal(true) }} className="flex w-full items-center gap-2 rounded-[10px] px-3 py-2.5 text-sm text-[#374151] hover:bg-[#f3f4f6]">
-                <KeyRound className="h-4 w-4" /> Cambiar contraseña
-              </button>
-              <button type="button" onClick={logout} className="flex w-full items-center gap-2 rounded-[10px] px-3 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
-                <LogOut className="h-4 w-4" /> Cerrar sesión
-              </button>
+        {/* CENTER: search (only on practices page) */}
+        <div className="flex-1 flex justify-center px-4">
+          {isPractices && (
+            <div className="relative flex items-center w-full max-w-md">
+              <Search className="absolute left-3 h-4 w-4 text-gray-400" strokeWidth={1.8} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar..."
+                className="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-8 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 text-gray-400 hover:text-gray-700 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           )}
         </div>
-      </div>
+
+        {/* RIGHT: user menu */}
+        <div className="flex items-center gap-2 md:gap-3 shrink-0">
+          {/* User button + dropdown */}
+          <div ref={menuRef} className="relative ml-1">
+            <button
+              type="button"
+              onClick={() => setIsUserMenuOpen((v) => !v)}
+              className="flex h-9 items-center rounded-lg bg-gray-900 px-4 text-[13px] font-semibold text-white hover:bg-gray-800 active:scale-[0.97] transition-all select-none"
+              aria-label={`Usuario: ${fullName || 'Usuario'}`}
+              aria-expanded={isUserMenuOpen}
+            >
+              {displayName}
+            </button>
+
+            {isUserMenuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+                <p className="px-3 py-1.5 text-[11px] font-medium text-gray-400 truncate">{fullName || 'Usuario'}</p>
+                <button
+                  type="button"
+                  onClick={() => { setIsUserMenuOpen(false); setShowPasswordModal(true) }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <KeyRound className="h-4 w-4" /> Cambiar contraseña
+                </button>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+                >
+                  <LogOut className="h-4 w-4" /> Cerrar sesión
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
       {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />}
-    </header>
+    </>
   )
 }
-

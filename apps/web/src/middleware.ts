@@ -73,6 +73,12 @@ export function middleware(request: NextRequest) {
     // Autenticado pero sin el rol correcto → 403
     if (userRole && !matchedRoute.roles.includes(userRole)) {
       const destination = userRole === 'SIGNER' ? '/signer-dashboard' : '/overview'
+      
+      // Prevent infinite redirect loop if they are already going to destination but don't have access
+      if (pathname === destination) {
+        return NextResponse.redirect(new URL('/login', request.url))
+      }
+      
       return NextResponse.redirect(new URL(destination, request.url))
     }
   }

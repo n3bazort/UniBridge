@@ -1,0 +1,20 @@
+{
+  "fecha": "2026-07-22T14:32:59.779Z",
+  "documentos": 25,
+  "completados": 25,
+  "fallidos": 0,
+  "encolado_ms": 228,
+  "solicitudes_ms": 3953,
+  "total_s": 860.83,
+  "docs_por_segundo": 0.03,
+  "ms_por_documento": 34433,
+  "concurrencia": 4,
+  "serie": [
+    {
+      "t": 860.83,
+      "completed": 25,
+      "failed": 0,
+      "progress": 100
+    }
+  ]
+}

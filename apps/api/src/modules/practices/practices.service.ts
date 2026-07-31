@@ -76,6 +76,7 @@ export class PracticesService {
                 select: {
                   id: true,
                   status: true,
+                  signatureStatus: true,
                   documentCode: true,
                   documentType: true,
                   invalidReason: true,
@@ -356,7 +357,6 @@ export class PracticesService {
     // Validate or auto-create active period
     let activePeriod = await this.prisma.academicPeriod.findFirst({ where: { isActive: true } });
     if (!activePeriod) {
-      // Auto-create a default active period based on current date
       const now = new Date();
       const year = now.getFullYear();
       const semester = now.getMonth() < 6 ? 1 : 2;
@@ -389,7 +389,6 @@ export class PracticesService {
     let importedCount = 0;
     const errors: string[] = [];
 
-    // Helper para dividir en lotes de 10 y acelerar la importación
     const chunkSize = 15;
     const batches = [];
     for (let i = 0; i < students.length; i += chunkSize) {
@@ -402,20 +401,23 @@ export class PracticesService {
 
         try {
           const companyName = row.companyName || 'Empresa No Especificada';
+          const contactName = row.companyContactName || row.companyTutor || undefined;
+          const recipientName = row.companyPosition || row.destinatarioOficio || undefined;
+
           let company = await this.prisma.company.upsert({
             where: { name: companyName },
             update: {
-              contactName: row.companyTutor || undefined,
+              contactName,
               email: row.companyEmail || undefined,
               phone: row.companyPhone || undefined,
-              recipientName: row.destinatarioOficio || undefined
+              recipientName,
             },
             create: {
               name: companyName,
-              contactName: row.companyTutor,
-              email: row.companyEmail,
-              phone: row.companyPhone,
-              recipientName: row.destinatarioOficio
+              contactName: contactName || null,
+              email: row.companyEmail || null,
+              phone: row.companyPhone || null,
+              recipientName: recipientName || null,
             }
           });
 
@@ -431,7 +433,6 @@ export class PracticesService {
                 }
               });
             } catch(e) {
-              // Si falla por concurrencia, intentar buscar de nuevo
               user = await this.prisma.user.findUnique({ where: { email: row.email } });
               if (!user) throw e;
             }
@@ -508,6 +509,7 @@ export class PracticesService {
                 tutorName: row.tutorName,
                 practiceLevel: row.practiceLevel,
                 academicLevel: row.academicLevel,
+                workArea: row.workArea,
                 totalHours: row.totalHours,
                 status: 'COMPLETED'
               }
@@ -522,6 +524,7 @@ export class PracticesService {
                 tutorName: row.tutorName,
                 practiceLevel: row.practiceLevel,
                 academicLevel: row.academicLevel,
+                workArea: row.workArea,
                 totalHours: row.totalHours,
                 status: 'COMPLETED'
               }

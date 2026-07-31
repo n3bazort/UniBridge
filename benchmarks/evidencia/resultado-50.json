@@ -1,0 +1,44 @@
+{
+  "fecha": "2026-07-29T18:20:07.131Z",
+  "documentos": 50,
+  "completados": 50,
+  "fallidos": 0,
+  "encolado_ms": 70,
+  "solicitudes_ms": 2884,
+  "total_s": 8.12,
+  "docs_por_segundo": 6.16,
+  "ms_por_documento": 162,
+  "concurrencia": 4,
+  "serie": [
+    {
+      "t": 0.01,
+      "completed": 0,
+      "failed": 0,
+      "progress": 0
+    },
+    {
+      "t": 2.02,
+      "completed": 12,
+      "failed": 0,
+      "progress": 24
+    },
+    {
+      "t": 4.05,
+      "completed": 26,
+      "failed": 0,
+      "progress": 52
+    },
+    {
+      "t": 6.11,
+      "completed": 41,
+      "failed": 0,
+      "progress": 82
+    },
+    {
+      "t": 8.12,
+      "completed": 50,
+      "failed": 0,
+      "progress": 100
+    }
+  ]
+}

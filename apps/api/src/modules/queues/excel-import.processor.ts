@@ -5,7 +5,6 @@ import * as ExcelJS from 'exceljs';
 import { unlink } from 'fs/promises';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
-import { OpenSearchService } from '../opensearch/opensearch.service';
 
 interface ExcelJobData {
   importId: string;
@@ -24,8 +23,7 @@ export class ExcelImportProcessor extends WorkerHost {
   private readonly logger = new Logger(ExcelImportProcessor.name);
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly openSearchService: OpenSearchService
+    private readonly prisma: PrismaService
   ) {
     super();
   }
@@ -104,20 +102,6 @@ export class ExcelImportProcessor extends WorkerHost {
               lastName,
             },
           });
-
-          // 6. Indexar en OpenSearch (falla silenciosamente para no bloquear el import)
-          try {
-            await this.openSearchService.indexStudent({
-              id: student.id,
-              firstName: student.firstName,
-              lastName: student.lastName,
-              dni: student.dni,
-              programName: programId,
-              academicPeriod: '2024-1',
-            });
-          } catch (osError) {
-            this.logger.warn(`Error indexando estudiante ${student.id} en OpenSearch: ${osError}`);
-          }
 
           successRows++;
         } catch (rowError) {

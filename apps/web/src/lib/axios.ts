@@ -5,6 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1'
 
 export const api = axios.create({
   baseURL: API_URL,
+  timeout: 15000,
 })
 
 // Request interceptor: attach access token
@@ -48,7 +49,7 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${data.access_token}`
         return api(originalRequest)
       } catch (refreshError) {
-        // If the refresh token is expired/invalid, force logout
+        // If the refresh token is expired/invalid, force logout and clear session cookie
         useAuthStore.getState().logout()
         // Client-side redirect
         if (typeof window !== 'undefined') {

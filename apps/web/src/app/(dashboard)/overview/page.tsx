@@ -144,8 +144,6 @@ export default function OverviewPage() {
             value={kpis?.activePractices || 0} 
             icon={<Briefcase className="w-4 h-4 text-blue-600" />} 
             iconBg="bg-blue-50"
-            trend="+12% vs mes ant."
-            trendColor="text-emerald-600"
           />
           <KpiCard 
             title="Estudiantes Activos" 

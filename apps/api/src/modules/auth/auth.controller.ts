@@ -15,7 +15,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ auth: { limit: 10, ttl: 900000 } }) // Máx 10 intentos por 15 minutos — anti brute-force
+  @Throttle({ default: { limit: 10, ttl: 900000 } }) // Máx 10 intentos por 15 minutos — anti brute-force
   @ApiOperation({ summary: 'Iniciar sesión (Login)' })
   @ApiResponse({ status: 200, description: 'Login exitoso retornando Access y Refresh Tokens' })
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })

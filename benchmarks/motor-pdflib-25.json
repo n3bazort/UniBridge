@@ -1,0 +1,22 @@
+{
+  "fecha": "2026-07-28T19:42:19.906Z",
+  "motor": "pdf-lib",
+  "documentos": 25,
+  "arranque_frio_ms": 142.34,
+  "total_s": 0.353,
+  "ms_por_documento": 14.12,
+  "docs_por_segundo": 70.8,
+  "minimo_ms": 3.61,
+  "mediana_ms": 12.73,
+  "p95_ms": 31.53,
+  "maximo_ms": 34.76,
+  "peso_medio_kb": 1.6,
+  "memoria_pico_mb": 31.7,
+  "entorno": {
+    "node": "v24.14.1",
+    "plataforma": "win32 10.0.26200",
+    "cpu": "AMD Ryzen 3 3250U with Radeon Graphics",
+    "nucleos": 4,
+    "ram_gb": 13.9
+  }
+}

@@ -11,15 +11,9 @@ interface RoleGateProps {
 }
 
 export function RoleGate({ children, allowedRoles }: RoleGateProps) {
-  const { user, isAuthenticated } = useAuthStore()
+  const { user, isAuthenticated, _hasHydrated: hasHydrated } = useAuthStore()
   const router = useRouter()
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
-  const [hasHydrated, setHasHydrated] = useState(false)
-
-  // Wait for client-side hydration to complete so Zustand can read from localStorage
-  useEffect(() => {
-    setHasHydrated(true)
-  }, [])
 
   useEffect(() => {
     if (!hasHydrated) return
@@ -36,9 +30,15 @@ export function RoleGate({ children, allowedRoles }: RoleGateProps) {
     if (!hasRole) {
       // Redirect based on their actual role to prevent infinite loops
       if (user.role === 'SIGNER') {
-        router.replace('/signer-dashboard')
+        if (window.location.pathname !== '/signer-dashboard') router.replace('/signer-dashboard')
       } else {
-        router.replace('/overview')
+        if (window.location.pathname !== '/overview') {
+          router.replace('/overview')
+        } else {
+          // Si ya está en overview pero no tiene rol, enviarlo a login para evitar bucles.
+          document.cookie = 'unibridge-session=; path=/; max-age=0; SameSite=Lax'
+          router.replace('/login')
+        }
       }
     } else {
       setIsAuthorized(true)

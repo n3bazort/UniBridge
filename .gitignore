@@ -78,11 +78,24 @@ packages/db/.env
 
 # Archivos de tesis / documentacion personal (no forman parte del sistema)
 tesis-edit/
+_local/
 *.docx
 *.pdf
 !apps/web/public/templates/*.docx
 
+# Credenciales de firma: NUNCA se suben, ni las de prueba.
+# Se regeneran con OpenSSL siguiendo certificados-prueba/README.md
+*.p12
+*.pfx
+certificados-prueba/*
+!certificados-prueba/README.md
+
 # Artefactos locales
 uploads/
 capturas/
-*.bat
+scripts/windows/*.bat
+
+# Evidencia de las mediciones: sí se versiona, es el respaldo del Anexo I
+!benchmarks/evidencia/
+!benchmarks/evidencia/*.log
+!benchmarks/*.json

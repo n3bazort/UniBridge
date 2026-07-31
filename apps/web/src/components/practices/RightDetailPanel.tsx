@@ -32,6 +32,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
   const allDocs = generatedDocs.map(d => {
     let docName = d.template?.name || 'Documento'
     if (d.documentType === 'SOLICITUD') docName = 'Solicitud de Prácticas'
+    if (d.documentType === 'DESIGNACION') docName = 'Designación de Estudiantes'
     if (d.documentType === 'CERTIFICADO') docName = 'Certificado de Prácticas'
     
     return {
@@ -148,15 +149,21 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
               </div>
               <span className="text-[14px] font-medium text-[#111827] leading-tight max-w-[120px] truncate" title={p.company?.name}>
                 {p.company?.name || 'Sin asignar'}
-                <br/><span className="text-[12px] text-[#6b7280] font-normal">Sector no disp.</span>
+                <br/><span className="text-[12px] text-[#6b7280] font-normal" title={p.company?.email}>
+                  {p.company?.email || 'Sin correo'}
+                </span>
               </span>
             </div>
           </div>
           <div className="flex flex-col">
             <span className="text-[12px] font-medium text-[#9ca3af] mb-2">Contacto Empresa</span>
+            {/* Nombre y cargo: son los dos que los oficios imprimen como
+                destinatario, así que conviene verlos antes de emitir. */}
             <span className="text-[13px] font-medium text-[#374151] max-w-[140px] truncate" title={p.company?.contactName}>
               {p.company?.contactName || 'No registrado'}
-              <br/><span className="text-[12px] text-[#6b7280] font-normal">Rol no disp.</span>
+              <br/><span className="text-[12px] text-[#6b7280] font-normal" title={p.company?.recipientName}>
+                {p.company?.recipientName || 'Sin cargo'}
+              </span>
             </span>
           </div>
         </div>
@@ -166,7 +173,9 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
         {/* Tutor Info */}
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col">
-            <span className="text-[12px] font-medium text-[#9ca3af] mb-2">Tutor Institucional</span>
+            {/* Es el tutor ACADÉMICO: el docente que la Facultad designa. El
+                contacto de la empresa es el de arriba, no este. */}
+            <span className="text-[12px] font-medium text-[#9ca3af] mb-2">Tutor Académico</span>
             <div className="flex items-center gap-2">
               <img src={`https://api.dicebear.com/9.x/notionists/svg?seed=${p.tutorName}`} className="w-[32px] h-[32px] rounded-full shrink-0" />
               <span className="text-[14px] font-medium text-[#111827] leading-tight max-w-[120px] truncate" title={p.tutorName}>
@@ -176,10 +185,17 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
             </div>
           </div>
           <div className="flex flex-col justify-center">
-             <span className="text-[12px] font-medium text-[#9ca3af] mb-2">Contacto Tutor</span>
-             <span className="text-[13px] font-medium text-[#374151] truncate max-w-[140px]" title={p.student.user?.email}>
-               {p.student.user?.email || 'Email no disp.'}
-               <br/><span className="text-[12px] text-[#6b7280] font-normal">Tel no disp.</span>
+             {/* El correo es del estudiante, no del tutor: el rótulo anterior
+                 decía «Contacto Tutor» y mostraba este mismo valor.
+                 Y hoy funciona como identificador, no como canal: no se valida
+                 su formato al importar ni se envía nada a esa dirección. */}
+             <span className="text-[12px] font-medium text-[#9ca3af] mb-2">Identificador de acceso</span>
+             <span
+               className="text-[13px] font-medium text-[#374151] truncate max-w-[140px]"
+               title={`${p.student.user?.email || ''}\nDistingue la cuenta al iniciar sesión. El sistema no verifica la dirección ni envía correos a ella.`}
+             >
+               {p.student.user?.email || 'Sin registrar'}
+               <br/><span className="text-[12px] text-[#6b7280] font-normal">Sin verificar</span>
              </span>
           </div>
         </div>
@@ -191,11 +207,15 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
         <div className="grid grid-cols-2 gap-y-5 gap-x-4">
           <div className="flex flex-col">
             <span className="text-[12px] font-medium text-[#9ca3af]">Área / Departamento</span>
-            <span className="text-[13px] font-medium text-[#374151] mt-1">No disponible</span>
+            <span className="text-[13px] font-medium text-[#374151] mt-1" title="La solicitud oficial la imprime: «en el área de: ___»">
+              {p.workArea || 'Sin registrar'}
+            </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[12px] font-medium text-[#9ca3af]">Jornada</span>
-            <span className="text-[13px] font-medium text-[#374151] mt-1">No disponible</span>
+            {/* Antes decía «Jornada», que no existe en ninguna parte del
+                sistema. El nivel académico sí, y no se veía en ningún lado. */}
+            <span className="text-[12px] font-medium text-[#9ca3af]">Nivel académico</span>
+            <span className="text-[13px] font-medium text-[#374151] mt-1">{p.academicLevel || 'Sin registrar'}</span>
           </div>
           <div className="flex flex-col">
             <span className="text-[12px] font-medium text-[#9ca3af]">Tipo de práctica</span>
@@ -203,10 +223,16 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
           </div>
           <div className="flex flex-col">
             <span className="text-[12px] font-medium text-[#9ca3af]">Total de horas</span>
+            {/* Antes decía «120 / 120 h», que aparentaba un avance cumplido. El
+                sistema no lleva horas cumplidas: solo las que se asignaron. */}
             <div className="flex items-center gap-1.5 mt-1 text-[13px] font-semibold text-[#111827]">
               <Clock className="w-[14px] h-[14px] text-[#2563eb]" />
-              {p.totalHours} / {p.totalHours} h
+              {p.totalHours} h
             </div>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[12px] font-medium text-[#9ca3af]">Periodo académico</span>
+            <span className="text-[13px] font-medium text-[#374151] mt-1">{p.academicPeriod || 'Sin registrar'}</span>
           </div>
         </div>
       </div>

@@ -34,4 +34,21 @@ export class CreateAcademicPeriodDto {
   @IsString()
   @IsOptional()
   directorName?: string;
+
+  // Los oficios oficiales imprimen estos tres datos bajo la firma del
+  // Responsable de Prácticas. Cambian cuando cambia la persona del cargo.
+  @ApiPropertyOptional({ example: '1311920613', description: 'Cédula del Responsable de Prácticas' })
+  @IsString()
+  @IsOptional()
+  directorDni?: string;
+
+  @ApiPropertyOptional({ example: '0999279120', description: 'Teléfono del Responsable de Prácticas' })
+  @IsString()
+  @IsOptional()
+  directorPhone?: string;
+
+  @ApiPropertyOptional({ example: 'practicas@uleam.edu.ec', description: 'Correo del Responsable de Prácticas' })
+  @IsString()
+  @IsOptional()
+  directorEmail?: string;
 }

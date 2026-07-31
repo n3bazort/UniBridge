@@ -13,25 +13,24 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const hasHydrated = useAuthStore((state) => state._hasHydrated)
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const [hasHydrated, setHasHydrated] = useState(false)
   const { isCollapsed, isMobileOpen, closeMobileSidebar } = useSidebarStore()
 
   useEffect(() => {
     setMounted(true)
-    setHasHydrated(true)
   }, [])
 
   useEffect(() => {
-    if (!hasHydrated) return
+    if (!hasHydrated || !mounted) return
     
     if (!isAuthenticated) {
       // Clear cookie to break middleware infinite loops
       document.cookie = 'unibridge-session=; path=/; max-age=0; SameSite=Lax'
       router.replace('/login')
     }
-  }, [isAuthenticated, router, hasHydrated])
+  }, [isAuthenticated, router, hasHydrated, mounted])
 
   if (!mounted || !hasHydrated || !isAuthenticated) {
     return (
@@ -44,9 +43,27 @@ export default function DashboardLayout({
     )
   }
 
+  /* ─────────────────────────────────────────────────────
+     Layout structure (CSS Grid):
+     
+     ┌──────────┬──────────────────────────┐
+     │          │  TOPBAR (fixed h-14)     │
+     │ SIDEBAR  ├──────────────────────────┤
+     │ (fixed)  │  MAIN CONTENT            │
+     │          │  (scrollable)            │
+     └──────────┴──────────────────────────┘
+
+     - Sidebar is position:fixed, pushes content via grid column
+     - Right column uses a simple flex-col: topbar then main
+     - Topbar is NOT sticky/fixed — it's just the first child in flex-col
+       so it never overlaps or floats incorrectly
+     ───────────────────────────────────────────────────── */
   return (
-    <div className="flex min-h-screen bg-[#f7f7f8]">
+    <div className="h-screen overflow-hidden bg-[#f7f7f8]">
+      {/* Sidebar — fixed, out of flow */}
       <Sidebar />
+
+      {/* Mobile overlay */}
       {isMobileOpen && (
         <button
           type="button"
@@ -55,12 +72,32 @@ export default function DashboardLayout({
           className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-[1px] md:hidden"
         />
       )}
-      <div className={`flex flex-1 flex-col transition-all duration-300 ease-in-out ${isCollapsed ? 'md:pl-[80px]' : 'md:pl-[240px]'}`}>
+
+      {/* Main content area — offset by sidebar width */}
+      <div
+        className="flex flex-col h-screen transition-all duration-300 ease-in-out"
+        style={{ marginLeft: 'var(--sidebar-w)' }}
+      >
+        {/* Topbar: simple block element, no sticky/fixed needed */}
         <Topbar />
-        <main className="flex-1 w-full relative">
+
+        {/* Page content: fills remaining height, scrolls internally */}
+        <main className="flex-1 min-h-0 w-full relative overflow-auto">
           {children}
         </main>
       </div>
+
+      {/* CSS custom property for sidebar width, driven by state */}
+      <style>{`
+        :root {
+          --sidebar-w: ${isCollapsed ? '80px' : '240px'};
+        }
+        @media (max-width: 767px) {
+          :root {
+            --sidebar-w: 0px;
+          }
+        }
+      `}</style>
     </div>
   )
 }

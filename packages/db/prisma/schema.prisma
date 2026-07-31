@@ -35,6 +35,7 @@ model User {
   generatedDocuments GeneratedDocument[]
   invalidatedDocuments GeneratedDocument[] @relation("DocumentInvalidation")
   deanSignedItems    SignatureBatchItem[] @relation("ItemDeanSigner")
+  directorSignedItems SignatureBatchItem[] @relation("ItemDirectorSigner")
   finalSignedItems   SignatureBatchItem[] @relation("ItemFinalSigner")
   signatureBatches   SignatureBatch[]
   generationBatches  GenerationBatch[]
@@ -59,6 +60,7 @@ model Faculty {
   excelImports  ExcelImport[]
   documentTemplates DocumentTemplate[]
   userInvitations UserInvitation[]
+  signerProfiles  SignerProfile[]
 
   @@map("faculties")
 }
@@ -149,9 +151,12 @@ model Practice {
   companyId       String   @db.Uuid
   facultyId       String   @db.Uuid
   academicPeriod  String   @default("2024-1")
-  tutorName       String?  
-  practiceLevel   String?  
+  tutorName       String?
+  practiceLevel   String?
   academicLevel   String?
+  // Área de la empresa donde el estudiante desempeñará las actividades.
+  // La solicitud oficial (PAP-001) la imprime: "en el área de: ___".
+  workArea        String?
   status          PracticeStatus @default(PENDING)
   startDate       DateTime?
   endDate         DateTime?
@@ -268,16 +273,18 @@ model SignerProfile {
   signerRole SignerRole
   fullName   String
   title      String?    // ej. "Decano de la Facultad de Ciencias de la Vida"
+  facultyId  String?    @db.Uuid
   createdAt  DateTime   @default(now())
 
-  user       User @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+  faculty    Faculty? @relation(fields: [facultyId], references: [id])
 
   @@map("signer_profiles")
 }
 
 enum SignatureBatchStatus {
-  PENDING_DEAN     // esperando firma del decano
-  PENDING_DIRECTOR // esperando firma del director
+  PENDING_DIRECTOR // 1. esperando firma del responsable de prácticas (primero)
+  PENDING_DEAN     // 2. esperando firma del decano (segundo)
   COMPLETED        // ambas firmas subidas y publicadas
   CANCELLED
 }
@@ -286,7 +293,7 @@ model SignatureBatch {
   id          String               @id @default(uuid()) @db.Uuid
   code        String               @unique // ej. LOTE-2026-1-00001
   name        String?
-  status      SignatureBatchStatus @default(PENDING_DEAN)
+  status      SignatureBatchStatus @default(PENDING_DIRECTOR)
   createdById String               @db.Uuid
   deanSignedAt     DateTime?
   directorSignedAt DateTime?
@@ -300,9 +307,10 @@ model SignatureBatch {
 }
 
 enum SignatureItemStatus {
-  PENDING        // sin firmas
-  SIGNED_BY_DEAN // primera firma subida y verificada
-  SIGNED         // ambas firmas subidas y verificadas
+  PENDING             // sin firmas
+  SIGNED_BY_DIRECTOR  // primera firma subida (por el responsable)
+  SIGNED_BY_DEAN      // firma del decano
+  SIGNED              // ambas firmas subidas y verificadas
   REJECTED
 }
 
@@ -311,18 +319,22 @@ model SignatureBatchItem {
   batchId        String              @db.Uuid
   documentId     String              @db.Uuid
   status         SignatureItemStatus @default(PENDING)
+  directorFileKey String?            // objectKey del PDF firmado por el responsable
+  directorChecksum String?
+  directorSignedById String?         @db.Uuid  // qué usuario firmó como Responsable
   deanFileKey    String?             // objectKey del PDF firmado por el decano
   deanChecksum   String?
   deanSignedById String?             @db.Uuid  // qué usuario firmó como Decano
   finalFileKey   String?             // objectKey del PDF con ambas firmas
   finalChecksum  String?
-  finalSignedById String?            @db.Uuid  // qué usuario firmó como Responsable
+  finalSignedById String?            @db.Uuid  // qué usuario completó la firma final
   rejectReason   String?
   updatedAt      DateTime            @updatedAt
   createdAt      DateTime            @default(now())
 
   batch          SignatureBatch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
   document       GeneratedDocument @relation(fields: [documentId], references: [id])
+  directorSignedBy User?           @relation("ItemDirectorSigner", fields: [directorSignedById], references: [id])
   deanSignedBy   User?             @relation("ItemDeanSigner", fields: [deanSignedById], references: [id])
   finalSignedBy  User?             @relation("ItemFinalSigner", fields: [finalSignedById], references: [id])
 
@@ -414,8 +426,15 @@ model AcademicPeriod {
   endDate       DateTime
   isActive      Boolean  @default(false)
   
-  deanName      String? 
-  directorName  String? 
+  deanName      String?
+  directorName  String?
+
+  // Datos de contacto del Responsable de Prácticas que los oficios oficiales
+  // imprimen bajo su firma. Cambian cuando cambia la persona del cargo, por eso
+  // viven junto al periodo y no dentro de la plantilla.
+  directorDni   String?
+  directorPhone String?
+  directorEmail String?
 
   practices     Practice[]
   sequences     DocumentSequence[]

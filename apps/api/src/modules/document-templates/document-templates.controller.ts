@@ -59,7 +59,7 @@ export class DocumentTemplatesController {
   ) {
     if (!file) throw new BadRequestException('Archivo requerido');
     const facultyId = req.user?.facultyId || body.facultyId;
-    return this.service.createDocxTemplate(body.name, file.buffer, file.originalname, facultyId);
+    return this.service.createDocxTemplate(body.name, file.buffer, file.originalname, facultyId, body.kind);
   }
 
   @Post('upload-image')
@@ -88,6 +88,23 @@ export class DocumentTemplatesController {
   @ApiOperation({ summary: 'URL prefirmada de una imagen de fondo almacenada en MinIO' })
   getBackgroundUrl(@Query('key') key: string) {
     return this.service.getBackgroundUrl(key);
+  }
+
+  @Get('sequences')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Obtener secuencias de numeración de oficios' })
+  getSequences(@Query('periodCode') periodCode?: string) {
+    return this.service.getSequences(periodCode);
+  }
+
+  @Patch('sequences')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Actualizar numeración siguiente para un tipo de oficio' })
+  updateSequence(@Body() body: { type: string; nextNumber: number; periodCode?: string }) {
+    if (!body.type || typeof body.nextNumber !== 'number') {
+      throw new BadRequestException('Parametros type y nextNumber requeridos');
+    }
+    return this.service.updateSequence(body.type, body.nextNumber, body.periodCode);
   }
 
   @Get()
@@ -120,7 +137,10 @@ export class DocumentTemplatesController {
   @Patch(':id/docx-config')
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Configurar numeración del oficio' })
-  updateDocxConfig(@Param('id') id: string, @Body() body: { docTypeAbbr?: string; codeSuffix?: string; codePrefix?: string }) {
+  updateDocxConfig(@Param('id') id: string, @Body() body: {
+    docTypeAbbr?: string; codeSuffix?: string; codePrefix?: string;
+    kind?: string; scope?: string; codePattern?: string; fileBaseName?: string;
+  }) {
     return this.service.updateDocxConfig(id, body);
   }
 

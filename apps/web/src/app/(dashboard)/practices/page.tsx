@@ -87,8 +87,11 @@ export default function PracticesPage() {
   )
 
   // Modal previo a generar el oficio: formato (DOCX/PDF) + aviso de reemplazo
-  const [solicitudModal, setSolicitudModal] = useState<{ items: Practice[]; companyName: string; existing: boolean } | null>(null)
+  // `kind` decide cuál de los dos oficios en Word se emite: los dos salen
+  // agrupados por empresa y comparten este mismo diálogo.
+  const [solicitudModal, setSolicitudModal] = useState<{ kind: 'SOLICITUD' | 'DESIGNACION'; items: Practice[]; companyName: string; existing: boolean } | null>(null)
   const [solicitudAsPdf, setSolicitudAsPdf] = useState(false)
+  const [useBlankSignatures, setUseBlankSignatures] = useState(false)
   const [openInBrowser, setOpenInBrowser] = useState(false)
 
   // Hydrate preferences from local storage
@@ -321,17 +324,6 @@ export default function PracticesPage() {
     }
   }
 
-  const handleEditPhone = async (studentId: string, phone: string) => {
-    try {
-      await api.patch(`/students/${studentId}`, { phone })
-      queryClient.invalidateQueries({ queryKey: ['practices-all'] })
-      toast.success("Celular actualizado exitosamente")
-    } catch (error: any) {
-      console.error(error)
-      toast.error("Error al actualizar el celular del estudiante")
-    }
-  }
-
   // ── Reasignación de empresa ──
   // Impacto mostrado en el modal: la solicitud es grupal, así que mover a un
   // estudiante invalida el oficio de TODOS los que comparten el documentCode.
@@ -509,7 +501,7 @@ export default function PracticesPage() {
    * Paso previo a generar el oficio: valida requisitos y abre el modal donde
    * se elige el formato (DOCX o PDF) y se confirma el reemplazo si ya existe.
    */
-  const handleGenerateSolicitud = async (groupItems: Practice[]) => {
+  const handleGenerateOficio = async (kind: 'SOLICITUD' | 'DESIGNACION', groupItems: Practice[]) => {
     if (!groupItems || groupItems.length === 0) return
 
     const company = groupItems[0].company
@@ -518,46 +510,76 @@ export default function PracticesPage() {
       return
     }
 
-    // El teléfono/correo de la empresa NO se imprimen en el oficio (sirven
-    // para contacto externo). El celular del estudiante SÍ va impreso.
-    const missingPhones = groupItems.filter(p => !p.student.phone)
-    if (missingPhones.length > 0) {
-      toast.error(`Faltan celulares de ${missingPhones.length} estudiante(s): ese dato se imprime en la tabla del oficio. Complétalos con el ícono rojo de su fila.`)
-      return
+    // El formato oficial de la designación imprime el tutor de cada estudiante:
+    // sin ese dato saldría una fila en blanco en la tabla del oficio.
+    if (kind === 'DESIGNACION') {
+      const sinTutor = groupItems.filter(p => !p.tutorName?.trim())
+      if (sinTutor.length > 0) {
+        toast.error(`Faltan tutores académicos de ${sinTutor.length} estudiante(s): ese dato se imprime en la tabla de la designación.`)
+        return
+      }
     }
 
     try {
       const studentIds = groupItems.map((p) => p.studentId)
-      const checkRes = await api.post('/generated-documents/check-solicitud', { studentIds })
+      const checkRes = await api.post('/generated-documents/check-oficio', { kind, studentIds })
       setSolicitudModal({
+        kind,
         items: groupItems,
         companyName: company.name,
         existing: !!checkRes.data?.exists,
       })
     } catch {
-      setSolicitudModal({ items: groupItems, companyName: company.name, existing: false })
+      setSolicitudModal({ kind, items: groupItems, companyName: company.name, existing: false })
     }
   }
+
+  const handleGenerateSolicitud = (groupItems: Practice[]) => handleGenerateOficio('SOLICITUD', groupItems)
+  const handleGenerateDesignacion = (groupItems: Practice[]) => handleGenerateOficio('DESIGNACION', groupItems)
 
   const confirmGenerateSolicitud = async () => {
     const modal = solicitudModal
     if (!modal) return
     setSolicitudModal(null)
     setIsGenerating(true)
-    const toastId = toast.loading('Generando documento(s), por favor espera...')
+    const etiqueta = modal.kind === 'SOLICITUD' ? 'solicitud' : 'designación'
+    const toastMsg = solicitudAsPdf
+      ? `Generando y convirtiendo ${etiqueta} a PDF oficial...`
+      : `Generando ${etiqueta} en formato Word (.docx)...`
+    const toastId = toast.loading(toastMsg)
     try {
       const templatesRes = await api.get('/document-templates')
-      const docxTemplates = templatesRes.data.filter((t: any) => t.type === 'DOCX')
+      // Cada oficio tiene su propia plantilla. Las subidas antes de que
+      // existieran los dos formatos no declaran tipo: son de solicitud.
+      const activeTemplates = (templatesRes.data || []).filter((t: any) => !t.deletedAt)
+      const tipoDe = (t: any) => (typeof t.content === 'object' && t.content?.kind) || 'SOLICITUD'
+      const docxTemplates = activeTemplates.filter((t: any) => t.type === 'DOCX' && tipoDe(t) === modal.kind)
       if (docxTemplates.length === 0) {
-        toast.error('No se encontró ninguna plantilla DOCX subida.', { id: toastId })
+        toast.error(
+          `No hay ninguna plantilla de ${etiqueta} subida. Súbela en Plantillas y márcala como predeterminada.`,
+          { id: toastId, duration: 7000 },
+        )
         return
       }
       const defaultDocxTemplate = docxTemplates.find((t: any) => typeof t.content === 'object' && t.content?.isDefault === true)
         || docxTemplates[0]
+      
+      let targetTemplate = defaultDocxTemplate
+      if (useBlankSignatures) {
+        const blankVariant = docxTemplates.find((t: any) =>
+          t.name.toLowerCase().includes('sin firma') ||
+          !t.name.toLowerCase().includes('con firma y sello')
+        )
+        if (blankVariant) {
+          targetTemplate = blankVariant
+        }
+      }
+
       const studentIds = modal.items.map((p) => p.studentId)
 
-      const response = await api.post('/generated-documents/generate-solicitud', {
-        templateId: defaultDocxTemplate.id,
+      const response = await api.post('/generated-documents/generate-oficio', {
+        kind: modal.kind,
+        templateId: targetTemplate.id,
         studentIds,
         overwrite: modal.existing,
         asPdf: solicitudAsPdf,
@@ -566,37 +588,71 @@ export default function PracticesPage() {
       queryClient.invalidateQueries({ queryKey: ['practices-all'] })
       queryClient.invalidateQueries({ queryKey: ['generated-documents'] })
 
-      const actionPayload = { label: 'Ir a Repositorio', onClick: () => router.push('/documents') }
+      const emitidos: any[] = response.data?.documents?.length
+        ? response.data.documents
+        : [response.data]
+
+      const firstDocId = emitidos[0]?.id || ''
+      const actionPayload = { label: 'Ir a Repositorio', onClick: () => router.push(`/certificates?highlight=${firstDocId}`) }
+
+      const nombre = modal.kind === 'SOLICITUD' ? 'Solicitud' : 'Designación'
+      const resumen = emitidos.length === 1
+        ? `${nombre} ${emitidos[0]?.documentCode || ''}`
+        : `${emitidos.length} oficios (uno por estudiante)`
 
       if (solicitudAsPdf) {
-        toast.success(`Oficio ${response.data?.documentCode || ''} generado en PDF`, { id: toastId, action: actionPayload })
-        const docCode = response.data?.documentCode
-        try {
-          const docs = await api.get('/generated-documents')
-          const doc = (docs.data || []).find((d: any) => d.documentCode === docCode && d.status === 'VALID')
-          if (doc && openInBrowser) {
-            const v = await api.get(`/generated-documents/${doc.id}/view`)
-            window.open(v.data.url, '_blank')
-          }
-        } catch {}
-      } else if (response.data?.downloadUrl) {
-        toast.success(`Oficio ${response.data?.documentCode || ''} generado — descargando DOCX`, { id: toastId, action: actionPayload })
+        toast.success(`${resumen} generada en PDF`, { id: toastId, action: actionPayload })
         if (openInBrowser) {
-          const a = document.createElement('a')
-          a.href = response.data.downloadUrl
-          a.download = (response.data.fileUrl || 'documento').split('/').pop() || 'documento'
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
+          try {
+            const docs = await api.get('/generated-documents')
+            const codigos = new Set(emitidos.map((d) => d.documentCode))
+            const encontrados = (docs.data || []).filter(
+              (d: any) => codigos.has(d.documentCode) && d.status === 'VALID',
+            )
+            // Un único documentCode puede tener una fila por estudiante: se abre
+            // cada papel una sola vez.
+            const vistos = new Set<string>()
+            for (const doc of encontrados) {
+              if (vistos.has(doc.documentCode)) continue
+              vistos.add(doc.documentCode)
+              const v = await api.get(`/generated-documents/${doc.id}/view`)
+              window.open(v.data.url, '_blank')
+            }
+          } catch {}
+        }
+      } else if (emitidos.some((d) => d?.downloadUrl)) {
+        toast.success(`${resumen} generada — descargando DOCX`, { id: toastId, action: actionPayload })
+        if (openInBrowser) {
+          for (const doc of emitidos) {
+            if (!doc?.downloadUrl) continue
+            const a = document.createElement('a')
+            a.href = doc.downloadUrl
+            // El servidor devuelve el nombre con el que la Facultad archiva el
+            // oficio; el key interno solo sirve de respaldo
+            a.download = doc.fileName || (doc.fileUrl || 'documento').split('/').pop() || 'documento'
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+          }
         }
       }
     } catch (error: any) {
-      let msg = 'Error en la generación del Oficio.'
-      const resMsg = error.response?.data?.message
-      if (resMsg) {
-        msg = Array.isArray(resMsg) ? resMsg.join(', ') : typeof resMsg === 'string' ? resMsg : JSON.stringify(resMsg)
+      const resData = error.response?.data
+      let detail = ''
+      if (resData?.message) {
+        detail = Array.isArray(resData.message)
+          ? resData.message.join(', ')
+          : typeof resData.message === 'string'
+          ? resData.message
+          : JSON.stringify(resData.message)
+      } else if (resData?.error) {
+        detail = typeof resData.error === 'string' ? resData.error : JSON.stringify(resData.error)
+      } else if (error.message) {
+        detail = error.message
       }
-      toast.error(msg, { id: toastId })
+
+      const msg = detail ? detail : `Error en la generación de la ${etiqueta}.`
+      toast.error(msg, { id: toastId, duration: 8000 })
     } finally {
       setIsGenerating(false)
     }
@@ -715,7 +771,7 @@ export default function PracticesPage() {
                     { value: 'PENDING', label: 'Pendiente' },
                     { value: 'IN_PROGRESS', label: 'En Curso' },
                     { value: 'DELAYED', label: 'En Atrasado' },
-                    { value: 'COMPLETED', label: 'Finalizado' },
+                    { value: 'COMPLETED', label: 'Horas cumplidas' },
                     { value: 'CANCELED', label: 'Cancelado' },
                   ]} 
                 />
@@ -850,12 +906,12 @@ export default function PracticesPage() {
                 onToggleSelection={handleToggleSelection}
                 onToggleAll={handleToggleAll}
                 onGenerateSolicitud={groupBy === 'company' ? handleGenerateSolicitud : undefined}
+                onGenerateDesignacion={groupBy === 'company' ? handleGenerateDesignacion : undefined}
                 isGenerating={isGenerating}
                 onSelectPractice={handleSelectPractice}
                 activePracticeId={activePracticeId}
                 isGrouped={groupBy !== 'none'}
                 onUpdateStatus={handleUpdateStatus}
-                onEditPhone={handleEditPhone}
                 onReassign={activeTab === 'assigned' ? setReassignPractice : undefined}
                 recentlyInvalidatedDocIds={recentlyInvalidatedDocIds}
                 generatingCertIds={generatingCertIds}
@@ -1082,18 +1138,20 @@ export default function PracticesPage() {
             <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[440px] border border-slate-100 overflow-hidden">
               <div className="px-6 pt-5 pb-4">
                 <h2 className="text-[16px] font-bold text-[#111827]">
-                  Generar solicitud · {solicitudModal.companyName}
+                  Generar {solicitudModal.kind === 'SOLICITUD' ? 'solicitud' : 'designación'} · {solicitudModal.companyName}
                 </h2>
                 <p className="text-[12.5px] text-slate-500 mt-0.5">
-                  Un único oficio con los {solicitudModal.items.length} estudiante{solicitudModal.items.length > 1 ? 's' : ''} del grupo.
+                  {solicitudModal.kind === 'SOLICITUD'
+                    ? `Un único oficio que pide vacantes para los ${solicitudModal.items.length} estudiante${solicitudModal.items.length > 1 ? 's' : ''} del grupo.`
+                    : `Un único oficio que designa a los ${solicitudModal.items.length} estudiante${solicitudModal.items.length > 1 ? 's' : ''} del grupo con su tutor académico.`}
                 </p>
               </div>
 
               {solicitudModal.existing && (
                 <div className="mx-6 mb-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-[10px] px-3 py-2.5">
                   <span className="text-[12px] text-amber-800 leading-snug">
-                    ⚠ Ya existe una solicitud vigente para este grupo: la versión anterior quedará
-                    invalidada (visible en el historial por 30 días).
+                    ⚠ Ya existe una {solicitudModal.kind === 'SOLICITUD' ? 'solicitud' : 'designación'} vigente para este grupo:
+                    la versión anterior quedará invalidada (visible en el historial por 30 días).
                   </span>
                 </div>
               )}
@@ -1116,20 +1174,35 @@ export default function PracticesPage() {
                 </button>
               </div>
 
-              <div className="mx-6 mb-5 flex items-center gap-2">
-                <input 
-                  type="checkbox" 
-                  id="openBrowser"
-                  checked={openInBrowser}
-                  onChange={(e) => {
-                    setOpenInBrowser(e.target.checked);
-                    localStorage.setItem('unibridge_open_solicitud_in_browser', String(e.target.checked));
-                  }}
-                  className="rounded border-slate-300 text-[#111827] focus:ring-[#111827] w-4 h-4 cursor-pointer"
-                />
-                <label htmlFor="openBrowser" className="text-[13px] text-slate-700 cursor-pointer select-none">
-                  Visualizar / Descargar al finalizar
-                </label>
+              <div className="mx-6 mb-5 flex flex-col gap-2.5">
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="checkbox" 
+                    id="openBrowser"
+                    checked={openInBrowser}
+                    onChange={(e) => {
+                      setOpenInBrowser(e.target.checked);
+                      localStorage.setItem('unibridge_open_solicitud_in_browser', String(e.target.checked));
+                    }}
+                    className="rounded border-slate-300 text-[#111827] focus:ring-[#111827] w-4 h-4 cursor-pointer"
+                  />
+                  <label htmlFor="openBrowser" className="text-[13px] text-slate-700 cursor-pointer select-none">
+                    Visualizar / Descargar al finalizar
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="checkbox" 
+                    id="blankSignatures"
+                    checked={useBlankSignatures}
+                    onChange={(e) => setUseBlankSignatures(e.target.checked)}
+                    className="rounded border-slate-300 text-[#111827] focus:ring-[#111827] w-4 h-4 cursor-pointer"
+                  />
+                  <label htmlFor="blankSignatures" className="text-[13px] font-medium text-amber-900 bg-amber-50/70 border border-amber-200/60 rounded-md px-2 py-0.5 cursor-pointer select-none" title="Genera el documento sin imágenes de firma ni sello pegadas, dejando la línea en blanco para firmar con esfero a mano">
+                    Sin imágenes de firma/sello (para firma física en papel)
+                  </label>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 px-6 py-4 bg-slate-50 border-t border-slate-100">

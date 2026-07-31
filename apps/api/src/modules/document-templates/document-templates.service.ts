@@ -2,6 +2,10 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { MinioService } from '../minio/minio.service';
 import * as crypto from 'crypto';
+import { OFICIO_KINDS, OFICIO_SCOPES } from '../generated-documents/oficio.util';
+
+/** Los dos oficios en Word que la Facultad emite. */
+const DOCX_KINDS = OFICIO_KINDS;
 
 @Injectable()
 export class DocumentTemplatesService {
@@ -68,7 +72,7 @@ export class DocumentTemplatesService {
    * Guarda el DOCX en MinIO (key "templates/...") en lugar del filesystem local.
    * Así funciona igual en Docker, con varias instancias o tras un redeploy.
    */
-  async createDocxTemplate(name: string, fileBuffer: Buffer, originalName: string, facultyId?: string) {
+  async createDocxTemplate(name: string, fileBuffer: Buffer, originalName: string, facultyId?: string, kind?: string) {
     let assignedFacultyId = facultyId;
     if (!assignedFacultyId) {
       // Si el Admin sube y no tiene facultyId en el token, asignamos la primera facultad
@@ -89,7 +93,9 @@ export class DocumentTemplatesService {
       data: {
         name,
         type: 'DOCX',
-        content: objectKey,
+        // La plantilla declara de qué oficio es: la Facultad usa dos formatos en
+        // Word y emitir uno con el cuerpo del otro produciría un documento falso.
+        content: { path: objectKey, kind: DOCX_KINDS.includes(kind as any) ? kind : 'SOLICITUD' },
         facultyId: assignedFacultyId,
       },
     });
@@ -99,24 +105,41 @@ export class DocumentTemplatesService {
    * El content de una plantilla DOCX puede ser un string (key de MinIO,
    * formato original) o un objeto { path, isDefault?, codePrefix?, codeSuffix? }
    * (formato nuevo con configuración). Este helper normaliza ambos.
+   *
+   * Las plantillas anteriores a los dos formatos no declaran `kind`: se asumen
+   * de solicitud, que era el único oficio que existía cuando se subieron.
    */
-  static docxContent(content: any): { path: string; isDefault?: boolean; docTypeAbbr?: string; codeSuffix?: string; codePrefix?: string } {
-    if (typeof content === 'string') return { path: content };
-    return content || { path: '' };
+  static docxContent(content: any): {
+    path: string; kind: string; scope: string; isDefault?: boolean; docTypeAbbr?: string;
+    codeSuffix?: string; codePrefix?: string; codePattern?: string; fileBaseName?: string;
+  } {
+    if (typeof content === 'string') return { path: content, kind: 'SOLICITUD', scope: 'GRUPO' };
+    const obj = content || {};
+    return { ...obj, path: obj.path || '', kind: obj.kind || 'SOLICITUD', scope: obj.scope || 'GRUPO' };
   }
 
   /**
-   * Marca una plantilla como predeterminada de su tipo y DESMARCA todas las
-   * demás del mismo tipo en la misma transacción: nunca puede haber dos.
+   * Marca una plantilla como predeterminada y desmarca las que competían con
+   * ella en la misma transacción: nunca puede haber dos.
+   *
+   * En DOCX el ámbito es el tipo de oficio, no el formato de archivo: la
+   * solicitud y la designación tienen cada una su predeterminada, porque son
+   * documentos distintos que se emiten en momentos distintos.
    */
   async setDefault(id: string) {
     const target = await this.prisma.documentTemplate.findUnique({ where: { id } });
     if (!target) throw new NotFoundException('Template no encontrado');
 
     const sameType = await this.prisma.documentTemplate.findMany({ where: { type: target.type } });
+    const targetKind = target.type === 'DOCX'
+      ? DocumentTemplatesService.docxContent(target.content).kind
+      : null;
+
+    const compiten = sameType.filter((t) =>
+      t.type !== 'DOCX' || DocumentTemplatesService.docxContent(t.content).kind === targetKind);
 
     await this.prisma.$transaction(
-      sameType.map((t) => {
+      compiten.map((t) => {
         const isTarget = t.id === id;
         let content: any;
         if (t.type === 'DOCX') {
@@ -128,7 +151,10 @@ export class DocumentTemplatesService {
       }),
     );
 
-    return { id, type: target.type, message: `"${target.name}" es ahora la plantilla predeterminada de ${target.type}` };
+    const ambito = targetKind === 'DESIGNACION' ? 'designación de estudiantes'
+      : targetKind === 'SOLICITUD' ? 'solicitud de prácticas'
+      : target.type;
+    return { id, type: target.type, kind: targetKind, message: `"${target.name}" es ahora la plantilla predeterminada de ${ambito}` };
   }
 
   /**
@@ -136,20 +162,36 @@ export class DocumentTemplatesService {
    * alrededor del número secuencial {{oficioId}}, que es inamovible porque
    * garantiza la unicidad del documento.
    */
-  async updateDocxConfig(id: string, config: { docTypeAbbr?: string; codeSuffix?: string; codePrefix?: string }) {
+  async updateDocxConfig(id: string, config: {
+    docTypeAbbr?: string; codeSuffix?: string; codePrefix?: string;
+    kind?: string; scope?: string; codePattern?: string; fileBaseName?: string;
+  }) {
     const template = await this.prisma.documentTemplate.findUnique({ where: { id } });
     if (!template) throw new NotFoundException('Template no encontrado');
     if (template.type !== 'DOCX') throw new BadRequestException('Solo aplica a plantillas DOCX');
+    if (config.kind && !DOCX_KINDS.includes(config.kind as any)) {
+      throw new BadRequestException(`Tipo de oficio no reconocido: ${config.kind}`);
+    }
+    if (config.scope && !OFICIO_SCOPES.includes(config.scope as any)) {
+      throw new BadRequestException(`Alcance no reconocido: ${config.scope}`);
+    }
 
     const current = DocumentTemplatesService.docxContent(template.content);
     const content = {
       ...current,
+      kind: config.kind ?? current.kind,
+      scope: config.scope ?? current.scope,
       docTypeAbbr: config.docTypeAbbr ?? current.docTypeAbbr ?? 'SPP',
       codePrefix: config.codePrefix ?? current.codePrefix ?? '',
       codeSuffix: config.codeSuffix ?? current.codeSuffix ?? '',
+      // Vacío significa «usa el patrón que trae el sistema para este oficio»
+      codePattern: config.codePattern ?? current.codePattern ?? '',
+      fileBaseName: config.fileBaseName ?? current.fileBaseName ?? '',
     };
+    if (!content.codePattern) delete (content as any).codePattern;
+    if (!content.fileBaseName) delete (content as any).fileBaseName;
     await this.prisma.documentTemplate.update({ where: { id }, data: { content } });
-    return { id, docTypeAbbr: content.docTypeAbbr, codeSuffix: content.codeSuffix, codePrefix: content.codePrefix };
+    return { id, ...content };
   }
 
   /**
@@ -237,5 +279,61 @@ export class DocumentTemplatesService {
     return this.prisma.documentTemplate.delete({
       where: { id },
     });
+  }
+
+  /**
+   * Obtiene la lista de secuencias de numeración por tipo de oficio para el periodo indicado.
+   */
+  async getSequences(periodCode?: string) {
+    let targetPeriod = periodCode;
+    if (!targetPeriod) {
+      const active = await this.prisma.academicPeriod.findFirst({ where: { isActive: true } });
+      targetPeriod = active?.code || '2026-1';
+    }
+
+    const sequences = await this.prisma.documentSequence.findMany({
+      where: { periodCode: targetPeriod },
+    });
+
+    const kinds = ['SOLICITUD', 'DESIGNACION'];
+    return kinds.map((kind) => {
+      const found = sequences.find((s) => s.type === kind);
+      const lastNumber = found ? found.lastNumber : 0;
+      return {
+        type: kind,
+        periodCode: targetPeriod,
+        lastNumber,
+        nextNumber: lastNumber + 1,
+      };
+    });
+  }
+
+  /**
+   * Permite retomar o cambiar la numeración del próximo oficio a emitir.
+   */
+  async updateSequence(type: string, nextNumber: number, periodCode?: string) {
+    let targetPeriod = periodCode;
+    if (!targetPeriod) {
+      const active = await this.prisma.academicPeriod.findFirst({ where: { isActive: true } });
+      targetPeriod = active?.code || '2026-1';
+    }
+
+    // Si el usuario quiere que el próximo número sea nextNumber, guardamos lastNumber = nextNumber - 1
+    const lastNumber = Math.max(0, Number(nextNumber) - 1);
+
+    const sequence = await this.prisma.documentSequence.upsert({
+      where: {
+        type_periodCode: { type, periodCode: targetPeriod },
+      },
+      update: { lastNumber },
+      create: { type, periodCode: targetPeriod, lastNumber },
+    });
+
+    return {
+      type: sequence.type,
+      periodCode: sequence.periodCode,
+      lastNumber: sequence.lastNumber,
+      nextNumber: sequence.lastNumber + 1,
+    };
   }
 }

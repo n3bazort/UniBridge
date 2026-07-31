@@ -132,7 +132,7 @@ export class SignaturesService {
   /** Lotes pendientes de la firma del usuario logueado (según su SignerProfile). */
   async findPendingForSigner(userId: string) {
     const profile = await this.getSignerProfile(userId);
-    const stage: SignatureBatchStatus = profile.signerRole === 'DEAN' ? 'PENDING_DEAN' : 'PENDING_DIRECTOR';
+    const stage: SignatureBatchStatus = profile.signerRole === 'DIRECTOR' ? 'PENDING_DIRECTOR' : 'PENDING_DEAN';
     return this.prisma.signatureBatch.findMany({
       where: { status: stage },
       include: {
@@ -170,7 +170,7 @@ export class SignaturesService {
 
   /**
    * Empaqueta en un ZIP los archivos que corresponden a la etapa actual:
-   * originales si espera al decano, firmados-por-decano si espera al director.
+   * originales si espera al responsable de prácticas, firmados-por-responsable si espera al decano.
    * Los nombres de entrada son `<documentCode>.pdf` para el re-emparejamiento.
    */
   async streamBatchZip(batchId: string, userId: string, role: string, res: Response) {
@@ -178,7 +178,7 @@ export class SignaturesService {
 
     if (role === 'SIGNER') {
       const profile = await this.getSignerProfile(userId);
-      const expected: SignatureBatchStatus = profile.signerRole === 'DEAN' ? 'PENDING_DEAN' : 'PENDING_DIRECTOR';
+      const expected: SignatureBatchStatus = profile.signerRole === 'DIRECTOR' ? 'PENDING_DIRECTOR' : 'PENDING_DEAN';
       if (batch.status !== expected) {
         throw new ForbiddenException('Este lote no está pendiente de tu firma');
       }
@@ -193,7 +193,7 @@ export class SignaturesService {
       const code = item.document.documentCode || item.document.id;
       if (seen.has(code)) continue;
       seen.add(code);
-      const key = batch.status === 'PENDING_DIRECTOR' ? item.deanFileKey : item.document.fileUrl;
+      const key = batch.status === 'PENDING_DEAN' ? (item.directorFileKey || item.deanFileKey) : item.document.fileUrl;
       if (!key) continue;
       const ext = key.endsWith('.docx') ? '.docx' : '.pdf';
       entries.push({ key, name: `${code}${ext}` });
@@ -231,24 +231,56 @@ export class SignaturesService {
       include: {
         items: {
           where: { status: 'SIGNED', finalFileKey: { not: null } },
-          include: { document: { select: { documentCode: true } } },
+          include: {
+            document: {
+              select: {
+                documentCode: true,
+                documentType: true,
+                student: { select: { firstName: true, lastName: true } },
+              },
+            },
+          },
         },
       },
       orderBy: { createdAt: 'asc' },
     });
 
+    /** Quita lo que no admite un nombre de archivo, conservando tildes y ñ. */
+    const limpiar = (s: string) =>
+      s.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
+
     // Deduplicar por archivo (una SOLICITUD grupal comparte finalFileKey)
     const seen = new Set<string>();
-    const entries: { key: string; name: string }[] = [];
+    const certificados: { key: string; name: string; orden: string }[] = [];
+    const solicitudes: { key: string; name: string; orden: string }[] = [];
     for (const batch of batches) {
       for (const item of batch.items) {
         if (!item.finalFileKey || seen.has(item.finalFileKey)) continue;
         seen.add(item.finalFileKey);
-        const code = item.document.documentCode || item.id;
-        // Carpeta por lote para que el ZIP quede navegable
-        entries.push({ key: item.finalFileKey, name: `${batch.code}/${code}.pdf` });
+        const doc = item.document;
+        const code = doc.documentCode || item.id;
+        const alumno = doc.student
+          ? limpiar(`${doc.student.lastName} ${doc.student.firstName}`)
+          : '';
+        if (doc.documentType === 'CERTIFICADO' && alumno) {
+          // Un solo directorio, el nombre del estudiante por delante para que
+          // el explorador de archivos los muestre ya ordenados.
+          certificados.push({
+            key: item.finalFileKey,
+            name: `Certificados firmados/${alumno} - ${code}.pdf`,
+            orden: alumno.toLocaleLowerCase('es'),
+          });
+        } else {
+          solicitudes.push({
+            key: item.finalFileKey,
+            name: `Solicitudes firmadas/${batch.code} - ${code}.pdf`,
+            orden: `${batch.code} ${code}`,
+          });
+        }
       }
     }
+    const cmp = (a: { orden: string }, b: { orden: string }) => a.orden.localeCompare(b.orden, 'es');
+    const entries = [...certificados.sort(cmp), ...solicitudes.sort(cmp)];
 
     if (entries.length === 0) {
       throw new NotFoundException('No hay documentos firmados que descargar en la selección');
@@ -286,7 +318,7 @@ export class SignaturesService {
     const profile = await this.getSignerProfile(userId);
     const batch = await this.findBatch(batchId);
 
-    const expected: SignatureBatchStatus = profile.signerRole === 'DEAN' ? 'PENDING_DEAN' : 'PENDING_DIRECTOR';
+    const expected: SignatureBatchStatus = profile.signerRole === 'DIRECTOR' ? 'PENDING_DIRECTOR' : 'PENDING_DEAN';
     if (batch.status !== expected) {
       throw new ForbiddenException('Este lote no está pendiente de tu firma');
     }
@@ -311,52 +343,7 @@ export class SignaturesService {
         // Verificación: el PDF debe contener al menos una firma digital
         assertPdfHasDigitalSignature(file.buffer, file.originalname);
 
-        const checksum = crypto.createHash('sha256').update(file.buffer).digest('hex');
-        const stage = profile.signerRole === 'DEAN' ? 'dean' : 'final';
-        const objectKey = `signed/${periodo}/${batch.code}/${stage}/${documentCode}.pdf`;
-        await this.minio.uploadBuffer(file.buffer, objectKey, 'application/pdf');
-
-        const itemIds = items.map((i) => i.id);
-        if (profile.signerRole === 'DEAN') {
-          await this.prisma.signatureBatchItem.updateMany({
-            where: { id: { in: itemIds } },
-            // Se guarda QUIÉN firmó: sin eso, el historial no puede decir qué
-            // autoridad respalda cada documento
-            data: { status: 'SIGNED_BY_DEAN', deanFileKey: objectKey, deanChecksum: checksum, deanSignedById: userId },
-          });
-          await this.prisma.generatedDocument.updateMany({
-            where: { id: { in: items.map((i) => i.document.id) } },
-            data: { signatureStatus: 'PARTIALLY_SIGNED' },
-          });
-        } else {
-          await this.prisma.signatureBatchItem.updateMany({
-            where: { id: { in: itemIds } },
-            data: { status: 'SIGNED', finalFileKey: objectKey, finalChecksum: checksum, finalSignedById: userId },
-          });
-          await this.prisma.generatedDocument.updateMany({
-            where: { id: { in: items.map((i) => i.document.id) } },
-            data: {
-              signatureStatus: 'SIGNED',
-              signedFileKey: objectKey,
-              signedChecksum: checksum,
-              signedAt: new Date(),
-            },
-          });
-
-          // El firmado final (ambas firmas) REEMPLAZA a las versiones
-          // anteriores: se elimina la intermedia del decano. El original sin
-          // firmar se conserva como respaldo del expediente.
-          const staleKeys = [...new Set(items.map((i) => i.deanFileKey).filter(Boolean))] as string[];
-          for (const staleKey of staleKeys) {
-            if (staleKey === objectKey) continue;
-            try {
-              await this.minio.removeObject(staleKey);
-              this.logger.log(`Versión intermedia eliminada: ${staleKey}`);
-            } catch (e) {
-              this.logger.warn(`No se pudo eliminar la versión intermedia ${staleKey}: ${e?.message}`);
-            }
-          }
-        }
+        await this.persistSignedItem(documentCode, file.buffer, items, profile, userId, periodo, batch.code);
 
         results.push({ file: file.originalname, ok: true, documentCode });
       } catch (err: any) {
@@ -364,42 +351,14 @@ export class SignaturesService {
       }
     }
 
-    // ¿Se completó la etapa? (todos los ítems no-rechazados alcanzaron el estado)
-    const fresh = await this.findBatch(batchId);
-    const active = fresh.items.filter((i) => i.status !== 'REJECTED');
-    let newStatus: SignatureBatchStatus | null = null;
-
-    if (profile.signerRole === 'DEAN' && active.every((i) => i.status === 'SIGNED_BY_DEAN' || i.status === 'SIGNED')) {
-      newStatus = 'PENDING_DIRECTOR';
-      await this.prisma.signatureBatch.update({
-        where: { id: batchId },
-        data: { status: newStatus, deanSignedAt: new Date() },
-      });
-    } else if (profile.signerRole === 'DIRECTOR' && active.every((i) => i.status === 'SIGNED')) {
-      newStatus = 'COMPLETED';
-      await this.prisma.signatureBatch.update({
-        where: { id: batchId },
-        data: { status: newStatus, directorSignedAt: new Date() },
-      });
-    }
-
-    // Certificado firmado por ambas autoridades = práctica Finalizada.
-    // El estado se deriva de este hecho, no se marca a mano.
-    if (profile.signerRole === 'DIRECTOR') {
-      const signedDocs = await this.prisma.generatedDocument.findMany({
-        where: { id: { in: fresh.items.map((i) => i.document.id) } },
-        select: { studentId: true },
-      });
-      await this.practices
-        .recalculateForStudents([...new Set(signedDocs.map((d) => d.studentId))])
-        .catch((): void => undefined);
-    }
+    // ¿Se completó la etapa? Avanza el lote y recalcula prácticas si procede.
+    const batchStatus = await this.finalizeBatchStage(batchId, profile);
 
     return {
       results,
       uploaded: results.filter((r) => r.ok).length,
       failed: results.filter((r) => !r.ok).length,
-      batchStatus: newStatus ?? fresh.status,
+      batchStatus,
     };
   }
 
@@ -430,12 +389,104 @@ export class SignaturesService {
       include: { document: true, batch: true },
     });
     if (!item) throw new NotFoundException('Ítem no encontrado');
-    const key = item.finalFileKey || item.deanFileKey || item.document.fileUrl;
+    const key = item.finalFileKey || item.directorFileKey || item.deanFileKey || item.document.fileUrl;
     const url = await this.minio.getPresignedUrl(key, 900, key.split('/').pop());
     return { url, expiresInSeconds: 900 };
   }
 
   // ───────────────────── Helpers ─────────────────────
+
+  /** Sube el PDF firmado y actualiza ítems/documentos según la etapa (responsable/decano). */
+  private async persistSignedItem(
+    documentCode: string,
+    buffer: Buffer,
+    items: Array<{ id: string; directorFileKey?: string | null; deanFileKey?: string | null; document: { id: string } }>,
+    profile: { signerRole: SignerRole },
+    userId: string,
+    periodo: string,
+    batchCode: string,
+  ) {
+    const checksum = crypto.createHash('sha256').update(buffer).digest('hex');
+    const stage = profile.signerRole === 'DIRECTOR' ? 'director' : 'final';
+    const objectKey = `signed/${periodo}/${batchCode}/${stage}/${documentCode}.pdf`;
+    await this.minio.uploadBuffer(buffer, objectKey, 'application/pdf');
+
+    const itemIds = items.map((i) => i.id);
+    if (profile.signerRole === 'DIRECTOR') {
+      await this.prisma.signatureBatchItem.updateMany({
+        where: { id: { in: itemIds } },
+        data: { status: 'SIGNED_BY_DIRECTOR', directorFileKey: objectKey, directorChecksum: checksum, directorSignedById: userId },
+      });
+      await this.prisma.generatedDocument.updateMany({
+        where: { id: { in: items.map((i) => i.document.id) } },
+        data: { signatureStatus: 'PARTIALLY_SIGNED' },
+      });
+    } else {
+      await this.prisma.signatureBatchItem.updateMany({
+        where: { id: { in: itemIds } },
+        data: { status: 'SIGNED', finalFileKey: objectKey, finalChecksum: checksum, finalSignedById: userId },
+      });
+      await this.prisma.generatedDocument.updateMany({
+        where: { id: { in: items.map((i) => i.document.id) } },
+        data: {
+          signatureStatus: 'SIGNED',
+          signedFileKey: objectKey,
+          signedChecksum: checksum,
+          signedAt: new Date(),
+        },
+      });
+
+      // El firmado final (ambas firmas) REEMPLAZA a las versiones anteriores: se
+      // elimina la intermedia del responsable. El original sin firmar se conserva.
+      const staleKeys = [...new Set(items.map((i) => i.directorFileKey || i.deanFileKey).filter(Boolean))] as string[];
+      for (const staleKey of staleKeys) {
+        if (staleKey === objectKey) continue;
+        try {
+          await this.minio.removeObject(staleKey);
+          this.logger.log(`Versión intermedia eliminada: ${staleKey}`);
+        } catch (e: any) {
+          this.logger.warn(`No se pudo eliminar la versión intermedia ${staleKey}: ${e?.message}`);
+        }
+      }
+    }
+  }
+
+  /** Avanza el lote si la etapa está completa y recalcula prácticas tras el decano (firma final). */
+  private async finalizeBatchStage(
+    batchId: string,
+    profile: { signerRole: SignerRole },
+  ): Promise<SignatureBatchStatus> {
+    const fresh = await this.findBatch(batchId);
+    const active = fresh.items.filter((i) => i.status !== 'REJECTED');
+    let newStatus: SignatureBatchStatus | null = null;
+
+    if (profile.signerRole === 'DIRECTOR' && active.every((i) => i.status === 'SIGNED_BY_DIRECTOR' || i.status === 'SIGNED_BY_DEAN' || i.status === 'SIGNED')) {
+      newStatus = 'PENDING_DEAN';
+      await this.prisma.signatureBatch.update({
+        where: { id: batchId },
+        data: { status: newStatus, directorSignedAt: new Date() },
+      });
+    } else if (profile.signerRole === 'DEAN' && active.every((i) => i.status === 'SIGNED')) {
+      newStatus = 'COMPLETED';
+      await this.prisma.signatureBatch.update({
+        where: { id: batchId },
+        data: { status: newStatus, deanSignedAt: new Date() },
+      });
+    }
+
+    // Certificado firmado por ambas autoridades = práctica Finalizada (estado derivado).
+    if (profile.signerRole === 'DEAN') {
+      const signedDocs = await this.prisma.generatedDocument.findMany({
+        where: { id: { in: fresh.items.map((i) => i.document.id) } },
+        select: { studentId: true },
+      });
+      await this.practices
+        .recalculateForStudents([...new Set(signedDocs.map((d) => d.studentId))])
+        .catch((): void => undefined);
+    }
+
+    return newStatus ?? fresh.status;
+  }
 
   private async getSignerProfile(userId: string) {
     const profile = await this.prisma.signerProfile.findUnique({ where: { userId } });

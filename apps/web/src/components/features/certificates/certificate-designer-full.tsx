@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { Stage, Layer, Text as KonvaText, Image as KonvaImage, Transformer, Rect } from 'react-konva'
 import useImage from 'use-image'
 import { api } from '@/lib/axios'
@@ -8,8 +8,12 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/store/auth-store'
+import {
+  Plus, Trash2, AlignLeft, AlignCenter, AlignRight,
+  Type, Image as ImageIcon, Save, Settings, Layers, X
+} from 'lucide-react'
 
-/* ───────────── Tipos ───────────── */
+/* ─── Types ─── */
 export interface TemplateElement {
   id: string
   type: 'text' | 'image'
@@ -25,7 +29,7 @@ export interface TemplateElement {
   width?: number
 }
 
-/* ───────────── Variables disponibles del backend ───────────── */
+/* ─── System variables from backend ─── */
 const SYSTEM_VARIABLES = [
   { label: 'Nombre Estudiante', value: '{{studentName}}' },
   { label: 'Cédula', value: '{{studentDni}}' },
@@ -41,197 +45,224 @@ const SYSTEM_VARIABLES = [
   { label: 'Responsable Prácticas', value: '{{responsableName}}' },
 ]
 
-/* ───────────── Componente Principal ───────────── */
+/* ─── Document size (A4 landscape in px) ─── */
+const DOC_W = 1123
+const DOC_H = 794
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN COMPONENT
+   ═══════════════════════════════════════════════════════════════ */
 export function CertificateDesignerFull() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const templateId = searchParams.get('templateId')
   const queryClient = useQueryClient()
-  const user = useAuthStore((state) => state.user)
+  const user = useAuthStore((s) => s.user)
 
+  /* ── State ── */
   const [elements, setElements] = useState<TemplateElement[]>([])
-  const [selectedId, selectShape] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [bgImageUrl, setBgImageUrl] = useState<string | null>(null)
-  // Key durable en MinIO (lo que se persiste); bgImageUrl es la URL para mostrar
   const [bgImageKey, setBgImageKey] = useState<string | null>(null)
-  const bgFileInputRef = useRef<HTMLInputElement>(null)
   const [templateName, setTemplateName] = useState('')
   const [saving, setSaving] = useState(false)
   const [isDefaultTemplate, setIsDefaultTemplate] = useState(false)
-  const [image] = useImage(bgImageUrl || '')
-  const stageRef = useRef<any>(null)
+
+  /* ── Canvas auto-fit ── */
   const containerRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<any>(null)
+  const bgFileRef = useRef<HTMLInputElement>(null)
+  const [canvasSize, setCanvasSize] = useState({ w: 800, h: 600, scale: 0.6 })
+  const [bgImage] = useImage(bgImageUrl || '')
 
-  const [stagePos, setStagePos] = useState({ x: 0, y: 0 })
-  const [stageScale, setStageScale] = useState(1)
+  /* ─────────────────────────────────────────────
+     AUTO-FIT: document always fills available space
+     ───────────────────────────────────────────── */
+  const fitCanvas = useCallback(() => {
+    const el = containerRef.current
+    if (!el) return
+    const cw = el.clientWidth
+    const ch = el.clientHeight
+    if (cw <= 0 || ch <= 0) return
 
-  const CANVAS_W = 1123
-  const CANVAS_H = 794
+    const pad = 32
+    const scale = Math.min((cw - pad * 2) / DOC_W, (ch - pad * 2) / DOC_H, 1)
+    setCanvasSize({ w: cw, h: ch, scale: Math.max(0.05, scale) })
+  }, [])
 
-  const handleWheel = (e: any) => {
-    e.evt.preventDefault();
-    const scaleBy = 1.1;
-    const stage = stageRef.current;
-    if (!stage) return;
-    const oldScale = stage.scaleX();
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(fitCanvas)
+    ro.observe(el)
+    window.addEventListener('resize', fitCanvas)
+    fitCanvas()
+    return () => { ro.disconnect(); window.removeEventListener('resize', fitCanvas) }
+  }, [fitCanvas])
 
-    const mousePointTo = {
-      x: (pointer.x - stage.x()) / oldScale,
-      y: (pointer.y - stage.y()) / oldScale,
-    };
+  /* Computed position to center the doc */
+  const docX = (canvasSize.w - DOC_W * canvasSize.scale) / 2
+  const docY = (canvasSize.h - DOC_H * canvasSize.scale) / 2
 
-    const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
-    setStageScale(newScale);
-    setStagePos({
-      x: pointer.x - mousePointTo.x * newScale,
-      y: pointer.y - mousePointTo.y * newScale,
-    });
-  };
-
-  // Centrar el canvas inicialmente
-  React.useEffect(() => {
-    if (containerRef.current) {
-      const containerW = containerRef.current.clientWidth;
-      const containerH = containerRef.current.clientHeight;
-      // Calcular escala inicial para que quepa en el contenedor (con margen)
-      const scale = Math.min(
-        (containerW - 40) / CANVAS_W,
-        (containerH - 40) / CANVAS_H
-      );
-      setStageScale(scale);
-      setStagePos({
-        x: (containerW - CANVAS_W * scale) / 2,
-        y: (containerH - CANVAS_H * scale) / 2,
-      });
-    }
-  }, []);
-
-  // Si viene con templateId, cargar el template existente
-  useQuery({
+  /* ─────────────────────────────────────────────
+     LOAD TEMPLATE DATA
+     ───────────────────────────────────────────── */
+  const { data: templateData } = useQuery({
     queryKey: ['template', templateId],
     queryFn: async () => {
       if (!templateId) return null
       const res = await api.get(`/document-templates/${templateId}`)
-      const tmpl = res.data
-      setTemplateName(tmpl.name || '')
-      const content = tmpl.content as any
-      const bg = content?.background ? String(content.background) : ''
-      if (bg.startsWith('blob:')) {
-        // Fondos "blob:" corruptos de la versión anterior: se ignoran.
-      } else if (bg.startsWith('templates/backgrounds/')) {
-        // Fondo en MinIO: pedimos una URL prefirmada para mostrarlo.
+      return res.data
+    },
+    enabled: !!templateId,
+  })
+
+  useEffect(() => {
+    if (!templateData) return
+    setTemplateName(templateData.name || '')
+
+    let content = templateData.content
+    if (typeof content === 'string') {
+      try { content = JSON.parse(content) } catch { /* noop */ }
+    }
+    if (!content || typeof content !== 'object') return
+
+    // Background
+    const bg = content.background ? String(content.background) : ''
+    if (bg && !bg.startsWith('blob:')) {
+      if (bg.startsWith('templates/backgrounds/')) {
         setBgImageKey(bg)
         api.get('/document-templates/bg-url', { params: { key: bg } })
           .then((r) => setBgImageUrl(r.data?.url || null))
           .catch(() => setBgImageUrl(null))
-      } else if (bg) {
-        // Fondos antiguos: /uploads/..., http..., /templates/... → uso directo.
+      } else {
         setBgImageUrl(bg)
       }
-      if (content?.elements) setElements(content.elements.map((el: any, i: number) => ({
-        ...el, id: el.id || `loaded-${i}-${Date.now()}`
-      })))
-      
-      const isDefault = tmpl.name === 'Certificado de Prácticas Oficial' || content?.isDefault === true
-      setIsDefaultTemplate(isDefault)
-      return tmpl
-    },
-    enabled: !!templateId
-  })
+    }
 
-  /* ─── Funciones ─── */
-  const addTextBox = useCallback((text: string = 'Escribe aquí...') => {
+    // Elements
+    if (Array.isArray(content.elements)) {
+      setElements(
+        content.elements.map((el: any, i: number) => ({
+          ...el,
+          id: el.id || `el-${i}-${Date.now()}`,
+        }))
+      )
+    }
+
+    setIsDefaultTemplate(
+      templateData.name === 'Certificado de Prácticas Oficial' || content.isDefault === true
+    )
+  }, [templateData])
+
+  /* ─────────────────────────────────────────────
+     ELEMENT ACTIONS
+     ───────────────────────────────────────────── */
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const addTextBox = useCallback((text = 'Nuevo texto...') => {
     const newEl: TemplateElement = {
       id: `el-${Date.now()}`,
       type: 'text',
       content: text,
       x: 100 + Math.random() * 200,
       y: 100 + Math.random() * 200,
-      fontSize: 20,
+      fontSize: 24,
       fontFamily: 'Arial',
       fontWeight: 'normal',
       fontStyle: 'normal',
-      textAlign: 'left',
+      textAlign: 'center',
       color: '#000000',
       width: 400,
     }
-    setElements(prev => [...prev, newEl])
-    selectShape(newEl.id)
+    setElements((prev) => [...prev, newEl])
+    setSelectedId(newEl.id)
   }, [])
 
-  const addVariable = useCallback((varText: string) => {
-    addTextBox(varText)
-  }, [addTextBox])
-
-  const updateElement = useCallback((id: string, updates: Partial<TemplateElement>) => {
-    setElements(prev => prev.map(el => el.id === id ? { ...el, ...updates } : el))
+  const updateElement = useCallback((id: string, u: Partial<TemplateElement>) => {
+    setElements((prev) => prev.map((el) => (el.id === id ? { ...el, ...u } : el)))
   }, [])
 
   const deleteElement = useCallback((id: string) => {
-    setElements(prev => prev.filter(el => el.id !== id))
-    selectShape(null)
+    setElements((prev) => prev.filter((el) => el.id !== id))
+    setSelectedId(null)
   }, [])
 
-  const handleUploadBackground = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const selectedElement = elements.find((el) => el.id === selectedId)
+
+  /* Insertar variable en la posición del cursor o al final del campo seleccionado */
+  const handleInsertVariable = useCallback((varValue: string) => {
+    if (selectedId && selectedElement) {
+      const textarea = textareaRef.current
+      let newContent = ''
+      if (textarea) {
+        const start = textarea.selectionStart ?? selectedElement.content.length
+        const end = textarea.selectionEnd ?? selectedElement.content.length
+        const before = selectedElement.content.substring(0, start)
+        const after = selectedElement.content.substring(end)
+        newContent = before + varValue + after
+
+        updateElement(selectedId, { content: newContent })
+
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.focus()
+            const newPos = start + varValue.length
+            textareaRef.current.setSelectionRange(newPos, newPos)
+          }
+        }, 10)
+      } else {
+        newContent = selectedElement.content + ' ' + varValue
+        updateElement(selectedId, { content: newContent })
+      }
+      toast.success(`Variable ${varValue} insertada`)
+    } else {
+      addTextBox(varValue)
+    }
+  }, [selectedId, selectedElement, updateElement, addTextBox])
+
+  /* ─────────────────────────────────────────────
+     BACKGROUND UPLOAD
+     ───────────────────────────────────────────── */
+  const handleUploadBg = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    // Validación de tamaño (evita PNG enormes que ralentizan o rompen el guardado)
-    const MAX_MB = 8
-    if (file.size > MAX_MB * 1024 * 1024) {
-      toast.error(`La imagen supera ${MAX_MB} MB. Usa una más liviana (idealmente < 2 MB).`)
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error('La imagen supera 8 MB. Usa una más liviana.')
       e.target.value = ''
       return
     }
-
-    const formData = new FormData()
-    formData.append('image', file)
+    const fd = new FormData()
+    fd.append('image', file)
     try {
-      const response = await api.post('/document-templates/upload-image', formData)
-      const serverUrl = response.data?.url
-      const serverKey = response.data?.key
-      if (!serverUrl || typeof serverUrl !== 'string') {
-        throw new Error('Respuesta inválida del servidor')
-      }
-      setBgImageUrl(serverUrl)          // URL prefirmada para vista previa
-      setBgImageKey(serverKey || null)  // key durable que se guardará
-      toast.success('Imagen de fondo cargada')
-    } catch (err) {
-      // IMPORTANTE: NO usar URL.createObjectURL como respaldo. Esa URL "blob:"
-      // solo vive en esta sesión; si se guardara, al recargar el diseño
-      // aparecería en blanco. Mejor avisar y conservar el fondo anterior.
-      toast.error('No se pudo subir la imagen. Verifica que el servidor esté activo e inténtalo de nuevo.')
-      console.error('Error subiendo imagen de fondo:', err)
+      const res = await api.post('/document-templates/upload-image', fd)
+      if (!res.data?.url) throw new Error('Bad response')
+      setBgImageUrl(res.data.url)
+      setBgImageKey(res.data.key || null)
+      toast.success('Fondo cargado')
+    } catch {
+      toast.error('No se pudo subir la imagen.')
     } finally {
       e.target.value = ''
     }
   }
 
+  /* ─────────────────────────────────────────────
+     SAVE
+     ───────────────────────────────────────────── */
   const handleSave = async () => {
-    if (!templateName.trim()) {
-      alert('Escribe un nombre para la plantilla')
-      return
-    }
-    // Nunca persistir una URL temporal "blob:" (quedaría en blanco al recargar)
-    if (bgImageUrl && bgImageUrl.startsWith('blob:')) {
-      toast.error('La imagen de fondo no se subió correctamente. Vuelve a cargarla antes de guardar.')
-      return
-    }
+    if (!templateName.trim()) { toast.error('Escribe un nombre para la plantilla'); return }
+    if (bgImageUrl?.startsWith('blob:')) { toast.error('Fondo inválido. Vuelve a cargarlo.'); return }
     setSaving(true)
-    const payload = {
-      name: templateName,
-      content: {
-        width: CANVAS_W,
-        height: CANVAS_H,
-        // Se guarda la key de MinIO (durable). Si es un fondo antiguo sin key,
-        // se conserva su URL tal cual para no romper plantillas existentes.
-        background: bgImageKey || bgImageUrl,
-        elements: elements.map(({ id, ...rest }) => rest),
-      }
-    }
     try {
+      const payload = {
+        name: templateName,
+        content: {
+          width: DOC_W, height: DOC_H,
+          background: bgImageKey || bgImageUrl,
+          elements: elements.map(({ id, ...rest }) => rest),
+        },
+      }
       if (templateId) {
         await api.post(`/document-templates/pdf/${templateId}`, payload)
       } else {
@@ -240,370 +271,405 @@ export function CertificateDesignerFull() {
       toast.success('Diseño guardado exitosamente')
       queryClient.invalidateQueries({ queryKey: ['document-templates'] })
       router.push('/documents')
-    } catch (err) {
+    } catch {
       toast.error('Error guardando el diseño')
     } finally {
       setSaving(false)
     }
   }
 
-  const handleDragEnd = (e: any, id: string) => {
-    updateElement(id, { x: Math.round(e.target.x()), y: Math.round(e.target.y()) })
+  const isReadOnly = isDefaultTemplate && user?.role === 'COORDINATOR'
+
+  /** Abandona el editor descartando lo que no se haya guardado. */
+  const handleCancel = () => {
+    const hayTrabajo = elements.length > 0 || !!bgImageUrl || !!templateName.trim()
+    if (hayTrabajo && !confirm('¿Salir sin guardar? Se perderán los cambios que no hayas guardado.')) return
+    router.push('/documents')
   }
 
-  const selectedElement = elements.find(el => el.id === selectedId)
-
+  /* ═══════════════════════════════════════════════════════════════
+     RENDER
+     ═══════════════════════════════════════════════════════════════ */
   return (
-    <div className="flex gap-0 h-[calc(100vh-80px)]">
-      {/* ═══════ PANEL IZQUIERDO ═══════ */}
-      <div className="w-80 bg-white border-r flex flex-col overflow-y-auto shrink-0">
-        {/* Header */}
-        <div className="p-4 border-b">
-          <h2 className="font-bold text-lg">Diseñador de Certificados</h2>
-          <p className="text-xs text-gray-500 mt-1">Sube un fondo, arrastra variables y texto</p>
-        </div>
+    <div className="h-[calc(100dvh-56px)] overflow-hidden bg-[#f1f5f9] flex items-center justify-center p-4">
 
-        {/* Nombre */}
-        <div className="p-4 border-b space-y-2">
-          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre del Diseño</label>
-          <input
-            type="text"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
-            placeholder="Ej: Certificado de Aprobación"
-            className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+      {/* Centered wrapper: canvas + sidebar together */}
+      <div className="flex w-full max-w-[1400px] h-full gap-4">
 
-        {/* Fondo: zona clickeable evidente — con miniatura y acciones cuando ya hay imagen */}
-        <div className="p-4 border-b space-y-2">
-          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Imagen de Fondo</label>
-          <input
-            ref={bgFileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleUploadBackground}
-            className="hidden"
-          />
-          {bgImageUrl ? (
-            <div className="relative group/bg rounded-lg overflow-hidden border border-slate-200">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={bgImageUrl} alt="Fondo actual" className="w-full h-[86px] object-cover" />
-              <div className="absolute inset-0 bg-black/0 group-hover/bg:bg-black/45 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover/bg:opacity-100">
-                <button
-                  onClick={() => bgFileInputRef.current?.click()}
-                  className="px-3 py-1.5 bg-white text-[12px] font-semibold text-slate-800 rounded-md shadow hover:bg-slate-100"
-                >
-                  Cambiar fondo
-                </button>
-                <button
-                  onClick={() => { setBgImageUrl(null); setBgImageKey(null) }}
-                  className="px-3 py-1.5 bg-red-500 text-[12px] font-semibold text-white rounded-md shadow hover:bg-red-600"
-                >
-                  Quitar
-                </button>
-              </div>
-              <span className="absolute bottom-1 left-1.5 text-[9.5px] font-semibold text-white bg-black/50 px-1.5 py-0.5 rounded pointer-events-none group-hover/bg:opacity-0 transition-opacity">
-                Pasa el mouse para cambiar o quitar
-              </span>
-            </div>
-          ) : (
+      {/* ────────── LEFT: Canvas ────────── */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 relative rounded-2xl bg-white/40 border border-gray-200/60 overflow-hidden">
+
+        {/* Salir sin guardar: devuelve al listado descartando los cambios */}
+        <button
+          onClick={handleCancel}
+          title="Salir sin guardar"
+          aria-label="Salir del editor sin guardar"
+          className="absolute top-3 right-3 z-20 w-8 h-8 rounded-lg bg-white border border-gray-200 shadow-sm text-gray-500 hover:text-red-600 hover:bg-red-50 hover:border-red-200 flex items-center justify-center transition-colors"
+        >
+          <X size={16} />
+        </button>
+
+        {/* Floating action: Change background */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex gap-1.5">
+          <input ref={bgFileRef} type="file" accept="image/*" onChange={handleUploadBg} className="hidden" />
+          <button
+            onClick={() => bgFileRef.current?.click()}
+            className="bg-white border border-gray-200 shadow-sm rounded-lg px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 transition-colors"
+          >
+            <ImageIcon size={14} />
+            {bgImageUrl ? 'Cambiar Fondo' : 'Subir Fondo'}
+          </button>
+          {bgImageUrl && (
             <button
-              onClick={() => bgFileInputRef.current?.click()}
-              className="w-full h-[86px] border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50/50 rounded-lg flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-blue-600 transition-colors"
+              onClick={() => { setBgImageUrl(null); setBgImageKey(null) }}
+              className="bg-white border border-gray-200 shadow-sm rounded-lg px-2 py-1.5 text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+              title="Quitar fondo"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-              </svg>
-              <span className="text-[12px] font-semibold">Haz click para subir el fondo</span>
-              <span className="text-[10px]">PNG o JPG, tamaño carta</span>
+              <Trash2 size={14} />
             </button>
           )}
         </div>
 
-        {/* Variables */}
-        <div className="p-4 border-b space-y-3">
-          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Variables del Sistema</label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {SYSTEM_VARIABLES.map(v => (
-              <button
-                key={v.value}
-                onClick={() => addVariable(v.value)}
-                className="text-[11px] px-2 py-1.5 border rounded-md hover:bg-blue-50 hover:border-blue-300 text-left truncate transition-colors"
-                title={v.value}
-              >
-                + {v.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Texto constante */}
-        <div className="p-4 border-b">
-          <button
-            onClick={() => addTextBox('Escribe aquí...')}
-            className="w-full px-4 py-2.5 bg-slate-800 text-white rounded-md hover:bg-slate-700 text-sm font-medium transition-colors"
+        {/* Canvas area — auto-fit, no zoom, no drag */}
+        <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden">
+          <Stage
+            width={canvasSize.w}
+            height={canvasSize.h}
+            ref={stageRef}
+            x={docX}
+            y={docY}
+            scaleX={canvasSize.scale}
+            scaleY={canvasSize.scale}
+            /* Block all zoom / scroll / drag on the stage itself */
+            draggable={false}
+            onWheel={(e) => e.evt.preventDefault()}
+            onMouseDown={(e) => { if (e.target === e.target.getStage()) setSelectedId(null) }}
+            onTouchStart={(e) => { if (e.target === e.target.getStage()) setSelectedId(null) }}
           >
-            + Nuevo Cuadro de Texto
-          </button>
+            <Layer>
+              {/* White page */}
+              <Rect
+                x={0} y={0}
+                width={DOC_W} height={DOC_H}
+                fill="#ffffff"
+                shadowColor="rgba(0,0,0,0.08)"
+                shadowBlur={24}
+                shadowOffset={{ x: 0, y: 4 }}
+              />
+              {/* Background image */}
+              {bgImage && <KonvaImage image={bgImage} width={DOC_W} height={DOC_H} />}
+              {/* Text elements */}
+              {elements.map((el) => (
+                <KonvaText
+                  key={el.id}
+                  id={el.id}
+                  text={el.content}
+                  x={el.x}
+                  y={el.y}
+                  fontSize={el.fontSize || 20}
+                  fontFamily={el.fontFamily || 'Arial'}
+                  fontStyle={
+                    `${el.fontWeight === 'bold' ? 'bold ' : ''}${el.fontStyle === 'italic' ? 'italic' : ''}`.trim() || 'normal'
+                  }
+                  align={(el.textAlign as any) || 'left'}
+                  fill={el.color || '#000'}
+                  width={el.width || 400}
+                  draggable
+                  onDragStart={(e) => { e.cancelBubble = true }}
+                  onDragEnd={(e) => {
+                    e.cancelBubble = true
+                    updateElement(el.id, { x: Math.round(e.target.x()), y: Math.round(e.target.y()) })
+                  }}
+                  onClick={(e) => { e.cancelBubble = true; setSelectedId(el.id) }}
+                  onTap={(e) => { e.cancelBubble = true; setSelectedId(el.id) }}
+                  onTransformEnd={(e) => {
+                    const n = e.target
+                    updateElement(el.id, {
+                      x: Math.round(n.x()),
+                      y: Math.round(n.y()),
+                      width: Math.max(50, Math.round(n.width() * n.scaleX())),
+                    })
+                    n.scaleX(1); n.scaleY(1)
+                  }}
+                />
+              ))}
+              {selectedId && <TransformerComponent selectedId={selectedId} stageRef={stageRef} />}
+            </Layer>
+          </Stage>
+        </div>
+      </div>
+
+      {/* ────────── RIGHT: Sidebar ────────── */}
+      <aside className="w-[280px] xl:w-[300px] shrink-0 bg-white border border-gray-200/60 rounded-2xl flex flex-col overflow-hidden shadow-sm">
+
+        {/* Template name */}
+        <div className="px-5 pt-4 pb-3 border-b border-gray-100">
+          <input
+            type="text"
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            placeholder="Nombre de la plantilla..."
+            className="w-full text-[15px] font-semibold text-gray-900 placeholder-gray-400 bg-transparent border-none outline-none"
+          />
         </div>
 
-        {/* ═══════ PROPIEDADES DEL ELEMENTO ═══════ */}
-        {selectedElement && (
-          <div className="p-4 border-b space-y-4 bg-blue-50/50">
-            <label className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Propiedades</label>
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto">
 
-            {/* Contenido */}
-            <textarea
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[70px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={selectedElement.content}
-              onChange={(e) => updateElement(selectedId!, { content: e.target.value })}
-              placeholder="Texto o variable..."
-            />
-
-            {/* Tamaño y Color */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <label className="text-[10px] text-gray-500">Tamaño</label>
-                <input
-                  type="number"
-                  value={selectedElement.fontSize || 20}
-                  onChange={(e) => updateElement(selectedId!, { fontSize: Number(e.target.value) })}
-                  className="w-full border rounded-md px-2 py-1.5 text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] text-gray-500">Color</label>
-                <input
-                  type="color"
-                  value={selectedElement.color || '#000000'}
-                  onChange={(e) => updateElement(selectedId!, { color: e.target.value })}
-                  className="w-full h-[34px] border rounded-md cursor-pointer"
-                />
-              </div>
-            </div>
-
-            {/* Alineación */}
-            <div className="space-y-1">
-              <label className="text-[10px] text-gray-500">Alineación</label>
-              <div className="flex gap-1">
-                {(['left', 'center', 'right', 'justify'] as const).map(align => (
-                  <button
-                    key={align}
-                    onClick={() => updateElement(selectedId!, { textAlign: align })}
-                    className={`flex-1 text-xs py-1.5 rounded-md border transition-colors ${
-                      selectedElement.textAlign === align ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    {align === 'left' ? '◁' : align === 'center' ? '≡' : align === 'right' ? '▷' : '⊞'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Negrita / Cursiva */}
-            <div className="flex gap-2">
+          {/* ── Fields section ── */}
+          <div className="px-5 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-gray-900 flex items-center gap-1.5 uppercase tracking-wide">
+                <Layers size={14} className="text-gray-400" />
+                Campos
+              </h3>
               <button
-                onClick={() => updateElement(selectedId!, { fontWeight: selectedElement.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                className={`flex-1 py-2 text-sm font-bold rounded-md border transition-colors ${
-                  selectedElement.fontWeight === 'bold' ? 'bg-blue-600 text-white' : 'hover:bg-gray-100'
-                }`}
+                onClick={() => addTextBox()}
+                className="text-[11px] font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 transition-colors"
               >
-                N
-              </button>
-              <button
-                onClick={() => updateElement(selectedId!, { fontStyle: selectedElement.fontStyle === 'italic' ? 'normal' : 'italic' })}
-                className={`flex-1 py-2 text-sm italic rounded-md border transition-colors ${
-                  selectedElement.fontStyle === 'italic' ? 'bg-blue-600 text-white' : 'hover:bg-gray-100'
-                }`}
-              >
-                C
+                <Plus size={13} /> Añadir
               </button>
             </div>
 
-            {/* Ancho del cuadro */}
-            <div className="space-y-1">
-              <label className="text-[10px] text-gray-500">Ancho del cuadro (px)</label>
-              <input
-                type="number"
-                value={selectedElement.width || 400}
-                onChange={(e) => updateElement(selectedId!, { width: Number(e.target.value) })}
-                className="w-full border rounded-md px-2 py-1.5 text-sm"
-              />
+            <div className="space-y-1.5 max-h-[220px] overflow-y-auto">
+              {elements.map((el, i) => (
+                <button
+                  key={el.id}
+                  onClick={() => setSelectedId(el.id)}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-all ${
+                    selectedId === el.id
+                      ? 'border-gray-900 bg-gray-900 text-white shadow-sm'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-[10px] ${
+                    selectedId === el.id ? 'bg-gray-700' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    <Type size={12} />
+                  </span>
+                  <span className="text-xs font-medium truncate">{el.content || `Campo ${i + 1}`}</span>
+                </button>
+              ))}
+              {elements.length === 0 && (
+                <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-xl">
+                  <Type size={20} className="mx-auto mb-1.5 text-gray-300" />
+                  <p className="text-[11px] text-gray-400">Sin campos aún. Haz clic en "Añadir".</p>
+                </div>
+              )}
             </div>
-
-            {/* Fuente */}
-            <div className="space-y-1">
-              <label className="text-[10px] text-gray-500">Fuente</label>
-              <select
-                value={selectedElement.fontFamily || 'Arial'}
-                onChange={(e) => updateElement(selectedId!, { fontFamily: e.target.value })}
-                className="w-full border rounded-md px-2 py-1.5 text-sm bg-white"
-              >
-                <option value="Arial">Arial</option>
-                <option value="Times New Roman">Times New Roman</option>
-                <option value="Georgia">Georgia</option>
-                <option value="Courier New">Courier New</option>
-                <option value="Verdana">Verdana</option>
-              </select>
-            </div>
-
-            <button
-              onClick={() => deleteElement(selectedId!)}
-              className="w-full py-2 text-sm text-red-600 border border-red-200 rounded-md hover:bg-red-50 transition-colors"
-            >
-              Eliminar Elemento
-            </button>
           </div>
-        )}
 
-        {/* Botones de Acción */}
-        <div className="p-4 mt-auto border-t flex flex-col gap-2">
+          {/* ── Field Properties (shows when selected) ── */}
+          {selectedElement && (
+            <div className="px-5 py-4 border-t border-gray-100 bg-slate-50/50">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-semibold text-gray-900 flex items-center gap-1.5 uppercase tracking-wide">
+                  <Settings size={14} className="text-gray-400" />
+                  Propiedades del Campo
+                </h3>
+                <button
+                  onClick={() => deleteElement(selectedId!)}
+                  className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                  title="Eliminar campo"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {/* Multi-line Textarea */}
+                <Field label="Texto / Párrafo (admite varias líneas y variables)">
+                  <textarea
+                    ref={textareaRef}
+                    rows={4}
+                    value={selectedElement.content}
+                    onChange={(e) => updateElement(selectedId!, { content: e.target.value })}
+                    className="input-field font-sans text-xs leading-relaxed resize-y min-h-[90px] w-full p-2.5 bg-white border border-gray-200 rounded-lg text-gray-900 focus:border-blue-500 transition-all"
+                    placeholder="Escribe el texto o selecciona variables abajo para insertar..."
+                  />
+                </Field>
+
+                {/* Micro-chips for variable insertion inside current textarea */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-500 mb-1">
+                    ⚡ Insertar variable en la posición del cursor:
+                  </label>
+                  <div className="flex flex-wrap gap-1 max-h-[85px] overflow-y-auto pr-1">
+                    {SYSTEM_VARIABLES.map((v) => (
+                      <button
+                        key={v.value}
+                        onClick={() => handleInsertVariable(v.value)}
+                        className="text-[9.5px] px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-mono hover:bg-blue-100 hover:border-blue-300 transition-all active:scale-95 shrink-0"
+                        title={`Insertar ${v.value}`}
+                      >
+                        + {v.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Font Family */}
+                <Field label="Fuente">
+                  <select
+                    value={selectedElement.fontFamily || 'Arial'}
+                    onChange={(e) => updateElement(selectedId!, { fontFamily: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="Arial">Arial</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Verdana">Verdana</option>
+                  </select>
+                </Field>
+
+                {/* Font Size + Weight */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Tamaño (px)">
+                    <input
+                      type="number"
+                      value={selectedElement.fontSize || 24}
+                      onChange={(e) => updateElement(selectedId!, { fontSize: Number(e.target.value) })}
+                      className="input-field"
+                    />
+                  </Field>
+                  <Field label="Estilo">
+                    <select
+                      value={selectedElement.fontWeight || 'normal'}
+                      onChange={(e) => updateElement(selectedId!, { fontWeight: e.target.value })}
+                      className="input-field"
+                    >
+                      <option value="normal">Normal</option>
+                      <option value="bold">Negrita (Bold)</option>
+                    </select>
+                  </Field>
+                </div>
+
+                {/* Color + Alignment */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Color">
+                    <div className="flex items-center gap-2 input-field !py-1">
+                      <input
+                        type="color"
+                        value={selectedElement.color || '#000000'}
+                        onChange={(e) => updateElement(selectedId!, { color: e.target.value })}
+                        className="w-5 h-5 rounded border-none cursor-pointer bg-transparent p-0"
+                      />
+                      <span className="text-[10px] text-gray-500 font-mono">{selectedElement.color || '#000000'}</span>
+                    </div>
+                  </Field>
+                  <Field label="Alineación">
+                    <select
+                      value={selectedElement.textAlign || 'center'}
+                      onChange={(e) => updateElement(selectedId!, { textAlign: e.target.value })}
+                      className="input-field"
+                    >
+                      <option value="left">Izquierda</option>
+                      <option value="center">Centrado</option>
+                      <option value="right">Derecha</option>
+                    </select>
+                  </Field>
+                </div>
+
+                {/* Block Width Control */}
+                <Field label="Ancho del bloque (px)">
+                  <input
+                    type="number"
+                    value={selectedElement.width || 400}
+                    onChange={(e) => updateElement(selectedId!, { width: Number(e.target.value) })}
+                    className="input-field"
+                    placeholder="Ej: 800"
+                  />
+                </Field>
+
+                {/* X / Y */}
+                <div className="flex items-center gap-4 pt-1 text-[10px] text-gray-400">
+                  <span>Posición X: {selectedElement.x}px</span>
+                  <span>Posición Y: {selectedElement.y}px</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Variables ── */}
+          <div className="px-5 py-4 border-t border-gray-100">
+            <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-1">Variables Disponibles</h3>
+            <p className="text-[10.5px] text-gray-500 mb-2">
+              {selectedId ? 'Haz clic en una variable para insertarla en el campo seleccionado.' : 'Haz clic para crear un nuevo campo con la variable.'}
+            </p>
+            <div className="grid grid-cols-2 gap-1">
+              {SYSTEM_VARIABLES.map((v) => (
+                <button
+                  key={v.value}
+                  onClick={() => handleInsertVariable(v.value)}
+                  className="text-[10px] px-2 py-1.5 rounded border border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50 text-left truncate transition-colors active:scale-95"
+                  title={`Insertar ${v.value}`}
+                >
+                  + {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Save button (sticky bottom) ── */}
+        <div className="px-5 py-4 border-t border-gray-200 bg-white">
           <button
             onClick={handleSave}
-            disabled={saving || (isDefaultTemplate && user?.role === 'COORDINATOR')}
-            className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold rounded-md shadow-md transition-colors"
+            disabled={saving || isReadOnly}
+            className={`w-full py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+              saving
+                ? 'bg-gray-300 text-white cursor-wait'
+                : isReadOnly
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98] shadow-sm'
+            }`}
           >
-            {saving 
-              ? 'Guardando...' 
-              : (isDefaultTemplate && user?.role === 'COORDINATOR' ? '🔒 Solo Lectura' : '💾 Guardar Diseño Final')
-            }
-          </button>
-          <button
-            onClick={() => router.push('/documents')}
-            className="w-full py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold rounded-md transition-colors"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-
-      {/* ═══════ CANVAS CENTRAL ═══════ */}
-      <div 
-        ref={containerRef}
-        className="flex-1 bg-slate-200 overflow-hidden relative"
-      >
-        <Stage 
-          width={typeof window !== 'undefined' ? window.innerWidth - 320 : CANVAS_W} 
-          height={typeof window !== 'undefined' ? window.innerHeight - 80 : CANVAS_H} 
-          ref={stageRef}
-          onWheel={handleWheel}
-          draggable
-          x={stagePos.x}
-          y={stagePos.y}
-          scaleX={stageScale}
-          scaleY={stageScale}
-          onDragEnd={(e) => {
-            // Solo actualizar pos del stage si lo que se arrastra es el stage
-            if (e.target === stageRef.current) {
-              setStagePos({ x: e.target.x(), y: e.target.y() });
-            }
-          }}
-          onMouseDown={(e) => {
-            if (e.target === e.target.getStage()) selectShape(null)
-          }}
-        >
-          <Layer>
-            {/* Sombra y Fondo blanco base simulando el papel */}
-            <Rect 
-              x={0} y={0} 
-              width={CANVAS_W} height={CANVAS_H} 
-              fill="#ffffff" 
-              shadowColor="black"
-              shadowBlur={10}
-              shadowOpacity={0.2}
-              shadowOffset={{ x: 5, y: 5 }}
-            />
-
-            {/* Imagen de fondo */}
-            {image && <KonvaImage image={image} width={CANVAS_W} height={CANVAS_H} />}
-
-            {/* Elementos de texto */}
-            {elements.map((el) => (
-              <KonvaText
-                key={el.id}
-                id={el.id}
-                text={el.content}
-                x={el.x}
-                y={el.y}
-                fontSize={el.fontSize || 20}
-                fontFamily={el.fontFamily || 'Arial'}
-                fontStyle={
-                  `${el.fontWeight === 'bold' ? 'bold ' : ''}${el.fontStyle === 'italic' ? 'italic' : ''}`.trim() || 'normal'
-                }
-                align={el.textAlign as any || 'left'}
-                fill={el.color || '#000'}
-                width={el.width || 400}
-                draggable
-                onDragStart={(e) => {
-                  e.cancelBubble = true; // Evitar arrastrar el stage
-                }}
-                onDragEnd={(e) => {
-                  e.cancelBubble = true;
-                  handleDragEnd(e, el.id);
-                }}
-                onClick={() => selectShape(el.id)}
-                onTap={() => selectShape(el.id)}
-                onTransformEnd={(e) => {
-                  const node = e.target
-                  updateElement(el.id, {
-                    x: Math.round(node.x()),
-                    y: Math.round(node.y()),
-                    width: Math.max(50, Math.round(node.width() * node.scaleX())),
-                  })
-                  node.scaleX(1)
-                  node.scaleY(1)
-                }}
-              />
-            ))}
-
-            {/* Transformer del elemento seleccionado */}
-            {selectedId && (
-              <TransformerComponent selectedId={selectedId} stageRef={stageRef} />
+            {saving ? (
+              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : isReadOnly ? (
+              '🔒 Solo Lectura'
+            ) : (
+              <><Save size={14} /> Guardar Diseño Final</>
             )}
-          </Layer>
-        </Stage>
-        
-        {/* Controles de Zoom Overlay */}
-        <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-white rounded-lg shadow-md p-1 border border-gray-200">
-          <button 
-            onClick={() => {
-              const newScale = stageScale / 1.2;
-              setStageScale(newScale);
-            }} 
-            className="p-2 hover:bg-gray-100 rounded text-gray-700 font-bold"
-            title="Alejar"
-          >
-            -
-          </button>
-          <span className="text-xs font-semibold px-2 min-w-[3rem] text-center">{Math.round(stageScale * 100)}%</span>
-          <button 
-            onClick={() => {
-              const newScale = stageScale * 1.2;
-              setStageScale(newScale);
-            }} 
-            className="p-2 hover:bg-gray-100 rounded text-gray-700 font-bold"
-            title="Acercar"
-          >
-            +
           </button>
         </div>
-      </div>
+      </aside>
+
+      </div>{/* end centered wrapper */}
+
+      {/* Inline utility styles */}
+      <style jsx global>{`
+        .input-field {
+          width: 100%;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.5rem;
+          padding: 6px 10px;
+          font-size: 12px;
+          color: #1f2937;
+          background: #fff;
+          outline: none;
+          transition: border-color 0.15s;
+        }
+        .input-field:focus {
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+        }
+      `}</style>
     </div>
   )
 }
 
-/* ─── Componente Transformer separado ─── */
+/* ─── Transformer ─── */
 function TransformerComponent({ selectedId, stageRef }: { selectedId: string; stageRef: React.RefObject<any> }) {
   const trRef = useRef<any>(null)
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (trRef.current && stageRef.current) {
-      const selectedNode = stageRef.current.findOne(`#${selectedId}`)
-      if (selectedNode) {
-        trRef.current.nodes([selectedNode])
+      const node = stageRef.current.findOne(`#${selectedId}`)
+      if (node) {
+        trRef.current.nodes([node])
         trRef.current.getLayer()?.batchDraw()
       }
     }
@@ -613,10 +679,23 @@ function TransformerComponent({ selectedId, stageRef }: { selectedId: string; st
     <Transformer
       ref={trRef}
       enabledAnchors={['middle-left', 'middle-right']}
-      boundBoxFunc={(oldBox, newBox) => {
-        if (newBox.width < 50) return oldBox
-        return newBox
-      }}
+      boundBoxFunc={(oldBox, newBox) => (newBox.width < 50 ? oldBox : newBox)}
+      borderStroke="#3b82f6"
+      borderDash={[4, 4]}
+      anchorStroke="#3b82f6"
+      anchorFill="#fff"
+      anchorSize={8}
+      anchorCornerRadius={4}
     />
+  )
+}
+
+/* ─── Tiny label wrapper ─── */
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-[10px] font-semibold text-gray-500 mb-1">{label}</label>
+      {children}
+    </div>
   )
 }
