@@ -24,7 +24,7 @@ export class StudentsController {
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @Roles(Role.ADMIN, Role.COORDINATOR, Role.SIGNER)
   @ApiOperation({ summary: 'Listar estudiantes (Aislado por Tenant)' })
   findAll(@Query() paginationDto: PaginationDto) {
     return this.studentsService.findAll(paginationDto);

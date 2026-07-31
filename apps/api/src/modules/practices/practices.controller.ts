@@ -34,7 +34,7 @@ export class PracticesController {
 
 
   @Get('dashboard-stats')
-  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @Roles(Role.ADMIN, Role.COORDINATOR, Role.SIGNER)
   @ApiOperation({ summary: 'Obtener estadísticas del dashboard' })
   getDashboardStats(@Req() req: any) {
     const facultyId = req.user?.facultyId;
@@ -42,7 +42,7 @@ export class PracticesController {
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @Roles(Role.ADMIN, Role.COORDINATOR, Role.SIGNER)
   @ApiOperation({ summary: 'Listar prácticas (Multi-tenant activo)' })
   findAll(@Query() paginationDto: PaginationDto) {
     return this.practicesService.findAll(paginationDto);

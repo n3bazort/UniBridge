@@ -24,14 +24,14 @@ export class CompaniesController {
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @Roles(Role.ADMIN, Role.COORDINATOR, Role.SIGNER)
   @ApiOperation({ summary: 'Listar Empresas con paginación y búsqueda' })
   findAll(@Query() paginationDto: PaginationDto) {
     return this.companiesService.findAll(paginationDto);
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @Roles(Role.ADMIN, Role.COORDINATOR, Role.SIGNER)
   @ApiOperation({ summary: 'Obtener Empresa por ID' })
   findOne(@Param('id') id: string) {
     return this.companiesService.findOne(id);
