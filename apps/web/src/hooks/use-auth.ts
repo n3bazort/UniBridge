@@ -7,12 +7,13 @@ import type { LoginResponse } from '@/types/auth'
 /** Escribe una cookie ligera que lee el middleware.ts de Next.js para proteger rutas SSR */
 function setSessionCookie(role: string, isAuthenticated: boolean) {
   const value = encodeURIComponent(JSON.stringify({ isAuthenticated, role }))
-  // SameSite=Lax protege contra CSRF, HttpOnly=false porque el middleware Edge runtime sí puede leerla
-  document.cookie = `unibridge-session=${value}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+  const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = `unibridge-session=${value}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax${isSecure}`
 }
 
 function clearSessionCookie() {
-  document.cookie = 'unibridge-session=; path=/; max-age=0; SameSite=Lax'
+  const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = `unibridge-session=; path=/; max-age=0; SameSite=Lax${isSecure}`
 }
 
 export function useAuth() {

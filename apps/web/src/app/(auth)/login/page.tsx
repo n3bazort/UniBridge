@@ -28,10 +28,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!hasHydrated) return
 
-    // Check if the session cookie actually exists to avoid stale localStorage loop
-    const hasCookie = typeof document !== 'undefined' && document.cookie.includes('unibridge-session=')
-
-    if (isAuthenticated && user && hasCookie) {
+    if (isAuthenticated && user) {
       if (user.role === 'ADMIN') {
         router.replace('/overview')
       } else if (user.role === 'COORDINATOR') {
@@ -39,9 +36,6 @@ export default function LoginPage() {
       } else if (user.role === 'SIGNER') {
         router.replace('/signer-dashboard')
       }
-    } else if (isAuthenticated && !hasCookie) {
-      // Stale Zustand state without valid cookie: clear it
-      useAuthStore.getState().logout()
     }
   }, [isAuthenticated, user, router, hasHydrated])
 
