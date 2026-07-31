@@ -33,4 +33,4 @@ services:
     startCommand: npm run start --workspace=web
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        value: "https://unibridge-api.onrender.com/api/v1"
+        value: "https://unibridge-api-035g.onrender.com/api/v1"
