@@ -72,7 +72,12 @@ export class MinioService implements OnModuleInit {
 
   /** Sube un archivo desde disco. Devuelve el objectKey. */
   async uploadFile(filePath: string, objectKey: string, mimetype: string): Promise<string> {
-    if (this.isDisabled) return `mock-uploads/${objectKey}`;
+    if (this.isDisabled) {
+      const targetPath = path.join(process.cwd(), 'uploads', objectKey);
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.copyFileSync(filePath, targetPath);
+      return objectKey;
+    }
     try {
       const fileStream = fs.createReadStream(filePath);
       const stat = fs.statSync(filePath);
@@ -93,7 +98,12 @@ export class MinioService implements OnModuleInit {
 
   /** Sube un buffer en memoria. Devuelve el objectKey. */
   async uploadBuffer(buffer: Buffer, objectKey: string, mimetype: string): Promise<string> {
-    if (this.isDisabled) return `mock-uploads/${objectKey}`;
+    if (this.isDisabled) {
+      const targetPath = path.join(process.cwd(), 'uploads', objectKey);
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.writeFileSync(targetPath, buffer);
+      return objectKey;
+    }
     try {
       await this.minioClient.putObject(
         this.bucketName,
@@ -115,7 +125,11 @@ export class MinioService implements OnModuleInit {
    * `inline` fuerza a que el navegador intente visualizar el archivo en vez de descargarlo.
    */
   async getPresignedUrl(objectKey: string, expirySeconds = 900, downloadName?: string, inline = false): Promise<string> {
-    if (this.isDisabled) return `/mock-uploads/${objectKey}`;
+    if (this.isDisabled) {
+      // Servido directamente como activo estático por NestJS (/uploads/...)
+      const filename = path.basename(objectKey);
+      return `/uploads/${objectKey}`;
+    }
 
     let respHeaders: Record<string, string> | undefined = undefined;
 
@@ -124,23 +138,12 @@ export class MinioService implements OnModuleInit {
       respHeaders = {
         'response-content-disposition': this.contentDisposition(disposicion, downloadName || 'documento'),
       };
-      // Minio/S3 a veces requiere explícitamente el Content-Type correcto para visualizar PDF o DOCX en línea si no se fijó al subir.
     }
 
     return this.minioClient.presignedGetObject(this.bucketName, objectKey, expirySeconds, respHeaders);
   }
 
-  /**
-   * Content-Disposition con nombre de archivo legible.
-   *
-   * Los oficios se archivan con nombres que llevan espacios y acentos
-   * («Designación de estudiantes Fish Ecuador 055.docx»). El parámetro
-   * `filename` solo admite ASCII y los navegadores NO deshacen el
-   * porcentaje-escapado ahí, así que percent-encodearlo dejaba nombres como
-   * «Designaci%C3%B3n%20de...». La forma correcta es la de la RFC 5987: un
-   * `filename` ASCII de reserva más un `filename*` en UTF-8, que es el que los
-   * navegadores actuales prefieren.
-   */
+  /** Content-Disposition con nombre de archivo legible. */
   private contentDisposition(disposicion: 'inline' | 'attachment', nombre: string): string {
     const ascii = nombre
       .normalize('NFD')
@@ -152,12 +155,35 @@ export class MinioService implements OnModuleInit {
 
   /** Stream de lectura de un objeto (para empaquetar ZIPs en el servidor). */
   async getObjectStream(objectKey: string): Promise<Readable> {
-    if (this.isDisabled) throw new Error('MinIO deshabilitado');
+    if (this.isDisabled) {
+      const candidates = [
+        path.join(process.cwd(), 'uploads', objectKey),
+        path.join(process.cwd(), objectKey),
+        path.join(process.cwd(), 'apps/web/public/templates', path.basename(objectKey)),
+        path.join(process.cwd(), 'apps/web/public/templates/Solicitud de Prácticas Oficial.docx'),
+      ];
+      for (const p of candidates) {
+        if (fs.existsSync(p)) return fs.createReadStream(p);
+      }
+      throw new Error(`Archivo no encontrado localmente: ${objectKey}`);
+    }
     return this.minioClient.getObject(this.bucketName, objectKey);
   }
 
   /** Descarga un objeto completo a un Buffer. */
   async getObjectBuffer(objectKey: string): Promise<Buffer> {
+    if (this.isDisabled) {
+      const candidates = [
+        path.join(process.cwd(), 'uploads', objectKey),
+        path.join(process.cwd(), objectKey),
+        path.join(process.cwd(), 'apps/web/public/templates', path.basename(objectKey)),
+        path.join(process.cwd(), 'apps/web/public/templates/Solicitud de Prácticas Oficial.docx'),
+      ];
+      for (const p of candidates) {
+        if (fs.existsSync(p)) return fs.readFileSync(p);
+      }
+      throw new Error(`Archivo no encontrado localmente: ${objectKey}`);
+    }
     const stream = await this.getObjectStream(objectKey);
     const chunks: Buffer[] = [];
     for await (const chunk of stream) {
@@ -168,7 +194,13 @@ export class MinioService implements OnModuleInit {
 
   /** Elimina un objeto del bucket (ej. al borrar una plantilla). */
   async removeObject(objectKey: string): Promise<void> {
-    if (this.isDisabled) return;
+    if (this.isDisabled) {
+      const p = path.join(process.cwd(), 'uploads', objectKey);
+      if (fs.existsSync(p)) {
+        try { fs.unlinkSync(p); } catch {}
+      }
+      return;
+    }
     try {
       await this.minioClient.removeObject(this.bucketName, objectKey);
     } catch (error) {
@@ -177,7 +209,10 @@ export class MinioService implements OnModuleInit {
   }
 
   async objectExists(objectKey: string): Promise<boolean> {
-    if (this.isDisabled) return false;
+    if (this.isDisabled) {
+      const p = path.join(process.cwd(), 'uploads', objectKey);
+      return fs.existsSync(p);
+    }
     try {
       await this.minioClient.statObject(this.bucketName, objectKey);
       return true;
