@@ -156,11 +156,18 @@ export class MinioService implements OnModuleInit {
   /** Stream de lectura de un objeto (para empaquetar ZIPs en el servidor). */
   async getObjectStream(objectKey: string): Promise<Readable> {
     if (this.isDisabled) {
+      const isDesignation = objectKey.toLowerCase().includes('designac');
+      const fallbackOfficialDocx = isDesignation
+        ? 'Designación de Estudiantes Oficial.docx'
+        : 'Solicitud de Prácticas Oficial.docx';
+
       const candidates = [
         path.join(process.cwd(), 'uploads', objectKey),
         path.join(process.cwd(), objectKey),
         path.join(process.cwd(), 'apps/web/public/templates', path.basename(objectKey)),
+        path.join(process.cwd(), 'apps/web/public/templates', fallbackOfficialDocx),
         path.join(process.cwd(), 'apps/web/public/templates/Solicitud de Prácticas Oficial.docx'),
+        path.join(process.cwd(), 'apps/web/public/templates/Designación de Estudiantes Oficial.docx'),
       ];
       for (const p of candidates) {
         if (fs.existsSync(p)) return fs.createReadStream(p);
@@ -173,11 +180,18 @@ export class MinioService implements OnModuleInit {
   /** Descarga un objeto completo a un Buffer. */
   async getObjectBuffer(objectKey: string): Promise<Buffer> {
     if (this.isDisabled) {
+      const isDesignation = objectKey.toLowerCase().includes('designac');
+      const fallbackOfficialDocx = isDesignation
+        ? 'Designación de Estudiantes Oficial.docx'
+        : 'Solicitud de Prácticas Oficial.docx';
+
       const candidates = [
         path.join(process.cwd(), 'uploads', objectKey),
         path.join(process.cwd(), objectKey),
         path.join(process.cwd(), 'apps/web/public/templates', path.basename(objectKey)),
+        path.join(process.cwd(), 'apps/web/public/templates', fallbackOfficialDocx),
         path.join(process.cwd(), 'apps/web/public/templates/Solicitud de Prácticas Oficial.docx'),
+        path.join(process.cwd(), 'apps/web/public/templates/Designación de Estudiantes Oficial.docx'),
       ];
       for (const p of candidates) {
         if (fs.existsSync(p)) return fs.readFileSync(p);
