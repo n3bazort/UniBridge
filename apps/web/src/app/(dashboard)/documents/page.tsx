@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FileText, Hash } from 'lucide-react'
+import { getAssetUrl } from '@/lib/utils'
 
 interface DocumentTemplate {
   id: string
@@ -1034,7 +1035,7 @@ function MiniTemplatePreview({ template }: { template: DocumentTemplate }) {
         .catch(() => setResolvedBg(null));
     }
   }, [rawBg]);
-  const [bgImage] = useImage(resolvedBg || '');
+  const [bgImage] = useImage(getAssetUrl(resolvedBg) || '');
   // Aumentar la escala para que se vea mucho más grande
   const scale = 0.16;
   const width = content?.width || 1123;

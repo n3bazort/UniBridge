@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/store/auth-store'
+import { getAssetUrl } from '@/lib/utils'
 import {
   Plus, Trash2, AlignLeft, AlignCenter, AlignRight,
   Type, Image as ImageIcon, Save, Settings, Layers, X
@@ -73,7 +74,7 @@ export function CertificateDesignerFull() {
   const stageRef = useRef<any>(null)
   const bgFileRef = useRef<HTMLInputElement>(null)
   const [canvasSize, setCanvasSize] = useState({ w: 800, h: 600, scale: 0.6 })
-  const [bgImage] = useImage(bgImageUrl || '')
+  const [bgImage] = useImage(getAssetUrl(bgImageUrl) || '')
 
   /* ─────────────────────────────────────────────
      AUTO-FIT: document always fills available space
