@@ -154,77 +154,68 @@ export class MinioService implements OnModuleInit {
     return `${disposicion}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(nombre)}`;
   }
 
+  private getLocalCandidatePaths(objectKey: string): string[] {
+    const lower = objectKey.toLowerCase();
+    const isDesignation = lower.includes('designac');
+    const hasSignature = lower.includes('firma') || lower.includes('sello');
+
+    let fallbackDocx = 'Solicitud de Prácticas Oficial.docx';
+    if (isDesignation && hasSignature) {
+      fallbackDocx = 'Designación (con firma y sello) de Estudiantes Oficial.docx';
+    } else if (isDesignation) {
+      fallbackDocx = 'Designación de Estudiantes Oficial.docx';
+    } else if (hasSignature) {
+      fallbackDocx = 'Solicitud (con firma y sello) de Prácticas Oficial.docx';
+    }
+
+    return [
+      path.join(process.cwd(), 'uploads', objectKey),
+      path.join(process.cwd(), objectKey),
+      path.join(process.cwd(), 'apps/web/public/templates', path.basename(objectKey)),
+      path.join(process.cwd(), 'apps/web/public/templates', fallbackDocx),
+      path.join(process.cwd(), 'apps/web/public/templates/Solicitud (con firma y sello) de Prácticas Oficial.docx'),
+      path.join(process.cwd(), 'apps/web/public/templates/Designación (con firma y sello) de Estudiantes Oficial.docx'),
+      path.join(process.cwd(), 'apps/web/public/templates/Solicitud de Prácticas Oficial.docx'),
+      path.join(process.cwd(), 'apps/web/public/templates/Designación de Estudiantes Oficial.docx'),
+    ];
+  }
+
   /** Stream de lectura de un objeto (para empaquetar ZIPs en el servidor). */
   async getObjectStream(objectKey: string): Promise<Readable> {
-    if (this.isDisabled) {
-      const lower = objectKey.toLowerCase();
-      const isDesignation = lower.includes('designac');
-      const hasSignature = lower.includes('firma') || lower.includes('sello');
-
-      let fallbackDocx = 'Solicitud de Prácticas Oficial.docx';
-      if (isDesignation && hasSignature) {
-        fallbackDocx = 'Designación (con firma y sello) de Estudiantes Oficial.docx';
-      } else if (isDesignation) {
-        fallbackDocx = 'Designación de Estudiantes Oficial.docx';
-      } else if (hasSignature) {
-        fallbackDocx = 'Solicitud (con firma y sello) de Prácticas Oficial.docx';
+    if (!this.isDisabled) {
+      try {
+        return await this.minioClient.getObject(this.bucketName, objectKey);
+      } catch (err) {
+        this.logger.warn(`Objeto ${objectKey} no encontrado en MinIO. Usando fallback de disco local.`);
       }
-
-      const candidates = [
-        path.join(process.cwd(), 'uploads', objectKey),
-        path.join(process.cwd(), objectKey),
-        path.join(process.cwd(), 'apps/web/public/templates', path.basename(objectKey)),
-        path.join(process.cwd(), 'apps/web/public/templates', fallbackDocx),
-        path.join(process.cwd(), 'apps/web/public/templates/Solicitud (con firma y sello) de Prácticas Oficial.docx'),
-        path.join(process.cwd(), 'apps/web/public/templates/Designación (con firma y sello) de Estudiantes Oficial.docx'),
-        path.join(process.cwd(), 'apps/web/public/templates/Solicitud de Prácticas Oficial.docx'),
-        path.join(process.cwd(), 'apps/web/public/templates/Designación de Estudiantes Oficial.docx'),
-      ];
-      for (const p of candidates) {
-        if (fs.existsSync(p)) return fs.createReadStream(p);
-      }
-      throw new Error(`Archivo no encontrado localmente: ${objectKey}`);
     }
-    return this.minioClient.getObject(this.bucketName, objectKey);
+    const candidates = this.getLocalCandidatePaths(objectKey);
+    for (const p of candidates) {
+      if (fs.existsSync(p)) return fs.createReadStream(p);
+    }
+    throw new Error(`Archivo no encontrado ni en MinIO ni en disco local: ${objectKey}`);
   }
 
   /** Descarga un objeto completo a un Buffer. */
   async getObjectBuffer(objectKey: string): Promise<Buffer> {
-    if (this.isDisabled) {
-      const lower = objectKey.toLowerCase();
-      const isDesignation = lower.includes('designac');
-      const hasSignature = lower.includes('firma') || lower.includes('sello');
-
-      let fallbackDocx = 'Solicitud de Prácticas Oficial.docx';
-      if (isDesignation && hasSignature) {
-        fallbackDocx = 'Designación (con firma y sello) de Estudiantes Oficial.docx';
-      } else if (isDesignation) {
-        fallbackDocx = 'Designación de Estudiantes Oficial.docx';
-      } else if (hasSignature) {
-        fallbackDocx = 'Solicitud (con firma y sello) de Prácticas Oficial.docx';
+    if (!this.isDisabled) {
+      try {
+        const stream = await this.minioClient.getObject(this.bucketName, objectKey);
+        const chunks: Buffer[] = [];
+        for await (const chunk of stream) {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        }
+        return Buffer.concat(chunks);
+      } catch (err) {
+        this.logger.warn(`Buffer de ${objectKey} no encontrado en MinIO. Usando fallback de disco local.`);
       }
+    }
 
-      const candidates = [
-        path.join(process.cwd(), 'uploads', objectKey),
-        path.join(process.cwd(), objectKey),
-        path.join(process.cwd(), 'apps/web/public/templates', path.basename(objectKey)),
-        path.join(process.cwd(), 'apps/web/public/templates', fallbackDocx),
-        path.join(process.cwd(), 'apps/web/public/templates/Solicitud (con firma y sello) de Prácticas Oficial.docx'),
-        path.join(process.cwd(), 'apps/web/public/templates/Designación (con firma y sello) de Estudiantes Oficial.docx'),
-        path.join(process.cwd(), 'apps/web/public/templates/Solicitud de Prácticas Oficial.docx'),
-        path.join(process.cwd(), 'apps/web/public/templates/Designación de Estudiantes Oficial.docx'),
-      ];
-      for (const p of candidates) {
-        if (fs.existsSync(p)) return fs.readFileSync(p);
-      }
-      throw new Error(`Archivo no encontrado localmente: ${objectKey}`);
+    const candidates = this.getLocalCandidatePaths(objectKey);
+    for (const p of candidates) {
+      if (fs.existsSync(p)) return fs.readFileSync(p);
     }
-    const stream = await this.getObjectStream(objectKey);
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    }
-    return Buffer.concat(chunks);
+    throw new Error(`Archivo no encontrado ni en MinIO ni en disco local: ${objectKey}`);
   }
 
   /** Elimina un objeto del bucket (ej. al borrar una plantilla). */
