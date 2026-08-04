@@ -517,12 +517,20 @@ export class GeneratedDocumentsService implements OnModuleInit {
     overwrite?: boolean,
     asPdf?: boolean,
   ) {
-    // 1. Obtener template
-    const template = await this.prisma.documentTemplate.findUnique({
-      where: { id: templateId },
-    });
-    if (!template || template.type !== 'DOCX') {
-      throw new NotFoundException('Template DOCX no encontrado');
+    // 1. Obtener template con fallback seguro por si templateId no viene o no es válido
+    let template = null;
+    if (templateId) {
+      template = await this.prisma.documentTemplate.findUnique({
+        where: { id: templateId },
+      });
+    }
+    if (!template) {
+      template = await this.prisma.documentTemplate.findFirst({
+        where: { type: 'DOCX' },
+      });
+    }
+    if (!template) {
+      throw new NotFoundException('Template DOCX no encontrado en el sistema');
     }
 
     // Las plantillas subidas antes de que existieran los dos formatos guardan el

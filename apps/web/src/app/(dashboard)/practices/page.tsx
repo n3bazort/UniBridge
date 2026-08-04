@@ -579,7 +579,7 @@ export default function PracticesPage() {
 
       const response = await api.post('/generated-documents/generate-oficio', {
         kind: modal.kind,
-        templateId: targetTemplate.id,
+        templateId: targetTemplate?.id,
         studentIds,
         overwrite: modal.existing,
         asPdf: solicitudAsPdf,
