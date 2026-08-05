@@ -316,7 +316,7 @@ function CertificatesPageInner() {
     setSendingToSignature(true)
     try {
       const res = await api.post('/signatures/batches', { documentIds: Array.from(selectedIds) })
-      toast.success(`Lote ${res.data.code} enviado al circuito de firma (Decano → Responsable de Prácticas)`)
+      toast.success(`Lote ${res.data.code} enviado al circuito de firma (Responsable de Prácticas → Decano)`)
       setSelectedIds(new Set())
       setViewMode('batches')
       refetch()
@@ -1205,7 +1205,7 @@ function CertificatesPageInner() {
                   </div>
                   <h3 className="text-[15px] font-bold text-slate-700">Aún no hay lotes de firma</h3>
                   <p className="text-[13px] text-slate-400 mt-1 max-w-[400px]">
-                    Selecciona documentos en la pestaña &quot;Documentos&quot; y presiona &quot;Enviar a firma&quot; para iniciar el circuito Decano → Responsable de Prácticas.
+                    Selecciona documentos en la pestaña &quot;Documentos&quot; y presiona &quot;Enviar a firma&quot; para iniciar el circuito Responsable de Prácticas → Decano.
                   </p>
                 </div>
               ) : (

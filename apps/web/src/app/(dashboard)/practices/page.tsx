@@ -1106,7 +1106,7 @@ export default function PracticesPage() {
                 />
                 <span className="text-[12.5px] text-slate-600 leading-snug">
                   <span className="font-semibold text-[#111827]">Enviar a firma automáticamente</span> al terminar
-                  (circuito Decano → Responsable de Prácticas)
+                  (circuito Responsable de Prácticas → Decano)
                 </span>
               </label>
 
