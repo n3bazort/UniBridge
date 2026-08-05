@@ -25,7 +25,12 @@ export class AuditLogsController {
     const take = Math.min(parseInt(limit || '20', 10), 100); // Máximo 100
 
     return this.prisma.auditLog.findMany({
-      where: tableName ? { tableName } : undefined,
+      where: {
+        tableName: {
+          notIn: ['RefreshToken', 'Session', 'UserToken', 'Unknown'],
+        },
+        ...(tableName ? { tableName } : {}),
+      },
       take,
       orderBy: { createdAt: 'desc' },
       select: {

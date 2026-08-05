@@ -260,16 +260,35 @@ export default function OverviewPage() {
             <h3 className="text-sm font-medium text-slate-800 mb-5">Actividad Reciente</h3>
             <div className="flex-1 flex flex-col gap-4">
               {recentActivity.length > 0 ? (
-                recentActivity.map((log: any, i: number) => (
-                  <ActivityItem
-                    key={i}
-                    icon={<FileText />}
-                    title={`${log.action} en ${log.tableName}`}
-                    desc={`ID: ${String(log.recordId).slice(0, 8)}...`}
-                    time={new Date(log.createdAt).toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' })}
-                    iconColor="text-blue-500"
-                  />
-                ))
+                recentActivity.map((log: any, i: number) => {
+                  const tableMap: Record<string, string> = {
+                    GeneratedDocument: 'Documento oficial',
+                    Practice: 'Práctica preprofesional',
+                    Student: 'Registro de estudiante',
+                    Company: 'Empresa receptora',
+                    DocumentTemplate: 'Plantilla de documento',
+                    SignatureBatch: 'Circuito de firma',
+                    User: 'Cuenta de usuario',
+                  }
+                  const actionMap: Record<string, string> = {
+                    create: 'Emisión / Creación',
+                    update: 'Actualización de estado',
+                    delete: 'Eliminación',
+                    updateMany: 'Actualización masiva',
+                  }
+                  const title = tableMap[log.tableName] || `${log.action} en ${log.tableName}`
+                  const desc = `${actionMap[log.action] || log.action} (Ref: ${String(log.recordId).slice(0, 8)})`
+                  return (
+                    <ActivityItem
+                      key={i}
+                      icon={<FileText />}
+                      title={title}
+                      desc={desc}
+                      time={new Date(log.createdAt).toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' })}
+                      iconColor="text-blue-500"
+                    />
+                  )
+                })
               ) : (
                 <>
                   <ActivityItem icon={<FileText />} title="Sin actividad reciente" desc="Las acciones del sistema aparecen aquí" time="" iconColor="text-slate-400" />
