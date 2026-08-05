@@ -76,10 +76,18 @@ export class PracticesController {
     return this.practicesService.recalculateAllStatuses();
   }
 
+  @Get('tutors')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Buscar nombres de tutores académicos ya registrados en prácticas (max 3)' })
+  async searchTutors(@Query('search') search: string) {
+    if (!search || search.trim().length < 2) return []
+    return this.practicesService.searchTutorNames(search.trim())
+  }
+
   @Delete(':id')
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Eliminar práctica' })
   remove(@Param('id') id: string) {
-    return this.practicesService.remove(id);
+    return this.practicesService.remove(id)
   }
 }

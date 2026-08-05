@@ -52,7 +52,7 @@ export function InlineCompanyModal({ isOpen, onClose, onCreated }: InlineCompany
   }
 
   return (
-    <div className="fixed inset-0 z-[300] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[300] bg-slate-900/15 flex items-center justify-center p-4 animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex items-center justify-between">

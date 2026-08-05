@@ -353,6 +353,19 @@ export class PracticesService {
     return this.prisma.practice.delete({ where: { id } });
   }
 
+  async searchTutorNames(search: string): Promise<string[]> {
+    const rows = await this.prisma.practice.findMany({
+      where: {
+        tutorName: { contains: search, mode: 'insensitive' },
+        deletedAt: null,
+      },
+      select: { tutorName: true },
+      distinct: ['tutorName'],
+      take: 3,
+    });
+    return rows.map(r => r.tutorName).filter(Boolean) as string[];
+  }
+
   async bulkImport(programName: string, students: any[], facultyId?: string) {
     // Validate or auto-create active period
     let activePeriod = await this.prisma.academicPeriod.findFirst({ where: { isActive: true } });
