@@ -477,7 +477,7 @@ export default function PracticesPage() {
           if (freshIds.length > 0) {
             const { data: batch } = await api.post('/signatures/batches', { documentIds: freshIds })
             toast.success(`Lote ${batch.code} enviado al circuito de firma (${freshIds.length} documentos)`, {
-              action: { label: 'Ver circuito', onClick: () => router.push('/certificates') },
+              action: { label: 'Ver circuito', onClick: () => router.push(`/certificates?highlight=${freshIds[0]}`) },
               duration: 8000,
             })
           }

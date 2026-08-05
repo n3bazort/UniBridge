@@ -1,0 +1,37 @@
+warning: in the working copy of 'apps/api/src/modules/signatures/signatures.service.ts', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/apps/api/src/modules/signatures/signatures.service.ts b/apps/api/src/modules/signatures/signatures.service.ts[m
+[1mindex 17f2e40..f8ce670 100644[m
+[1m--- a/apps/api/src/modules/signatures/signatures.service.ts[m
+[1m+++ b/apps/api/src/modules/signatures/signatures.service.ts[m
+[36m@@ -18,11 +18,12 @@[m [mimport { PracticesService } from '../practices/practices.service';[m
+  * Flujo de firma digital con FirmaEC (firma externa):[m
+  *[m
+  *  1. ADMIN/COORDINATOR crea un Lote de Firma con N documentos generados.[m
+[31m- *  2. El DECANO (rol SIGNER, SignerProfile.DEAN) descarga el ZIP del lote,[m
+[31m- *     firma los PDFs localmente con FirmaEC y los re-sube.[m
+[32m+[m[32m *     El lote nace en PENDING_DIRECTOR.[m
+[32m+[m[32m *  2. El RESPONSABLE DE PRÁCTICAS (rol SIGNER, SignerProfile.DIRECTOR) descarga[m
+[32m+[m[32m *     el ZIP del lote, firma los PDFs localmente con FirmaEC y los re-sube.[m
+  *  3. El sistema verifica que cada PDF contenga firma digital, calcula el[m
+[31m- *     SHA-256, y cuando todos los ítems están firmados avanza el lote.[m
+[31m- *  4. El DIRECTOR repite el proceso sobre los PDFs ya firmados por el decano.[m
+[32m+[m[32m *     SHA-256, y cuando todos los ítems están firmados pasa a PENDING_DEAN.[m
+[32m+[m[32m *  4. El DECANO repite el proceso sobre los PDFs ya firmados por el responsable.[m
+  *  5. Al completarse, cada documento queda SIGNED y visible para su estudiante.[m
+  *[m
+  * El emparejamiento archivo→documento se hace por el documentCode presente[m
+[1mdiff --git a/packages/db/prisma/schema.prisma b/packages/db/prisma/schema.prisma[m
+[1mindex f67616b..15ad09e 100755[m
+[1m--- a/packages/db/prisma/schema.prisma[m
+[1m+++ b/packages/db/prisma/schema.prisma[m
+[36m@@ -240,8 +240,8 @@[m [menum SignatureStatus {[m
+ }[m
+ [m
+ enum SignerRole {[m
+[31m-  DEAN      // Decano: firma primero[m
+[31m-  DIRECTOR  // Director: firma sobre el PDF ya firmado por el decano[m
+[32m+[m[32m  DEAN      // Decano: firma en segundo lugar, sobre el PDF que ya suscribió el responsable[m
+[32m+[m[32m  DIRECTOR  // Responsable de Prácticas: firma primero[m
+ }[m
+ [m
+ // Invitación genérica para que cualquier rol se auto-registre (ADMIN, COORDINATOR, SIGNER)[m
