@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import * as XLSX from 'xlsx'
-import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle, Loader2 } from 'lucide-react'
+import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle, Loader2, Plus } from 'lucide-react'
 import { FilterChip } from '@/components/ui/filter-chip'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -13,6 +13,8 @@ import { ReassignCompanyModal, rememberRecentCompany, type ReassignImpact } from
 import { FloatingActionBar } from '@/components/practices/FloatingActionBar'
 import { ConfirmCertificatesModal } from '@/components/practices/ConfirmCertificatesModal'
 import { RightDetailPanel } from '@/components/practices/RightDetailPanel'
+import { NewPracticeModal } from '@/components/practices/NewPracticeModal'
+import { MissingDataModal } from '@/components/practices/MissingDataModal'
 import { RoleGate } from '@/components/shared/role-gate'
 import { Button } from '@/components/ui/button'
 import { useSearchStore } from '@/store/search'
@@ -75,6 +77,23 @@ export default function PracticesPage() {
   const [reassignPractice, setReassignPractice] = useState<Practice | null>(null)
   const [isReassigning, setIsReassigning] = useState(false)
   const [recentlyInvalidatedDocIds, setRecentlyInvalidatedDocIds] = useState<Set<string>>(new Set())
+
+  // Modal de Nueva Práctica (Google / Monday style)
+  const [isNewPracticeModalOpen, setIsNewPracticeModalOpen] = useState(false)
+  const [practiceToEdit, setPracticeToEdit] = useState<any | null>(null)
+
+  // Guardafuegos de emisión: modal de diagnóstico de datos faltantes
+  const [missingDataGuard, setMissingDataGuard] = useState<{
+    isOpen: boolean
+    studentName?: string
+    documentType: string
+    missingFields: string[]
+    practiceToFix?: any
+  }>({
+    isOpen: false,
+    documentType: '',
+    missingFields: [],
+  })
 
   // Confirmación de emisión de certificados (con palomita de auto-firma)
   const [showConfirmCerts, setShowConfirmCerts] = useState(false)
@@ -498,12 +517,65 @@ export default function PracticesPage() {
       setGeneratingCertIds(new Set())
     }
   }
+  const validatePracticeDataForDoc = (practice: Practice, docType: string): string[] => {
+    const missing: string[] = []
+    if (practice.status === 'PENDING') {
+      missing.push('La práctica se encuentra en estado "Borrador"')
+    }
+    if (!practice.student) {
+      missing.push('Estudiante asignado')
+    } else {
+      if (!practice.student.dni) missing.push('Cédula del estudiante')
+      if (!practice.student.firstName || !practice.student.lastName) missing.push('Nombres y apellidos del estudiante')
+    }
+    if (!practice.company) {
+      missing.push('Empresa receptora asignada')
+    } else {
+      if (!practice.company.name) missing.push('Nombre Razón Social de la empresa')
+      if ((docType === 'SOLICITUD' || docType === 'DESIGNACION') && !practice.company.recipientName) {
+        missing.push('Destinatario y cargo de oficios en la empresa')
+      }
+    }
+    if (docType === 'SOLICITUD' || docType === 'DESIGNACION') {
+      if (!practice.workArea || !practice.workArea.trim()) {
+        missing.push('Área de trabajo en la empresa ("en el área de: ___")')
+      }
+    }
+    if (docType === 'DESIGNACION' || docType === 'CERTIFICADO') {
+      if (!practice.tutorName || !practice.tutorName.trim()) {
+        missing.push('Tutor Académico asignado')
+      }
+    }
+    if (docType === 'CERTIFICADO') {
+      if (!practice.totalHours || practice.totalHours <= 0) missing.push('Horas totales (> 0)')
+      if (!practice.practiceLevel) missing.push('Nivel de práctica')
+      if (!practice.academicLevel) missing.push('Nivel académico')
+    }
+    return missing
+  }
+
   /**
    * Paso previo a generar el oficio: valida requisitos y abre el modal donde
    * se elige el formato (DOCX o PDF) y se confirma el reemplazo si ya existe.
    */
   const handleGenerateOficio = async (kind: 'SOLICITUD' | 'DESIGNACION', groupItems: Practice[]) => {
     if (!groupItems || groupItems.length === 0) return
+
+    // Guardafuegos de validación: chequear si algún estudiante del grupo tiene datos faltantes
+    for (const item of groupItems) {
+      const missing = validatePracticeDataForDoc(item, kind)
+      if (missing.length > 0) {
+        const studentName = item.student ? `${item.student.firstName} ${item.student.lastName}` : undefined
+        setMissingDataGuard({
+          isOpen: true,
+          studentName,
+          documentType: kind === 'SOLICITUD' ? 'Solicitud (PAP-001)' : 'Designación',
+          missingFields: missing,
+          practiceToFix: item,
+        })
+        return
+      }
+    }
 
     const company = groupItems[0].company
     if (!company) {
@@ -764,6 +836,13 @@ export default function PracticesPage() {
         {/* Top Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-end gap-4 mb-6 w-full max-w-[1600px] mx-auto">
           <div className="flex items-center gap-2">
+            <Button
+              onClick={() => { setPracticeToEdit(null); setIsNewPracticeModalOpen(true); }}
+              className="bg-[#111827] hover:bg-[#1f2937] text-white font-bold px-4 py-2.5 text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="w-4 h-4 text-blue-400" />
+              <span>Nueva Práctica</span>
+            </Button>
             {activeTab === 'unassigned' && selectedIds.size > 0 && (
               <Button 
                 onClick={() => toast.info('La interfaz de vinculación a Empresa estará disponible en la próxima actualización.')}
@@ -1267,6 +1346,34 @@ export default function PracticesPage() {
             </div>
           </div>
         )}
+
+        {/* Modal de Nueva Práctica (Google / Monday Style) */}
+        <NewPracticeModal
+          isOpen={isNewPracticeModalOpen}
+          onClose={() => {
+            setIsNewPracticeModalOpen(false)
+            setPracticeToEdit(null)
+          }}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ['practices-all'] })
+          }}
+          practiceToEdit={practiceToEdit}
+        />
+
+        {/* Modal de Alerta y Diagnóstico de Datos Faltantes */}
+        <MissingDataModal
+          isOpen={missingDataGuard.isOpen}
+          onClose={() => setMissingDataGuard((prev) => ({ ...prev, isOpen: false }))}
+          studentName={missingDataGuard.studentName}
+          documentType={missingDataGuard.documentType}
+          missingFields={missingDataGuard.missingFields}
+          onFixData={() => {
+            if (missingDataGuard.practiceToFix) {
+              setPracticeToEdit(missingDataGuard.practiceToFix)
+              setIsNewPracticeModalOpen(true)
+            }
+          }}
+        />
       </div>
     </RoleGate>
   )

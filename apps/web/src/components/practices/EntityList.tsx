@@ -442,6 +442,11 @@ export function EntityList({
                         <div className="flex flex-col flex-1 min-w-[180px] truncate pr-4">
                           <span className="text-[13.5px] font-semibold text-[#111827] truncate flex items-center gap-1.5">
                             {practice.student.firstName} {practice.student.lastName}
+                            {practice.status === 'PENDING' && (
+                              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-300/80 shadow-2xs">
+                                Borrador
+                              </span>
+                            )}
                           </span>
                           {/* Solo lo que VARÍA entre compañeros; lo común vive en
                               la cabecera. Si nada varía, la cédula da identidad. */}
