@@ -732,7 +732,7 @@ export default function PracticesPage() {
   }
 
   const handleExportPracticesExcel = () => {
-    const listToExport = filteredPractices.length ? filteredPractices : practices
+    const listToExport = filteredPractices.length ? filteredPractices : rawPractices
     if (!listToExport.length) {
       toast.error('No hay prácticas para exportar')
       return
