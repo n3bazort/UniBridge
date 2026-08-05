@@ -49,6 +49,7 @@ export interface Practice {
     dni: string
     phone?: string
     user?: { email: string }
+    program?: { id?: string; name?: string }
     generatedDocs?: GeneratedDoc[]
   }
   company?: {
