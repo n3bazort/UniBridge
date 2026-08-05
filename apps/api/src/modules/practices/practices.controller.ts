@@ -48,6 +48,16 @@ export class PracticesController {
     return this.practicesService.findAll(paginationDto);
   }
 
+  // IMPORTANTE: esta ruta debe ir ANTES de @Get(':id') para que NestJS
+  // no interprete 'tutors' como un parámetro :id
+  @Get('tutors')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Buscar nombres de tutores académicos ya registrados en prácticas (max 3)' })
+  async searchTutors(@Query('search') search: string) {
+    if (!search || search.trim().length < 2) return []
+    return this.practicesService.searchTutorNames(search.trim())
+  }
+
   @Get(':id')
   @Roles(Role.ADMIN, Role.COORDINATOR, Role.STUDENT)
   @ApiOperation({ summary: 'Obtener detalle de práctica' })
@@ -76,13 +86,7 @@ export class PracticesController {
     return this.practicesService.recalculateAllStatuses();
   }
 
-  @Get('tutors')
-  @Roles(Role.ADMIN, Role.COORDINATOR)
-  @ApiOperation({ summary: 'Buscar nombres de tutores académicos ya registrados en prácticas (max 3)' })
-  async searchTutors(@Query('search') search: string) {
-    if (!search || search.trim().length < 2) return []
-    return this.practicesService.searchTutorNames(search.trim())
-  }
+
 
   @Delete(':id')
   @Roles(Role.ADMIN)
