@@ -115,8 +115,11 @@ export class MinioService implements OnModuleInit {
       );
       return objectKey;
     } catch (error) {
-      this.logger.error('Error uploading buffer to MinIO', error);
-      throw error;
+      this.logger.warn(`Error uploading buffer to MinIO for ${objectKey}. Guardando copia en disco local:`, error);
+      const targetPath = path.join(process.cwd(), 'uploads', objectKey);
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.writeFileSync(targetPath, buffer);
+      return objectKey;
     }
   }
 
@@ -127,8 +130,6 @@ export class MinioService implements OnModuleInit {
    */
   async getPresignedUrl(objectKey: string, expirySeconds = 900, downloadName?: string, inline = false): Promise<string> {
     if (this.isDisabled) {
-      // Servido directamente como activo estático por NestJS (/uploads/...)
-      const filename = path.basename(objectKey);
       return `/uploads/${objectKey}`;
     }
 
@@ -141,7 +142,12 @@ export class MinioService implements OnModuleInit {
       };
     }
 
-    return this.minioClient.presignedGetObject(this.bucketName, objectKey, expirySeconds, respHeaders);
+    try {
+      return await this.minioClient.presignedGetObject(this.bucketName, objectKey, expirySeconds, respHeaders);
+    } catch (error) {
+      this.logger.warn(`Error obteniendo presigned URL de MinIO para ${objectKey}, usando fallback local:`, error);
+      return `/uploads/${objectKey}`;
+    }
   }
 
   /** Content-Disposition con nombre de archivo legible. */

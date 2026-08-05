@@ -240,8 +240,8 @@ enum SignatureStatus {
 }
 
 enum SignerRole {
-  DEAN      // Decano: firma primero
-  DIRECTOR  // Director: firma sobre el PDF ya firmado por el decano
+  DEAN      // Decano: firma en segundo lugar, sobre el PDF que ya suscribió el responsable
+  DIRECTOR  // Responsable de Prácticas: firma primero
 }
 
 // Invitación genérica para que cualquier rol se auto-registre (ADMIN, COORDINATOR, SIGNER)

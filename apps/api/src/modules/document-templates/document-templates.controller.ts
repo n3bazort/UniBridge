@@ -70,7 +70,9 @@ export class DocumentTemplatesController {
     storage: memoryStorage(),
     limits: { fileSize: 8 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
+      const isImage = (file.mimetype && file.mimetype.startsWith('image/')) ||
+                      (file.originalname && !!file.originalname.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i));
+      if (isImage) {
         cb(null, true);
       } else {
         cb(new BadRequestException('Solo se permiten imágenes (JPG, PNG, GIF, WEBP)'), false);

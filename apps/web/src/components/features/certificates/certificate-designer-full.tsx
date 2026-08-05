@@ -241,8 +241,9 @@ export function CertificateDesignerFull() {
       setBgImageUrl(res.data.url)
       setBgImageKey(res.data.key || null)
       toast.success('Fondo cargado')
-    } catch {
-      toast.error('No se pudo subir la imagen.')
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'No se pudo subir la imagen.'
+      toast.error(typeof msg === 'string' ? msg : 'No se pudo subir la imagen.')
     } finally {
       e.target.value = ''
     }

@@ -18,11 +18,12 @@ import { PracticesService } from '../practices/practices.service';
  * Flujo de firma digital con FirmaEC (firma externa):
  *
  *  1. ADMIN/COORDINATOR crea un Lote de Firma con N documentos generados.
- *  2. El DECANO (rol SIGNER, SignerProfile.DEAN) descarga el ZIP del lote,
- *     firma los PDFs localmente con FirmaEC y los re-sube.
+ *     El lote nace en PENDING_DIRECTOR.
+ *  2. El RESPONSABLE DE PRÁCTICAS (rol SIGNER, SignerProfile.DIRECTOR) descarga
+ *     el ZIP del lote, firma los PDFs localmente con FirmaEC y los re-sube.
  *  3. El sistema verifica que cada PDF contenga firma digital, calcula el
- *     SHA-256, y cuando todos los ítems están firmados avanza el lote.
- *  4. El DIRECTOR repite el proceso sobre los PDFs ya firmados por el decano.
+ *     SHA-256, y cuando todos los ítems están firmados pasa a PENDING_DEAN.
+ *  4. El DECANO repite el proceso sobre los PDFs ya firmados por el responsable.
  *  5. Al completarse, cada documento queda SIGNED y visible para su estudiante.
  *
  * El emparejamiento archivo→documento se hace por el documentCode presente
