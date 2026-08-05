@@ -69,6 +69,8 @@ export interface Practice {
   academicPeriod?: string
   status: string
   totalHours: number
+  startDate?: string | Date
+  endDate?: string | Date
 }
 
 export interface Group {
