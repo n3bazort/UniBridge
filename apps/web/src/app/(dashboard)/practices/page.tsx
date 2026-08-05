@@ -746,7 +746,7 @@ export default function PracticesPage() {
       'Estado': p.status === 'COMPLETED' ? 'Horas cumplidas' : p.status === 'IN_PROGRESS' ? 'En Curso' : p.status,
       'Horas Totales': p.totalHours || 0,
       'Tutor Académico': p.tutorName || '',
-      'Tutor Empresarial': p.companySupervisor || '',
+      'Tutor Empresarial': p.company?.contactName || '',
       'Período Académico': p.academicPeriod || '',
       'Fecha Inicio': p.startDate ? new Date(p.startDate).toLocaleDateString('es-EC') : '',
       'Fecha Fin': p.endDate ? new Date(p.endDate).toLocaleDateString('es-EC') : '',
