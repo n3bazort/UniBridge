@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
+import * as XLSX from 'xlsx'
 import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle, Loader2 } from 'lucide-react'
 import { FilterChip } from '@/components/ui/filter-chip'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -658,6 +659,40 @@ export default function PracticesPage() {
     }
   }
 
+  const handleExportPracticesExcel = () => {
+    const listToExport = filteredPractices.length ? filteredPractices : practices
+    if (!listToExport.length) {
+      toast.error('No hay prácticas para exportar')
+      return
+    }
+
+    const dataToExport = listToExport.map((p) => ({
+      'Cédula': p.student?.dni || '',
+      'Estudiante': `${p.student?.firstName || ''} ${p.student?.lastName || ''}`.trim(),
+      'Carrera / Programa': p.student?.program?.name || '',
+      'Empresa': p.company?.name || 'Sin asignación',
+      'Estado': p.status === 'COMPLETED' ? 'Horas cumplidas' : p.status === 'IN_PROGRESS' ? 'En Curso' : p.status,
+      'Horas Totales': p.totalHours || 0,
+      'Tutor Académico': p.tutorName || '',
+      'Tutor Empresarial': p.companySupervisor || '',
+      'Período Académico': p.academicPeriod || '',
+      'Fecha Inicio': p.startDate ? new Date(p.startDate).toLocaleDateString('es-EC') : '',
+      'Fecha Fin': p.endDate ? new Date(p.endDate).toLocaleDateString('es-EC') : '',
+    }))
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport)
+    worksheet['!cols'] = [
+      { wch: 12 }, { wch: 30 }, { wch: 30 }, { wch: 35 }, { wch: 20 },
+      { wch: 14 }, { wch: 25 }, { wch: 25 }, { wch: 16 }, { wch: 14 }, { wch: 14 }
+    ]
+
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Prácticas')
+    const dateStr = new Date().toISOString().slice(0, 10)
+    XLSX.writeFile(workbook, `UniBridge_Reporte_Practicas_${dateStr}.xlsx`)
+    toast.success(`Exportadas ${listToExport.length} prácticas a Excel (.xlsx)`)
+  }
+
   const selectedCount = selectedIds.size
   const hasCompletedSelected = Array.from(selectedIds).some(id => rawPractices.find(p => p.id === id)?.status === 'COMPLETED')
   const activePractice = useMemo(() => rawPractices.find(p => p.id === activePracticeId) || null, [rawPractices, activePracticeId])
@@ -808,6 +843,15 @@ export default function PracticesPage() {
                 >
                   <FileText className="w-3.5 h-3.5 text-rose-500" />
                   Emitir período…
+                </button>
+
+                <button
+                  onClick={handleExportPracticesExcel}
+                  className="flex items-center gap-1.5 h-[34px] px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[12.5px] font-bold shadow-soft transition-colors shrink-0 cursor-pointer"
+                  title="Exportar reporte de prácticas actual a un archivo de Excel (.xlsx)"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-100" />
+                  <span>Exportar Excel</span>
                 </button>
 
                 <div className="flex items-center gap-2 bg-white rounded-lg p-1 border shadow-soft shrink-0">
