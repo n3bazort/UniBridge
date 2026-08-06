@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import * as XLSX from 'xlsx'
-import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle, Loader2, Plus, Building2, UserCheck, List } from 'lucide-react'
+import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle, Loader2, Plus, Building2, UserCheck, List, MoreHorizontal } from 'lucide-react'
 import { FilterChip } from '@/components/ui/filter-chip'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -83,6 +83,19 @@ export default function PracticesPage() {
   // Modal de Nueva Práctica (Google / Monday style)
   const [isNewPracticeModalOpen, setIsNewPracticeModalOpen] = useState(false)
   const [practiceToEdit, setPracticeToEdit] = useState<any | null>(null)
+
+  const [showActionsMenu, setShowActionsMenu] = useState(false)
+  const actionsMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target as Node)) {
+        setShowActionsMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Guardafuegos de emisión: modal de diagnóstico de datos faltantes
   const [missingDataGuard, setMissingDataGuard] = useState<{
@@ -983,24 +996,39 @@ export default function PracticesPage() {
 
                 <div className="flex-1" />
 
-                {/* Emisión masiva: todo el período electivo, filtrado por carrera */}
-                <button
-                  onClick={openPeriodCertModal}
-                  className="flex items-center gap-1.5 h-[34px] px-3 rounded-lg bg-white border shadow-soft text-[12.5px] font-medium text-gray-600 hover:text-[#111827] hover:bg-slate-50 transition-colors shrink-0"
-                  title="Emitir los certificados de todos los elegibles de un período"
-                >
-                  <FileText className="w-3.5 h-3.5 text-rose-500" />
-                  Emitir período…
-                </button>
+                {/* Menú de Acciones Secundarias (Exportar / Emitir) */}
+                <div className="relative shrink-0" ref={actionsMenuRef}>
+                  <button
+                    onClick={() => setShowActionsMenu(prev => !prev)}
+                    className="flex items-center gap-1.5 h-[36px] px-3.5 rounded-xl bg-white border border-[#eef2f7] shadow-soft text-[12.5px] font-bold text-[#374151] hover:bg-slate-50 hover:border-[#cbd5e1] transition-colors cursor-pointer"
+                  >
+                    <MoreHorizontal className="w-4 h-4 text-slate-500" />
+                    <span>Acciones</span>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  </button>
 
-                <button
-                  onClick={handleExportPracticesExcel}
-                  className="flex items-center gap-1.5 h-[34px] px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[12.5px] font-bold shadow-soft transition-colors shrink-0 cursor-pointer"
-                  title="Exportar reporte de prácticas actual a un archivo de Excel (.xlsx)"
-                >
-                  <Download className="w-3.5 h-3.5 text-emerald-100" />
-                  <span>Exportar Excel</span>
-                </button>
+                  {showActionsMenu && (
+                    <div 
+                      className="absolute right-0 mt-1.5 w-56 bg-white rounded-[12px] border border-[#eef2f7] shadow-lg p-1.5 z-40"
+                      onClick={() => setShowActionsMenu(false)}
+                    >
+                      <button
+                        onClick={openPeriodCertModal}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-slate-50 rounded-[8px] transition-colors cursor-pointer"
+                      >
+                        <FileText className="w-4 h-4 text-rose-500 shrink-0" />
+                        <span>Emitir certificados de período...</span>
+                      </button>
+                      <button
+                        onClick={handleExportPracticesExcel}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-slate-50 rounded-[8px] transition-colors cursor-pointer"
+                      >
+                        <Download className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Exportar a Excel (.xlsx)</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex items-center gap-2 bg-[#f1f5f9] p-1 rounded-[10px] pr-2 shrink-0">
                   <span className="text-[11.5px] font-medium text-[#64748b] pl-2 hidden sm:inline">Agrupar por:</span>
