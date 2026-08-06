@@ -385,33 +385,32 @@ export function EntityList({
                 <div className="flex items-center gap-2 shrink-0">
                   {onGenerateDesignacion && puedeDesignar && designacionAction.kind !== 'none' && (
                     <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onGenerateDesignacion(group.items)
-                        }}
-                        disabled={isGenerating}
-                        className={cn(
-                          "h-8 flex items-center gap-1.5 rounded-lg text-[12.5px] font-medium transition-all disabled:opacity-50",
-                          allGroupSelected
-                            ? "px-3.5 bg-violet-600 hover:bg-violet-700 text-white shadow-soft shadow-violet-500/20"
-                            : "px-2.5 text-violet-600 hover:bg-violet-50"
-                        )}
-                        title={
-                          designacionAction.kind === 'update'
-                            ? `La designación actual no incluye a ${designacionAction.missing} estudiante(s). Se rehará con el grupo completo.`
-                            : designacionAction.kind === 'regenerate'
-                              ? 'La designación quedó invalidada. Se generará una nueva para el grupo.'
-                              : `Designa a los ${group.count} estudiantes de ${group.name} con su tutor académico`
-                        }
-                      >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        {designacionAction.kind === 'update'
-                          ? `Actualizar designación · incluir ${designacionAction.missing}`
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onGenerateDesignacion(group.items)
+                      }}
+                      disabled={isGenerating}
+                      className={cn(
+                        "h-8 flex items-center gap-1.5 rounded-lg text-[12.5px] font-medium transition-all disabled:opacity-50",
+                        allGroupSelected
+                          ? "px-3.5 bg-violet-600 hover:bg-violet-700 text-white shadow-soft shadow-violet-500/20"
+                          : "px-2.5 text-violet-600 hover:bg-violet-50"
+                      )}
+                      title={
+                        designacionAction.kind === 'update'
+                          ? `La designación actual no incluye a ${designacionAction.missing} estudiante(s). Se rehará con el grupo completo.`
                           : designacionAction.kind === 'regenerate'
-                            ? 'Regenerar designación'
-                            : 'Generar designación'}
-                      </button>
-                    )
+                            ? 'La designación quedó invalidada. Se generará una nueva para el grupo.'
+                            : `Designa a los ${group.count} estudiantes de ${group.name} con su tutor académico`
+                      }
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      {designacionAction.kind === 'update'
+                        ? `Actualizar designación · incluir ${designacionAction.missing}`
+                        : designacionAction.kind === 'regenerate'
+                          ? 'Regenerar designación'
+                          : 'Generar designación'}
+                    </button>
                   )}
                 </div>
               ) : onGenerateSolicitud ? (
