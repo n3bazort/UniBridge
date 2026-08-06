@@ -35,6 +35,18 @@ export function InlineStudentModal({ isOpen, onClose, programs, onCreated }: Inl
       return
     }
 
+    const firstNameWords = firstName.trim().split(/\s+/).filter(Boolean)
+    if (firstNameWords.length < 2) {
+      toast.error('Debe ingresar los 2 nombres del estudiante (ej: Dilian Alexander).')
+      return
+    }
+
+    const lastNameWords = lastName.trim().split(/\s+/).filter(Boolean)
+    if (lastNameWords.length < 2) {
+      toast.error('Debe ingresar los 2 apellidos del estudiante (ej: García López).')
+      return
+    }
+
     setIsSubmitting(true)
     try {
       const res = await api.post('/students', {
@@ -105,28 +117,28 @@ export function InlineStudentModal({ isOpen, onClose, programs, onCreated }: Inl
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[12px] font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1">
-                Nombres <span className="text-rose-500">*</span>
+                Nombres (2 obligatorios) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Ej. Juan Carlos"
+                placeholder="Ej. Dilian Alexander"
                 className="w-full h-10 px-3 text-sm rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900"
               />
             </div>
 
             <div>
               <label className="text-[12px] font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1">
-                Apellidos <span className="text-rose-500">*</span>
+                Apellidos (2 obligatorios) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                placeholder="Ej. Pérez Mendoza"
+                placeholder="Ej. García López"
                 className="w-full h-10 px-3 text-sm rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900"
               />
             </div>

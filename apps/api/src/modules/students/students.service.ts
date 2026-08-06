@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -22,6 +22,16 @@ export class StudentsService {
     }
 
     const { email, ...dtoData } = createStudentDto;
+
+    const firstNameWords = dtoData.firstName.trim().split(/\s+/).filter(Boolean);
+    if (firstNameWords.length < 2) {
+      throw new BadRequestException('Debe ingresar 2 nombres para el estudiante (ej: Dilian Alexander)');
+    }
+
+    const lastNameWords = dtoData.lastName.trim().split(/\s+/).filter(Boolean);
+    if (lastNameWords.length < 2) {
+      throw new BadRequestException('Debe ingresar 2 apellidos para el estudiante (ej: García López)');
+    }
 
     // 1. Resolver facultyId desde la carrera (Program) si no viene especificado
     let facultyId = dtoData.facultyId;
