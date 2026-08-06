@@ -8,6 +8,7 @@ import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSe
 import { FilterChip } from '@/components/ui/filter-chip'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import { EntityList, type Group, type Practice } from '@/components/practices/EntityList'
 import { ReassignCompanyModal, rememberRecentCompany, type ReassignImpact } from '@/components/practices/ReassignCompanyModal'
 import { FloatingActionBar } from '@/components/practices/FloatingActionBar'
@@ -897,40 +898,60 @@ export default function PracticesPage() {
     e.preventDefault();
     isDragging.current = true;
     document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  };
+function CompactFilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+  className,
+}: {
+  label: string
+  value: string | null
+  onChange: (val: any) => void
+  options: Array<{ value: string | null; label: string }>
+  className?: string
+}) {
+  const isSelected = value !== null
+
+  return (
+    <div className={cn("relative inline-flex items-center shrink-0", className)}>
+      <select
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
+        className={cn(
+          "appearance-none h-8 pl-3 pr-7 rounded-lg text-[12px] font-semibold transition-all cursor-pointer shadow-xs border focus:outline-none focus:ring-2 focus:ring-blue-500/10",
+          isSelected
+            ? "bg-blue-50/90 border-blue-200 text-blue-700 font-bold"
+            : "bg-white border-[#eef2f7] text-slate-600 hover:text-slate-900 hover:border-slate-300"
+        )}
+      >
+        {options.map((opt, i) => (
+          <option key={i} value={opt.value ?? ''}>
+            {label}: {opt.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className={cn("w-3.5 h-3.5 absolute right-2 pointer-events-none", isSelected ? "text-blue-500" : "text-slate-400")} />
+    </div>
+  )
+}
 
   return (
     <RoleGate allowedRoles={['ADMIN', 'COORDINATOR']}>
       <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8] pt-6 pb-12 px-4 lg:px-8">
         
-        {/* Header Row: Title + + Nueva Práctica */}
-        <div className="flex items-center justify-between gap-6 mb-5 w-full max-w-[1600px] mx-auto">
-          <div>
-            <h1 className="text-xl font-bold text-[#111827]">Registro de Prácticas</h1>
-            <p className="text-[12.5px] text-[#6b7280]">Gestión de asignaciones de empresa, seguimiento y certificados</p>
-          </div>
-          <Button
-            onClick={() => { setPracticeToEdit(null); setIsNewPracticeModalOpen(true); }}
-            className="bg-[#111827] hover:bg-[#1f2937] text-white font-bold px-4 py-2.5 text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-          >
-            <Plus className="w-4 h-4 text-blue-400" />
-            <span>Nueva Práctica</span>
-          </Button>
-        </div>
-
         {/* Main Grid: Entity List + Right Panel */}
         <div 
           id="main-grid-container"
-          className="flex flex-col xl:flex-row gap-[24px] items-stretch w-full max-w-[1600px] mx-auto relative mt-1"
+          className="flex flex-col xl:flex-row gap-[24px] items-stretch w-full max-w-[1600px] mx-auto relative mt-0"
         >
           
           {/* Left Column: Entity List + Filters */}
-          <div className="w-full xl:flex-1 flex flex-col gap-5 min-w-0">
+          <div className="w-full xl:flex-1 flex flex-col gap-4 min-w-0">
             
-            {/* Unified Filter Chips Bar */}
-            <div className="flex flex-wrap items-center gap-2.5 w-full">
-              <FilterChip 
+            {/* Minimalist Single-Row Toolbar */}
+            <div className="flex flex-wrap items-center gap-2 w-full bg-white p-2 rounded-[14px] border border-[#eef2f7] shadow-soft">
+              <CompactFilterSelect 
                 label="Periodo" 
                 value={filterPeriod} 
                 onChange={setFilterPeriod}
@@ -940,7 +961,7 @@ export default function PracticesPage() {
                 ]} 
               />
               
-              <FilterChip 
+              <CompactFilterSelect 
                 label="Estado" 
                 value={filterStatus} 
                 onChange={setFilterStatus}
@@ -954,9 +975,9 @@ export default function PracticesPage() {
                 ]}
               />
               
-              <FilterChip 
+              <CompactFilterSelect 
                 label="Facultad" 
-                className="hidden md:block"
+                className="hidden md:inline-flex"
                 value={filterFaculty} 
                 onChange={setFilterFaculty}
                 options={[
@@ -965,40 +986,40 @@ export default function PracticesPage() {
                 ]} 
               />
               
-              <FilterChip 
+              <CompactFilterSelect 
                 label="Carrera" 
-                className="hidden xl:block"
+                className="hidden xl:inline-flex"
                 value={filterProgram} 
                 onChange={setFilterProgram}
                 options={[
-                  { value: null, label: 'Todos' },
+                  { value: null, label: 'Todas' },
                   ...programs.map(p => ({ value: p as string, label: p as string }))
                 ]} 
               />
 
-              <div className="flex-1 min-w-[12px]" />
+              <div className="flex-1 min-w-[8px]" />
 
               {/* GroupBy dropdown */}
-              <div className="flex items-center gap-2 bg-[#f1f5f9] p-1 rounded-[10px] pr-2 shrink-0">
-                <span className="text-[11.5px] font-medium text-[#64748b] pl-2 hidden sm:inline">Agrupar por:</span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[11.5px] font-medium text-[#64748b] hidden sm:inline">Agrupar por:</span>
                 <div className="relative flex items-center">
                   <select
                     value={groupBy}
                     onChange={(e) => setGroupBy(e.target.value as any)}
-                    className="appearance-none bg-white border border-[#eef2f7] rounded-[8px] pl-8 pr-7 py-1.5 text-[11.5px] font-bold text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-pointer shadow-sm hover:border-[#cbd5e1] transition-colors"
+                    className="appearance-none bg-slate-50 border border-[#eef2f7] rounded-lg pl-7 pr-6 h-8 text-[11.5px] font-bold text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-pointer hover:bg-slate-100 transition-colors"
                   >
                     <option value="none">Sin agrupar</option>
                     <option value="company">Empresa</option>
                     <option value="tutor">Tutor</option>
                     <option value="level">Nivel</option>
                   </select>
-                  <div className="absolute left-2.5 text-blue-600 pointer-events-none">
+                  <div className="absolute left-2 text-blue-600 pointer-events-none">
                     {groupBy === 'company' && <Building2 className="w-3.5 h-3.5" />}
                     {groupBy === 'tutor' && <UserCheck className="w-3.5 h-3.5" />}
                     {groupBy === 'level' && <List className="w-3.5 h-3.5" />}
                     {groupBy === 'none' && <List className="w-3.5 h-3.5" />}
                   </div>
-                  <ChevronDown className="w-3.5 h-3.5 absolute right-2 text-slate-400 pointer-events-none" />
+                  <ChevronDown className="w-3 h-3 absolute right-1.5 text-slate-400 pointer-events-none" />
                 </div>
               </div>
 
@@ -1006,7 +1027,7 @@ export default function PracticesPage() {
               <div className="relative shrink-0" ref={actionsMenuRef}>
                 <button
                   onClick={() => setShowActionsMenu(prev => !prev)}
-                  className="flex items-center gap-1.5 h-[34px] px-3 rounded-[9px] bg-white border border-[#eef2f7] shadow-sm text-[11.5px] font-bold text-[#374151] hover:bg-slate-50 hover:border-[#cbd5e1] transition-colors cursor-pointer"
+                  className="flex items-center gap-1 h-8 px-2.5 rounded-lg bg-slate-50 border border-[#eef2f7] text-[11.5px] font-bold text-[#374151] hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   <MoreHorizontal className="w-3.5 h-3.5 text-slate-500" />
                   <span>Acciones</span>
@@ -1035,6 +1056,15 @@ export default function PracticesPage() {
                   </div>
                 )}
               </div>
+
+              {/* + Nueva Práctica Button */}
+              <Button
+                onClick={() => { setPracticeToEdit(null); setIsNewPracticeModalOpen(true); }}
+                className="bg-[#111827] hover:bg-[#1f2937] text-white font-bold h-8 px-3 text-[11.5px] rounded-lg shadow-sm transition-all flex items-center gap-1 cursor-pointer shrink-0 ml-1"
+              >
+                <Plus className="w-3.5 h-3.5 text-blue-400" />
+                <span>Nueva Práctica</span>
+              </Button>
             </div>
 
             {/* Barra de acciones flotante: acompaña la selección durante todo
