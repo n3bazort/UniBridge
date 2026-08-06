@@ -518,211 +518,212 @@ export default function DocumentsPage() {
               />
             </div>
 
-            {/* Los dos diseños, cada uno con su plantilla y su predeterminada */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Columnas por tipo de oficio */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
               {(Object.keys(OFICIOS) as OficioKind[]).map((kind) => {
                 const info = OFICIOS[kind]
                 const propias = docxTemplates.filter((t) => kindOf(t) === kind)
                 const tienePredeterminada = propias.some(
                   (t) => typeof t.content === 'object' && t.content?.isDefault === true
                 )
+                
                 return (
-                  <div
-                    key={kind}
-                    className={`flex flex-col gap-2 p-4 rounded-[16px] border bg-white ${
-                      kind === 'SOLICITUD' ? 'border-blue-100' : 'border-violet-100'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-[15px] font-semibold text-[#111827]">{info.titulo}</h3>
-                        <p className="text-[12.5px] text-[#6b7280] mt-0.5 leading-snug">{info.descripcion}</p>
-                      </div>
-                      <span
-                        className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${
-                          kind === 'SOLICITUD' ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'
-                        }`}
-                      >
-                        {propias.length} {propias.length === 1 ? 'plantilla' : 'plantillas'}
-                      </span>
-                    </div>
-
-                    <p className="text-[11.5px] text-[#9ca3af] font-mono">Numeración: {info.patron}</p>
-
-                    {!tienePredeterminada && (
-                      <p className="text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-[8px] px-2.5 py-1.5 leading-snug">
-                        {propias.length === 0
-                          ? 'No hay plantilla subida: este oficio todavía no se puede emitir.'
-                          : 'Ninguna está marcada como predeterminada: se usará la primera de la lista.'}
-                      </p>
-                    )}
-
-                    <div className="flex items-center gap-2 mt-1">
-                      <button
-                        onClick={() => { setUploadKind(kind); fileInputRef.current?.click() }}
-                        disabled={isUploading}
-                        className={`flex items-center gap-2 h-[34px] px-3 rounded-[10px] text-[13px] font-medium text-white shadow-soft transition-all disabled:opacity-50 ${
-                          kind === 'SOLICITUD' ? 'bg-[#111827] hover:bg-[#1f2937]' : 'bg-violet-600 hover:bg-violet-700'
-                        }`}
-                      >
-                        {isUploading && uploadKind === kind ? 'Subiendo…' : 'Subir plantilla'}
-                      </button>
-                      <a
-                        href={`/templates/${encodeURIComponent(info.ejemplo)}`}
-                        download={info.ejemplo}
-                        title="Descarga el formato de ejemplo, con los marcadores a la vista y sin firma ni sello"
-                        className="flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] text-[13px] font-medium text-[#6b7280] hover:text-[#111827] hover:bg-slate-100 transition-colors"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        Formato de ejemplo
-                      </a>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mt-4">
-                {[1,2,3,4].map(i => <Skeleton key={i} className="min-h-[120px] rounded-[16px] bg-white border border-[#eef2f7]" />)}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {docxTemplates.length === 0 && (
-                  <div className="col-span-full mt-2">
-                    <EmptyState 
-                      icon={FileText} 
-                      title="No hay plantillas DOCX" 
-                      description="Sube una plantilla de Microsoft Word (.docx) para generar oficios de solicitud de prácticas."
-                    />
-                  </div>
-                )}
-              {docxTemplates.map((template) => {
-                const isDocxDefault = typeof template.content === 'object' && template.content?.isDefault === true
-                const cfg = typeof template.content === 'object' && template.content !== null ? template.content : {}
-                const kind = kindOf(template)
-                const esDesignacion = kind === 'DESIGNACION'
-                return (
-                <div key={template.id} className={`group relative flex flex-col p-4 rounded-[16px] border bg-white shadow-sm hover:shadow-soft transition-all ${isDocxDefault ? 'border-emerald-500 ring-4 ring-emerald-500/10' : 'border-[#eef2f7]'}`}>
-                  {isDocxDefault && (
-                    <span className="absolute -top-2.5 right-3 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm uppercase tracking-wide">
-                      ✓ Predeterminado
-                    </span>
-                  )}
-                  {/* Qué oficio reproduce: sin esto las dos plantillas se ven idénticas en la cuadrícula */}
-                  <span
-                    className={`absolute -top-2.5 left-3 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm uppercase tracking-wide ${
-                      esDesignacion ? 'bg-violet-600 text-white' : 'bg-blue-600 text-white'
-                    }`}
-                  >
-                    {esDesignacion ? 'Designación' : 'Solicitud'}
-                  </span>
-                  <div 
-                    onClick={(e) => handlePreviewTemplate(template, e)}
-                    className={`w-full h-32 rounded-[12px] border flex items-center justify-center mb-3 cursor-pointer hover:bg-opacity-80 transition-opacity ${esDesignacion ? 'bg-violet-50/50 border-violet-100 hover:bg-violet-100/50' : 'bg-[#f8fafc] border-[#eef2f7] hover:bg-blue-50/50'}`}
-                    title="Clic para previsualizar la plantilla"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={esDesignacion ? 'text-violet-500' : 'text-[#3b82f6]'}>
-                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
-                      <polyline points="14 2 14 8 20 8"></polyline>
-                      <path d="M8 13h8"></path>
-                      <path d="M8 17h8"></path>
-                      <path d="M8 9h2"></path>
-                    </svg>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-[#111827] text-[14px] leading-tight line-clamp-2" title={template.name}>
-                        {template.name}
-                      </h3>
-                      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => handleDownloadTemplate(template, e)}
-                          className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#111827] hover:bg-slate-100 rounded-[8px] transition-colors"
-                          title="Descargar la plantilla Word original"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                          </svg>
-                        </button>
-                        <button
-                          onClick={(e) => handleMakeDefault(template, e)}
-                          className={`flex items-center justify-center w-7 h-7 rounded-[8px] transition-colors ${isDocxDefault ? 'text-emerald-600 bg-emerald-50' : 'text-[#9ca3af] hover:text-emerald-600 hover:bg-emerald-50'}`}
-                          title={isDocxDefault ? 'Plantilla predeterminada' : 'Establecer como predeterminada'}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={isDocxDefault ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                          </svg>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleRenameClick(template.id, template.name)
-                          }}
-                          className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#3b82f6] hover:bg-[#eff6ff] rounded-[8px] transition-colors"
-                          title="Renombrar plantilla"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                          </svg>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDelete(template.id)
-                          }}
-                          className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#ef4444] hover:bg-[#fef2f2] rounded-[8px] transition-colors"
-                          title="Eliminar plantilla"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 6h18"></path>
-                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                    <span className="text-[12px] font-medium text-[#9ca3af]">
-                      Creado el {new Date(template.createdAt).toLocaleDateString('es-ES')}
-                    </span>
-                    {/* Alcance: se ve sin abrir la configuración, porque cambia
-                        cuántos papeles produce cada emisión */}
-                    <span
-                      className={`mt-2 self-start text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${
-                        scopeOf(template) === 'ESTUDIANTE'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200/60'
-                          : 'bg-slate-100 text-slate-500'
+                  <div key={kind} className="flex flex-col gap-4">
+                    {/* El header / cajón informativo */}
+                    <div
+                      className={`flex flex-col gap-2 p-4 rounded-[16px] border bg-white ${
+                        kind === 'SOLICITUD' ? 'border-blue-100' : 'border-violet-100'
                       }`}
-                      title={ALCANCES[scopeOf(template)].detalle}
                     >
-                      {ALCANCES[scopeOf(template)].titulo}
-                    </span>
-                    {/* Numeración del oficio: patrón configurable por plantilla */}
-                    <button
-                      onClick={() => openCodeModal(template)}
-                      className="mt-2 flex items-center gap-1.5 text-left text-[11.5px] font-mono text-slate-500 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded-[8px] px-2.5 py-1.5 transition-colors truncate"
-                      title="Editar el alcance y la numeración del oficio"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                      </svg>
-                      <span className="truncate">
-                        Oficio No.{' '}
-                        <span className={esDesignacion ? 'text-violet-600 font-bold' : 'text-blue-600 font-bold'}>
-                          {vistaPreviaCodigo(cfg.codePattern || OFICIOS[kind].patron, cfg.docTypeAbbr || 'SPP', sequences.find(s => s.type === kind)?.nextNumber || 17)}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-[15px] font-semibold text-[#111827]">{info.titulo}</h3>
+                          <p className="text-[12.5px] text-[#6b7280] mt-0.5 leading-snug">{info.descripcion}</p>
+                        </div>
+                        <span
+                          className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${
+                            kind === 'SOLICITUD' ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'
+                          }`}
+                        >
+                          {propias.length} {propias.length === 1 ? 'plantilla' : 'plantillas'}
                         </span>
-                      </span>
-                    </button>
+                      </div>
+
+                      <p className="text-[11.5px] text-[#9ca3af] font-mono">Numeración: {info.patron}</p>
+
+                      {!tienePredeterminada && (
+                        <p className="text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-[8px] px-2.5 py-1.5 leading-snug">
+                          {propias.length === 0
+                            ? 'No hay plantilla subida: este oficio todavía no se puede emitir.'
+                            : 'Ninguna está marcada como predeterminada: se usará la primera de la lista.'}
+                        </p>
+                      )}
+
+                      <div className="flex items-center gap-2 mt-1">
+                        <button
+                          onClick={() => { setUploadKind(kind); fileInputRef.current?.click() }}
+                          disabled={isUploading}
+                          className={`flex items-center gap-2 h-[34px] px-3 rounded-[10px] text-[13px] font-medium text-white shadow-soft transition-all disabled:opacity-50 ${
+                            kind === 'SOLICITUD' ? 'bg-[#111827] hover:bg-[#1f2937]' : 'bg-violet-600 hover:bg-violet-700'
+                          }`}
+                        >
+                          {isUploading && uploadKind === kind ? 'Subiendo…' : 'Subir plantilla'}
+                        </button>
+                        <a
+                          href={`/templates/${encodeURIComponent(info.ejemplo)}`}
+                          download={info.ejemplo}
+                          title="Descarga el formato de ejemplo, con los marcadores a la vista y sin firma ni sello"
+                          className="flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] text-[13px] font-medium text-[#6b7280] hover:text-[#111827] hover:bg-slate-100 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                          Formato de ejemplo
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Lista de plantillas de este tipo */}
+                    {isLoading ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                        {[1, 2].map(i => <Skeleton key={i} className="min-h-[120px] rounded-[16px] bg-white border border-[#eef2f7]" />)}
+                      </div>
+                    ) : propias.length === 0 ? (
+                      <div className="mt-2">
+                        <EmptyState 
+                          icon={FileText} 
+                          title="No hay plantillas DOCX" 
+                          description={`Sube una plantilla para emitir ${info.titulo.toLowerCase()}.`}
+                        />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                        {propias.map((template) => {
+                          const isDocxDefault = typeof template.content === 'object' && template.content?.isDefault === true
+                          const cfg = typeof template.content === 'object' && template.content !== null ? template.content : {}
+                          const esDesignacion = kind === 'DESIGNACION'
+                          return (
+                            <div key={template.id} className={`group relative flex flex-col p-4 rounded-[16px] border bg-white shadow-sm hover:shadow-soft transition-all ${isDocxDefault ? 'border-emerald-500 ring-4 ring-emerald-500/10' : 'border-[#eef2f7]'}`}>
+                              {isDocxDefault && (
+                                <span className="absolute -top-2.5 right-3 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm uppercase tracking-wide">
+                                  ✓ Predeterminado
+                                </span>
+                              )}
+                              {/* Qué oficio reproduce: sin esto las dos plantillas se ven idénticas en la cuadrícula */}
+                              <span
+                                className={`absolute -top-2.5 left-3 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm uppercase tracking-wide ${
+                                  esDesignacion ? 'bg-violet-600 text-white' : 'bg-blue-600 text-white'
+                                }`}
+                              >
+                                {esDesignacion ? 'Designación' : 'Solicitud'}
+                              </span>
+                              <div 
+                                onClick={(e) => handlePreviewTemplate(template, e)}
+                                className={`w-full h-32 rounded-[12px] border flex items-center justify-center mb-3 cursor-pointer hover:bg-opacity-80 transition-opacity ${esDesignacion ? 'bg-violet-50/50 border-violet-100 hover:bg-violet-100/50' : 'bg-[#f8fafc] border-[#eef2f7] hover:bg-blue-50/50'}`}
+                                title="Clic para previsualizar la plantilla"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={esDesignacion ? 'text-violet-500' : 'text-[#3b82f6]'}>
+                                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                                  <polyline points="14 2 14 8 20 8"></polyline>
+                                  <path d="M8 13h8"></path>
+                                  <path d="M8 17h8"></path>
+                                  <path d="M8 9h2"></path>
+                                </svg>
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <h3 className="font-semibold text-[#111827] text-[14px] leading-tight line-clamp-2" title={template.name}>
+                                    {template.name}
+                                  </h3>
+                                  <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={(e) => handleDownloadTemplate(template, e)}
+                                      className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#111827] hover:bg-slate-100 rounded-[8px] transition-colors"
+                                      title="Descargar la plantilla Word original"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                      </svg>
+                                    </button>
+                                    <button
+                                      onClick={(e) => handleMakeDefault(template, e)}
+                                      className={`flex items-center justify-center w-7 h-7 rounded-[8px] transition-colors ${isDocxDefault ? 'text-emerald-600 bg-emerald-50' : 'text-[#9ca3af] hover:text-emerald-600 hover:bg-emerald-50'}`}
+                                      title={isDocxDefault ? 'Plantilla predeterminada' : 'Establecer como predeterminada'}
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={isDocxDefault ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                      </svg>
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleRenameClick(template.id, template.name)
+                                      }}
+                                      className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#3b82f6] hover:bg-[#eff6ff] rounded-[8px] transition-colors"
+                                      title="Renombrar plantilla"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                      </svg>
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleDelete(template.id)
+                                      }}
+                                      className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#ef4444] hover:bg-[#fef2f2] rounded-[8px] transition-colors"
+                                      title="Eliminar plantilla"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M3 6h18"></path>
+                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </div>
+                                <span className="text-[12px] font-medium text-[#9ca3af]">
+                                  Creado el {new Date(template.createdAt).toLocaleDateString('es-ES')}
+                                </span>
+                                {/* Alcance: se ve sin abrir la configuración */}
+                                <span
+                                  className={`mt-2 self-start text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${
+                                    scopeOf(template) === 'ESTUDIANTE'
+                                      ? 'bg-amber-50 text-amber-700 border border-amber-200/60'
+                                      : 'bg-slate-100 text-slate-500'
+                                  }`}
+                                  title={ALCANCES[scopeOf(template)].detalle}
+                                >
+                                  {ALCANCES[scopeOf(template)].titulo}
+                                </span>
+                                {/* Numeración del oficio: patrón configurable por plantilla */}
+                                <button
+                                  onClick={() => openCodeModal(template)}
+                                  className="mt-2 flex items-center gap-1.5 text-left text-[11.5px] font-mono text-slate-500 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded-[8px] px-2.5 py-1.5 transition-colors truncate"
+                                  title="Editar el alcance y la numeración del oficio"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                  </svg>
+                                  <span className="truncate">
+                                    Oficio No.{' '}
+                                    <span className={esDesignacion ? 'text-violet-600 font-bold' : 'text-blue-600 font-bold'}>
+                                      {vistaPreviaCodigo(cfg.codePattern || OFICIOS[kind].patron, cfg.docTypeAbbr || 'SPP', sequences.find(s => s.type === kind)?.nextNumber || 17)}
+                                    </span>
+                                  </span>
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
-                </div>
                 )
               })}
             </div>
-            )}
           </div>
 
         {/* Modal de Confirmación de Borrado */}
