@@ -886,30 +886,29 @@ export default function PracticesPage() {
     <RoleGate allowedRoles={['ADMIN', 'COORDINATOR']}>
       <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8] pt-6 pb-12 px-4 lg:px-8">
         
-        {/* Tabs: Asignados / Sin Asignar */}
-        <div className="flex items-center gap-6 mb-6 border-b border-gray-200 w-full max-w-[1600px] mx-auto">
-          <button
-            onClick={() => { setActiveTab('assigned'); setSelectedIds(new Set()); }}
-            className={`pb-3 text-[15px] font-semibold transition-colors relative ${activeTab === 'assigned' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Estudiantes Asignados
-            {activeTab === 'assigned' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />}
-          </button>
-          <button
-            onClick={() => { setActiveTab('unassigned'); setSelectedIds(new Set()); setGroupBy('none'); }}
-            className={`pb-3 text-[15px] font-semibold transition-colors relative ${activeTab === 'unassigned' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Estudiantes Sin Asignar
-            {activeTab === 'unassigned' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />}
-          </button>
-        </div>
+        {/* Tabs + Actions Row */}
+        <div className="flex items-center justify-between gap-6 mb-6 border-b border-gray-200 w-full max-w-[1600px] mx-auto pb-2.5">
+          <div className="flex items-center gap-6">
+            <button
+              onClick={() => { setActiveTab('assigned'); setSelectedIds(new Set()); }}
+              className={`pb-2.5 text-[15px] font-semibold transition-colors relative ${activeTab === 'assigned' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Estudiantes Asignados
+              {activeTab === 'assigned' && <div className="absolute -bottom-2.5 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />}
+            </button>
+            <button
+              onClick={() => { setActiveTab('unassigned'); setSelectedIds(new Set()); setGroupBy('none'); }}
+              className={`pb-2.5 text-[15px] font-semibold transition-colors relative ${activeTab === 'unassigned' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Estudiantes Sin Asignar
+              {activeTab === 'unassigned' && <div className="absolute -bottom-2.5 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />}
+            </button>
+          </div>
 
-        {/* Top Actions */}
-        <div className="flex flex-col md:flex-row md:items-center justify-end gap-4 mb-6 w-full max-w-[1600px] mx-auto">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pb-0.5">
             <Button
               onClick={() => { setPracticeToEdit(null); setIsNewPracticeModalOpen(true); }}
-              className="bg-[#111827] hover:bg-[#1f2937] text-white font-bold px-4 py-2.5 text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              className="bg-[#111827] hover:bg-[#1f2937] text-white font-bold px-3.5 py-2 text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
             >
               <Plus className="w-4 h-4 text-blue-400" />
               <span>Nueva Práctica</span>
@@ -917,7 +916,7 @@ export default function PracticesPage() {
             {activeTab === 'unassigned' && selectedIds.size > 0 && (
               <Button 
                 onClick={() => toast.info('La interfaz de vinculación a Empresa estará disponible en la próxima actualización.')}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs py-2 px-3 shrink-0"
               >
                 Vincular a Empresa ({selectedIds.size})
               </Button>
