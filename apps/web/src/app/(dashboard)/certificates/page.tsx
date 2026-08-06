@@ -210,6 +210,7 @@ function CertificatesPageInner() {
   const [filterState, setFilterState] = useState<'ALL' | 'READY' | 'IN_SIGNATURE' | 'SIGNED' | 'ARCHIVED'>('ALL')
   const [viewMode, setViewMode] = useState<'documents' | 'batches'>('documents')
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
+  const [groupBy, setGroupBy] = useState<'COMPANY' | 'DOCUMENT_TYPE' | 'STUDENT' | 'NONE'>('COMPANY')
 
   const [showInvalidateModal, setShowInvalidateModal] = useState(false)
   const [docToInvalidate, setDocToInvalidate] = useState<string | null>(null)
@@ -375,19 +376,28 @@ function CertificatesPageInner() {
   }, [documents, combinedSearch, filterState])
 
   /**
-   * Los documentos se agrupan siempre por empresa: es la unidad real de
-   * trabajo (la solicitud es grupal y los certificados se emiten por equipo).
-   * Así el nombre de la empresa se escribe una vez, no en cada fila.
+   * Los documentos se pueden agrupar por empresa, tipo de oficio o estudiante.
    */
   const groupedDocuments = useMemo(() => {
+    if (groupBy === 'NONE') {
+      return [['Documentos', filteredDocuments]] as [string, GeneratedDocument[]][]
+    }
     const groups: Record<string, GeneratedDocument[]> = {}
     filteredDocuments.forEach(doc => {
-      const key = doc.student?.practices?.[0]?.company?.name || 'Sin empresa'
+      let key = 'Otros'
+      if (groupBy === 'COMPANY') {
+        key = doc.student?.practices?.[0]?.company?.name || 'Sin empresa'
+      } else if (groupBy === 'DOCUMENT_TYPE') {
+        key = getClusterTypeName(doc.documentType)
+      } else if (groupBy === 'STUDENT') {
+        key = `${doc.student?.firstName || ''} ${doc.student?.lastName || ''}`.trim() || 'Desconocido'
+      }
+      
       if (!groups[key]) groups[key] = []
       groups[key].push(doc)
     })
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]))
-  }, [filteredDocuments])
+  }, [filteredDocuments, groupBy])
 
   /**
    * Solo los CERTIFICADOS entran al circuito de firma: la solicitud es un
@@ -979,6 +989,30 @@ function CertificatesPageInner() {
                   ))}
                 </div>
 
+                {/* Agrupar por */}
+                <div className="flex items-center gap-2 bg-[#f1f5f9] p-1 rounded-[10px] pr-2">
+                  <span className="text-[11.5px] font-medium text-[#64748b] pl-2 hidden sm:inline">Agrupar por:</span>
+                  <div className="relative flex items-center">
+                    <select
+                      value={groupBy}
+                      onChange={(e) => setGroupBy(e.target.value as any)}
+                      className="appearance-none bg-white border border-[#eef2f7] rounded-[8px] pl-8 pr-7 py-1.5 text-[11.5px] font-bold text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-pointer shadow-sm hover:border-[#cbd5e1] transition-colors"
+                    >
+                      <option value="COMPANY">Empresa</option>
+                      <option value="DOCUMENT_TYPE">Tipo de Oficio</option>
+                      <option value="STUDENT">Estudiante</option>
+                      <option value="NONE">Sin agrupar</option>
+                    </select>
+                    <div className="absolute left-2.5 text-blue-600 pointer-events-none">
+                      {groupBy === 'COMPANY' && <Building2 className="w-3.5 h-3.5" />}
+                      {groupBy === 'DOCUMENT_TYPE' && <FileText className="w-3.5 h-3.5" />}
+                      {groupBy === 'STUDENT' && <UserCheck className="w-3.5 h-3.5" />}
+                      {groupBy === 'NONE' && <List className="w-3.5 h-3.5" />}
+                    </div>
+                    <ChevronDown className="w-3.5 h-3.5 absolute right-2 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+
                 {/* Lista / cuadrícula + tamaño de ícono */}
                 <div className="flex items-center gap-1.5 bg-[#f1f5f9] p-1 rounded-[10px]">
                   <button
@@ -1083,15 +1117,15 @@ function CertificatesPageInner() {
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {groupedDocuments.map(([companyName, docs]) => {
+                {groupedDocuments.map(([groupName, docs]) => {
                   const selectable = selectableInGroup(docs)
                   const allSelected = selectable.length > 0 && selectable.every(d => selectedIds.has(d.id))
                   return (
-                    <div key={companyName} className="bg-white rounded-[16px] border border-[#eef2f7] shadow-soft overflow-hidden">
-                      {/* Cabecera de empresa: el nombre se escribe UNA vez */}
+                    <div key={groupName} className="bg-white rounded-[16px] border border-[#eef2f7] shadow-soft overflow-hidden">
+                      {/* Cabecera de grupo */}
                       <div 
                         className="flex items-center gap-3 px-4 py-3 bg-[#fdfdfd] border-b border-[#f3f4f6] cursor-pointer hover:bg-slate-50 transition-colors"
-                        onClick={() => setCollapsedGroups(prev => ({ ...prev, [companyName]: !prev[companyName] }))}
+                        onClick={() => setCollapsedGroups(prev => ({ ...prev, [groupName]: !prev[groupName] }))}
                       >
                         <input
                           type="checkbox"
@@ -1106,18 +1140,21 @@ function CertificatesPageInner() {
                           title={selectable.length > 0 ? `Seleccionar los ${selectable.length} enviables` : 'Ninguno disponible para firma'}
                         />
                         <div className="w-7 h-7 rounded-[8px] bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                          <Building2 className="w-3.5 h-3.5" />
+                          {groupBy === 'COMPANY' && <Building2 className="w-3.5 h-3.5" />}
+                          {groupBy === 'DOCUMENT_TYPE' && <FileText className="w-3.5 h-3.5" />}
+                          {groupBy === 'STUDENT' && <UserCheck className="w-3.5 h-3.5" />}
+                          {groupBy === 'NONE' && <List className="w-3.5 h-3.5" />}
                         </div>
-                        <span className="text-[13.5px] font-bold text-[#111827] truncate select-none">{companyName}</span>
+                        <span className="text-[13.5px] font-bold text-[#111827] truncate select-none">{groupName}</span>
                         <span className="text-[11.5px] font-medium text-[#9ca3af] select-none">{docs.length} doc{docs.length > 1 ? 's' : ''}</span>
                         
                         <div className="ml-auto text-slate-400">
-                          {collapsedGroups[companyName] ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          {collapsedGroups[groupName] ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </div>
                       </div>
                       
                       <AnimatePresence initial={false}>
-                        {!collapsedGroups[companyName] && (
+                        {!collapsedGroups[groupName] && (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
