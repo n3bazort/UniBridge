@@ -1,9 +1,10 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { Prisma } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class StudentsService {
@@ -20,8 +21,54 @@ export class StudentsService {
       throw new ConflictException('Ya existe un estudiante registrado con ese DNI');
     }
 
+    const { email, ...dtoData } = createStudentDto;
+
+    // 1. Resolver facultyId desde la carrera (Program) si no viene especificado
+    let facultyId = dtoData.facultyId;
+    if (!facultyId) {
+      const prog = await this.prisma.program.findUnique({
+        where: { id: dtoData.programId }
+      });
+      if (!prog) {
+        throw new NotFoundException('La carrera seleccionada no existe');
+      }
+      facultyId = prog.facultyId;
+    }
+
+    // 2. Resolver o crear el registro de usuario (User) para el estudiante
+    let userId = dtoData.userId;
+    if (!userId) {
+      const studentEmail = email || `${dtoData.dni}@estudiantes.unibridge.edu.ec`;
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: studentEmail }
+      });
+
+      if (existingUser) {
+        userId = existingUser.id;
+      } else {
+        const hashedPassword = await bcrypt.hash(dtoData.dni, 10);
+        const newUser = await this.prisma.user.create({
+          data: {
+            email: studentEmail,
+            password: hashedPassword,
+            role: 'STUDENT',
+          }
+        });
+        userId = newUser.id;
+      }
+    }
+
     return this.prisma.student.create({
-      data: createStudentDto
+      data: {
+        ...dtoData,
+        facultyId,
+        userId,
+      },
+      include: {
+        program: true,
+        faculty: true,
+        user: true,
+      }
     });
   }
 

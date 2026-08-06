@@ -1,18 +1,20 @@
-import { IsString, IsUUID, IsOptional } from 'class-validator';
+import { IsString, IsUUID, IsOptional, IsEmail } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateStudentDto {
-  @ApiProperty({ example: 'uuid-user' })
+  @ApiProperty({ example: 'uuid-user', required: false })
   @IsUUID()
-  userId!: string;
+  @IsOptional()
+  userId?: string;
 
   @ApiProperty({ example: 'uuid-program' })
   @IsUUID()
   programId!: string;
 
-  @ApiProperty({ example: 'uuid-faculty' })
+  @ApiProperty({ example: 'uuid-faculty', required: false })
   @IsUUID()
-  facultyId!: string;
+  @IsOptional()
+  facultyId?: string;
 
   @ApiProperty({ example: '1314151617' })
   @IsString()
@@ -30,4 +32,9 @@ export class CreateStudentDto {
   @IsString()
   @IsOptional()
   phone?: string;
+
+  @ApiProperty({ example: 'juan.perez@universidad.edu.ec', required: false })
+  @IsEmail()
+  @IsOptional()
+  email?: string;
 }
