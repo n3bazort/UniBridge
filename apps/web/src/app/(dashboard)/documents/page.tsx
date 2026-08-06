@@ -42,14 +42,14 @@ const OFICIOS: Record<OficioKind, {
   color: string
 }> = {
   SOLICITUD: {
-    titulo: 'Solicitud de prácticas',
+    titulo: 'Solicitud de Vacantes',
     descripcion: 'Pide a la empresa la apertura de vacantes para el grupo de estudiantes.',
     ejemplo: 'Solicitud de Prácticas Oficial.docx',
     patron: '{YYYY}-{PROGRAM}-{SEQ:3}',
     color: 'blue',
   },
   DESIGNACION: {
-    titulo: 'Designación de estudiantes',
+    titulo: 'Designación de Tutores',
     descripcion: 'Comunica a la empresa qué estudiantes fueron designados y quién los tutela.',
     ejemplo: 'Designación de Estudiantes Oficial.docx',
     patron: '{SEQ:3}-{FACULTY}-{PERIOD}-{PROGRAM}',
@@ -403,12 +403,12 @@ export default function DocumentsPage() {
 
   return (
     <RoleGate allowedRoles={['ADMIN', 'COORDINATOR']}>
-      <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8] pt-6 pb-12 px-4 sm:px-6 lg:px-8">
+      <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-slate-50 pt-6 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-6xl mx-auto flex flex-col gap-8">
           
           <div>
-            <h1 className="text-[22px] font-bold text-[#111827]">Gestión de Plantillas y Documentos</h1>
-            <p className="text-[#6b7280] mt-0.5 text-[14px] font-medium">Gestiona los diseños de certificados PDF, las plantillas de oficios DOCX y su correlativo de numeración.</p>
+            <h1 className="text-[26px] tracking-tight font-extrabold text-slate-800">Gestión de Plantillas y Documentos</h1>
+            <p className="text-slate-500 mt-1.5 text-[14.5px] font-medium leading-relaxed">Gestiona los diseños de certificados PDF, las plantillas de oficios DOCX y su correlativo de numeración.</p>
           </div>
 
           {/* Sección de Control de Numeración / Retoma de Secuencia */}
@@ -531,52 +531,51 @@ export default function DocumentsPage() {
                   <div key={kind} className="flex flex-col gap-4">
                     {/* El header / cajón informativo */}
                     <div
-                      className={`flex flex-col gap-2 p-4 rounded-[16px] border bg-white ${
-                        kind === 'SOLICITUD' ? 'border-blue-100' : 'border-violet-100'
-                      }`}
+                      className="relative overflow-hidden flex flex-col gap-3 p-5 rounded-[20px] bg-white border border-slate-100 shadow-sm"
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className={`absolute top-0 left-0 w-full h-1 ${kind === 'SOLICITUD' ? 'bg-blue-500' : 'bg-violet-500'}`}></div>
+                      <div className="flex items-start justify-between gap-3 mt-1">
                         <div>
-                          <h3 className="text-[15px] font-semibold text-[#111827]">{info.titulo}</h3>
-                          <p className="text-[12.5px] text-[#6b7280] mt-0.5 leading-snug">{info.descripcion}</p>
+                          <h3 className="text-[17px] tracking-tight font-bold text-slate-800">{info.titulo}</h3>
+                          <p className="text-[13px] text-slate-500 mt-1 leading-snug">{info.descripcion}</p>
                         </div>
                         <span
-                          className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${
+                          className={`shrink-0 text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider ${
                             kind === 'SOLICITUD' ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'
                           }`}
                         >
-                          {propias.length} {propias.length === 1 ? 'plantilla' : 'plantillas'}
+                          {propias.length} {propias.length === 1 ? 'PLANTILLA' : 'PLANTILLAS'}
                         </span>
                       </div>
 
-                      <p className="text-[11.5px] text-[#9ca3af] font-mono">Numeración: {info.patron}</p>
+                      <p className="text-[12px] text-slate-500 font-mono mt-1">Numeración: <span className="text-slate-700 font-semibold">{info.patron}</span></p>
 
                       {!tienePredeterminada && (
-                        <p className="text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-[8px] px-2.5 py-1.5 leading-snug">
+                        <p className="text-[12.5px] font-medium text-amber-700 bg-amber-50/80 border border-amber-200/60 rounded-[12px] px-3 py-2.5 mt-1 leading-snug">
                           {propias.length === 0
                             ? 'No hay plantilla subida: este oficio todavía no se puede emitir.'
                             : 'Ninguna está marcada como predeterminada: se usará la primera de la lista.'}
                         </p>
                       )}
 
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-3 mt-3">
                         <button
                           onClick={() => { setUploadKind(kind); fileInputRef.current?.click() }}
                           disabled={isUploading}
-                          className={`flex items-center gap-2 h-[34px] px-3 rounded-[10px] text-[13px] font-medium text-white shadow-soft transition-all disabled:opacity-50 ${
-                            kind === 'SOLICITUD' ? 'bg-[#111827] hover:bg-[#1f2937]' : 'bg-violet-600 hover:bg-violet-700'
+                          className={`flex items-center gap-2 h-10 px-4 rounded-xl text-[13.5px] font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 ${
+                            kind === 'SOLICITUD' ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-blue-500/30' : 'bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 shadow-violet-500/30'
                           }`}
                         >
-                          {isUploading && uploadKind === kind ? 'Subiendo…' : 'Subir plantilla'}
+                          {isUploading && uploadKind === kind ? 'Subiendo…' : 'Subir formato'}
                         </button>
                         <a
                           href={`/templates/${encodeURIComponent(info.ejemplo)}`}
                           download={info.ejemplo}
-                          title="Descarga el formato de ejemplo, con los marcadores a la vista y sin firma ni sello"
-                          className="flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] text-[13px] font-medium text-[#6b7280] hover:text-[#111827] hover:bg-slate-100 transition-colors"
+                          title="Descarga el formato de ejemplo"
+                          className="flex items-center gap-1.5 h-10 px-4 rounded-xl text-[13px] font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 transition-all"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                          Formato de ejemplo
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                          Ver ejemplo
                         </a>
                       </div>
                     </div>
@@ -601,15 +600,14 @@ export default function DocumentsPage() {
                           const cfg = typeof template.content === 'object' && template.content !== null ? template.content : {}
                           const esDesignacion = kind === 'DESIGNACION'
                           return (
-                            <div key={template.id} className={`group relative flex flex-col p-4 rounded-[16px] border bg-white shadow-sm hover:shadow-soft transition-all ${isDocxDefault ? 'border-emerald-500 ring-4 ring-emerald-500/10' : 'border-[#eef2f7]'}`}>
+                            <div key={template.id} className={`group relative flex flex-col p-4 rounded-[20px] bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 ${isDocxDefault ? 'ring-2 ring-emerald-500/50' : ''}`}>
                               {isDocxDefault && (
-                                <span className="absolute -top-2.5 right-3 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm uppercase tracking-wide">
+                                <span className="absolute -top-2.5 right-4 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm uppercase tracking-wide z-10">
                                   ✓ Predeterminado
                                 </span>
                               )}
-                              {/* Qué oficio reproduce: sin esto las dos plantillas se ven idénticas en la cuadrícula */}
                               <span
-                                className={`absolute -top-2.5 left-3 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm uppercase tracking-wide ${
+                                className={`absolute -top-2.5 left-4 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm uppercase tracking-wide z-10 ${
                                   esDesignacion ? 'bg-violet-600 text-white' : 'bg-blue-600 text-white'
                                 }`}
                               >
@@ -728,32 +726,35 @@ export default function DocumentsPage() {
 
         {/* Modal de Confirmación de Borrado */}
           {deleteModal.show && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4" onClick={() => setDeleteModal({ show: false, templateId: null })}>
-              <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[400px] p-6 transform transition-all border border-[#eef2f7]" onClick={e => e.stopPropagation()}>
-                <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600">
-                    <path d="M3 6h18"></path>
-                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                  </svg>
-                </div>
-                <h3 className="text-[18px] font-bold text-[#111827] mb-2">Eliminar Diseño</h3>
-                <p className="text-[14px] text-[#6b7280] mb-6 leading-relaxed">
-                  ¿Estás seguro de que deseas eliminar este diseño? Esta acción no se puede deshacer.
-                </p>
-                <div className="flex items-center justify-end gap-3">
-                  <button 
-                    onClick={() => setDeleteModal({ show: false, templateId: null })}
-                    className="px-4 py-2 text-[14px] font-medium text-[#374151] bg-white hover:bg-[#f8fafc] border border-[#eef2f7] rounded-[10px] transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button 
-                    onClick={confirmDelete}
-                    className="px-4 py-2 text-[14px] font-medium text-white bg-red-600 hover:bg-red-700 rounded-[10px] transition-colors shadow-soft"
-                  >
-                    Eliminar
-                  </button>
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setDeleteModal({ show: false, templateId: null })}>
+              <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-[400px] overflow-hidden transform transition-all border border-slate-100" onClick={e => e.stopPropagation()}>
+                <div className="bg-blue-600 h-2 w-full"></div>
+                <div className="p-6">
+                  <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600">
+                      <path d="M3 6h18"></path>
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                    </svg>
+                  </div>
+                  <h3 className="text-[18px] font-bold text-slate-800 mb-2 tracking-tight">Eliminar Diseño</h3>
+                  <p className="text-[14px] text-slate-500 mb-8 leading-relaxed">
+                    ¿Estás seguro de que deseas eliminar este diseño? Esta acción no se puede deshacer.
+                  </p>
+                  <div className="flex items-center justify-end gap-3">
+                    <button 
+                      onClick={() => setDeleteModal({ show: false, templateId: null })}
+                      className="px-5 py-2.5 text-[14px] font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      onClick={confirmDelete}
+                      className="px-5 py-2.5 text-[14px] font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-sm shadow-red-500/20"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -761,42 +762,45 @@ export default function DocumentsPage() {
 
           {/* Modal de Renombrar Plantilla */}
           {renameModal.show && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4" onClick={() => setRenameModal({ show: false, templateId: null, currentName: '' })}>
-              <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[400px] p-6 transform transition-all border border-[#eef2f7]" onClick={e => e.stopPropagation()}>
-                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                  </svg>
-                </div>
-                <h3 className="text-[18px] font-bold text-[#111827] mb-2">Renombrar Documento</h3>
-                <p className="text-[14px] text-[#6b7280] mb-4">
-                  Ingresa el nuevo nombre para este diseño:
-                </p>
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-[#f9fafb] border border-[#eef2f7] rounded-[10px] text-[14px] text-[#111827] focus:outline-none focus:ring-[3px] focus:ring-blue-500/10 focus:border-blue-500 transition-all mb-6"
-                  placeholder="Nombre de la plantilla"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') confirmRename();
-                  }}
-                />
-                <div className="flex items-center justify-end gap-3">
-                  <button 
-                    onClick={() => setRenameModal({ show: false, templateId: null, currentName: '' })}
-                    className="px-4 py-2 text-[14px] font-medium text-[#374151] bg-white hover:bg-[#f8fafc] border border-[#eef2f7] rounded-[10px] transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button 
-                    onClick={confirmRename}
-                    className="px-4 py-2 text-[14px] font-medium text-white bg-[#111827] hover:bg-[#1f2937] rounded-[10px] transition-colors shadow-soft"
-                  >
-                    Guardar
-                  </button>
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setRenameModal({ show: false, templateId: null, currentName: '' })}>
+              <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-[400px] overflow-hidden transform transition-all border border-slate-100" onClick={e => e.stopPropagation()}>
+                <div className="bg-blue-600 h-2 w-full"></div>
+                <div className="p-6">
+                  <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                  </div>
+                  <h3 className="text-[18px] font-bold text-slate-800 mb-2 tracking-tight">Renombrar Documento</h3>
+                  <p className="text-[14px] text-slate-500 mb-5">
+                    Ingresa el nuevo nombre para este diseño:
+                  </p>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[14px] text-slate-800 font-medium focus:outline-none focus:ring-[3px] focus:ring-blue-500/20 focus:border-blue-500 transition-all mb-8 shadow-inner shadow-slate-100/50"
+                    placeholder="Nombre de la plantilla"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') confirmRename();
+                    }}
+                  />
+                  <div className="flex items-center justify-end gap-3">
+                    <button 
+                      onClick={() => setRenameModal({ show: false, templateId: null, currentName: '' })}
+                      className="px-5 py-2.5 text-[14px] font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      onClick={confirmRename}
+                      className="px-5 py-2.5 text-[14px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-sm shadow-blue-500/30"
+                    >
+                      Guardar
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -804,50 +808,52 @@ export default function DocumentsPage() {
 
           {/* Modal de Numeración del Oficio */}
           {codeModal.show && codeModal.template && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4" onClick={() => setCodeModal({ show: false, template: null })}>
-              <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[520px] p-6 border border-[#eef2f7]" onClick={e => e.stopPropagation()}>
-                <h3 className="text-[18px] font-bold text-[#111827] mb-1">
-                  Configuración de la {kindOf(codeModal.template) === 'DESIGNACION' ? 'designación' : 'solicitud'}
-                </h3>
-                <p className="text-[13px] text-[#6b7280] mb-4">
-                  Cómo se emite este oficio y cómo se numera.
-                </p>
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setCodeModal({ show: false, template: null })}>
+              <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-[520px] overflow-hidden border border-slate-100" onClick={e => e.stopPropagation()}>
+                <div className="bg-blue-600 h-2 w-full"></div>
+                <div className="p-6">
+                  <h3 className="text-[18px] font-bold text-slate-800 mb-1 tracking-tight">
+                    Configuración de la {kindOf(codeModal.template) === 'DESIGNACION' ? 'designación' : 'solicitud'}
+                  </h3>
+                  <p className="text-[13.5px] text-slate-500 mb-6 font-medium">
+                    Cómo se emite este oficio y cómo se numera.
+                  </p>
 
-                {/* Alcance: a cuántos estudiantes ampara un mismo papel */}
-                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-2">
-                  Cuántos oficios se emiten
-                </label>
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  {(Object.keys(ALCANCES) as OficioScope[]).map((sc) => (
-                    <button
-                      key={sc}
-                      onClick={() => setCodeScope(sc)}
-                      className={`flex flex-col items-start gap-0.5 p-3 rounded-[12px] border text-left transition-colors ${
-                        codeScope === sc
-                          ? 'border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/10'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <span className="text-[13px] font-bold text-[#111827]">{ALCANCES[sc].titulo}</span>
-                      <span className="text-[11px] text-slate-500 leading-snug">{ALCANCES[sc].detalle}</span>
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[11.5px] text-slate-400 mb-5">
-                  El cuerpo del oficio se adapta solo: si ampara a uno habla en singular y si ampara a
-                  varios, en plural.
-                </p>
+                  {/* Alcance: a cuántos estudiantes ampara un mismo papel */}
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-2">
+                    Cuántos oficios se emiten
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    {(Object.keys(ALCANCES) as OficioScope[]).map((sc) => (
+                      <button
+                        key={sc}
+                        onClick={() => setCodeScope(sc)}
+                        className={`flex flex-col items-start gap-0.5 p-3 rounded-[12px] border text-left transition-colors ${
+                          codeScope === sc
+                            ? 'border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/10'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <span className="text-[13px] font-bold text-slate-800">{ALCANCES[sc].titulo}</span>
+                        <span className="text-[11px] text-slate-500 leading-snug">{ALCANCES[sc].detalle}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11.5px] text-slate-400 mb-6">
+                    El cuerpo del oficio se adapta solo: si ampara a uno habla en singular y si ampara a
+                    varios, en plural.
+                  </p>
 
-                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-2">
-                  Patrón de numeración
-                </label>
-                <p className="text-[12.5px] text-[#6b7280] mb-2.5">
-                  Lo que va entre llaves lo rellena el sistema; el resto sale tal cual.{' '}
-                  <span className="font-semibold">{'{SEQ}'}</span> es obligatorio: es el secuencial que
-                  impide que dos oficios se repitan.
-                </p>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-2">
+                    Patrón de numeración
+                  </label>
+                  <p className="text-[12.5px] text-slate-500 mb-3">
+                    Lo que va entre llaves lo rellena el sistema; el resto sale tal cual.{' '}
+                    <span className="font-semibold text-slate-700">{'{SEQ}'}</span> es obligatorio: es el secuencial que
+                    impide que dos oficios se repitan.
+                  </p>
 
-                <input
+                  <input
                   type="text"
                   value={codePattern}
                   onChange={(e) => setCodePattern(e.target.value)}
@@ -906,23 +912,24 @@ export default function DocumentsPage() {
                   se toman del programa del estudiante. Configúralas en Gestión de Carreras.
                 </div>
 
-                <div className="flex items-center justify-end gap-3">
+                <div className="flex items-center justify-end gap-3 mt-8">
                   <button
                     onClick={() => setCodeModal({ show: false, template: null })}
-                    className="px-4 py-2 text-[14px] font-medium text-[#374151] bg-white hover:bg-[#f8fafc] border border-[#eef2f7] rounded-[10px] transition-colors"
+                    className="px-5 py-2.5 text-[14px] font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={saveCodeConfig}
-                    className="px-4 py-2 text-[14px] font-medium text-white bg-[#111827] hover:bg-[#1f2937] rounded-[10px] transition-colors shadow-soft"
+                    className="px-5 py-2.5 text-[14px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-sm shadow-blue-500/30"
                   >
-                    Guardar numeración
+                    Guardar configuración
                   </button>
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
           <DocxPreviewModal
             isOpen={!!previewTemplate}
