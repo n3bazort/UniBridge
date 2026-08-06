@@ -990,6 +990,53 @@ export default function PracticesPage() {
               )}
             </FloatingActionBar>
 
+            {/* ── Borradores ── */}
+            {activeTab === 'assigned' && !isLoading && (() => {
+              const drafts = (response?.data || []).filter((p: any) => p.status === 'PENDING')
+              if (!drafts.length) return null
+              return (
+                <div className="mt-2 bg-amber-50 border border-amber-200/70 rounded-2xl p-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                    <span className="text-[12px] font-bold text-amber-800 uppercase tracking-wider">
+                      Borradores incompletos ({drafts.length})
+                    </span>
+                    <span className="text-[11.5px] text-amber-600 ml-1">· No pueden emitir documentos hasta completarse</span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {drafts.map((p: any) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between bg-white rounded-xl px-4 py-2.5 border border-amber-100 shadow-xs"
+                      >
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[13px] font-semibold text-slate-800 truncate">
+                            {p.student
+                              ? `${p.student.firstName} ${p.student.lastName}`
+                              : <span className="text-slate-400 italic">Sin estudiante</span>
+                            }
+                          </span>
+                          <span className="text-[11.5px] text-slate-400 truncate">
+                            {[
+                              p.company?.name,
+                              p.tutorName,
+                              p.academicPeriod,
+                            ].filter(Boolean).join(' · ') || 'Sin datos completos'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => { setPracticeToEdit(p); setIsNewPracticeModalOpen(true) }}
+                          className="ml-4 shrink-0 text-[11.5px] font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 border border-amber-300/60 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          Completar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+
             {/* Entity List */}
             {isLoading ? (
               <div className="flex flex-col gap-3 mt-2">
