@@ -87,7 +87,10 @@ export class PracticesService {
               }
             }
           },
-          company: true
+          company: true,
+          // Etiqueta de seguimiento del coordinador: la fila la pinta en lugar
+          // del estado derivado, así que tiene que venir con la lista.
+          label: { select: { id: true, name: true, color: true, isSystem: true, requiresCompletion: true } }
         }
       }),
       this.prisma.practice.count({ where }),
@@ -617,8 +620,10 @@ export class PracticesService {
     });
     const completionRate = allPracticesCount > 0 ? Math.round((completedPracticesCount / allPracticesCount) * 100) : 0;
 
+    // Alertas: solo lo que de verdad requiere intervención. «Atrasado» dejó de
+    // derivarse porque dependía de una fecha de fin que el sistema no recoge.
     const activeAlerts = await this.prisma.practice.count({
-      where: { ...whereCondition, status: { in: ['DELAYED', 'REJECTED'] } },
+      where: { ...whereCondition, status: { in: ['REJECTED', 'CANCELED'] } },
     });
 
     // 2. Status Distribution (Donut Chart)

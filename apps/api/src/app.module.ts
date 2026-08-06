@@ -26,6 +26,7 @@ import { MinioModule } from './modules/minio/minio.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { SignaturesModule } from './modules/signatures/signatures.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { PracticeLabelsModule } from './modules/practice-labels/practice-labels.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     AuditLogsModule,
     SignaturesModule,
     ReportsModule,
+    PracticeLabelsModule,
   ],
   controllers: [],
   providers: [

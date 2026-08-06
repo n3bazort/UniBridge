@@ -61,6 +61,7 @@ model Faculty {
   documentTemplates DocumentTemplate[]
   userInvitations UserInvitation[]
   signerProfiles  SignerProfile[]
+  practiceLabels  PracticeLabel[]
 
   @@map("faculties")
 }
@@ -158,6 +159,10 @@ model Practice {
   // La solicitud oficial (PAP-001) la imprime: "en el área de: ___".
   workArea        String?
   status          PracticeStatus @default(PENDING)
+  // Etiqueta que pone el coordinador a mano. Es una anotación de seguimiento
+  // («la empresa no aprueba aún», «no contestan») y NO interviene en `status`,
+  // que el sistema sigue derivando de los documentos emitidos.
+  labelId         String?  @db.Uuid
   startDate       DateTime?
   endDate         DateTime?
   totalHours      Int      @default(0)
@@ -169,8 +174,39 @@ model Practice {
   company         Company  @relation(fields: [companyId], references: [id])
   faculty         Faculty  @relation(fields: [facultyId], references: [id])
   period          AcademicPeriod? @relation(fields: [academicPeriod], references: [code])
+  label           PracticeLabel? @relation(fields: [labelId], references: [id], onDelete: SetNull)
 
   @@map("practices")
+}
+
+// Etiqueta de seguimiento que el coordinador asigna a una práctica.
+//
+// Son anotaciones propias del equipo, no estados del proceso: recogen lo que
+// el sistema no puede deducir de los documentos («la empresa no responde»).
+// Por eso conviven con `Practice.status` sin sustituirlo.
+//
+// `requiresCompletion` marca la única etiqueta con condición: solo puede
+// asignarse cuando la práctica tiene sus tres documentos vigentes y el
+// certificado ya firmado. El servidor lo verifica; la interfaz solo lo anticipa.
+model PracticeLabel {
+  id                 String   @id @default(uuid()) @db.Uuid
+  facultyId          String   @db.Uuid
+  name               String
+  /// Color en hexadecimal, p. ej. "#16a34a"
+  color              String
+  /// Etiqueta base creada por el sistema: no se puede eliminar
+  isSystem           Boolean  @default(false)
+  /// Exige tres documentos vigentes y certificado firmado para poder asignarse
+  requiresCompletion Boolean  @default(false)
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  faculty            Faculty    @relation(fields: [facultyId], references: [id])
+  practices          Practice[]
+
+  @@unique([facultyId, name])
+  @@map("practice_labels")
 }
 
 model DocumentTemplate {

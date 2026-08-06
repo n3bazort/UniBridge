@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight, MoreHorizontal, Building2, CheckSquare, Prin
 import { api } from '@/lib/axios'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { LabelPill } from './labels/LabelPill'
 
 export interface GeneratedDoc {
   id: string
@@ -92,6 +93,14 @@ export interface Practice {
   id: string
   studentId: string
   companyId?: string
+  /** Etiqueta de seguimiento del coordinador; no interviene en `status` */
+  label?: {
+    id: string
+    name: string
+    color: string
+    isSystem: boolean
+    requiresCompletion: boolean
+  } | null
   student: {
     firstName: string
     lastName: string
@@ -151,6 +160,12 @@ interface EntityListProps {
   onDocumentClick?: (docId: string) => void
   /** IDs de prácticas que actualmente están generando certificado */
   generatingCertIds?: Set<string>
+  /**
+   * Pinta la etiqueta de la fila. La página lo provee para envolver la píldora
+   * en su selector; sin él la lista sigue mostrando la etiqueta, solo que como
+   * indicador y sin poder cambiarla.
+   */
+  renderLabel?: (practice: Practice) => React.ReactNode
 }
 
 /**
@@ -225,10 +240,11 @@ export function EntityList({
   onReassign,
   recentlyInvalidatedDocIds,
   onDocumentClick,
-  generatingCertIds
+  generatingCertIds,
+  renderLabel
 }: EntityListProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
-  const [contextMenu, setContextMenu] = useState<{ id: string, x: number, y: number } | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ id: string, x: number, y: number, canceled: boolean } | null>(null)
 
   useEffect(() => {
     const closeMenu = (e: MouseEvent) => {
@@ -256,7 +272,12 @@ export function EntityList({
       setContextMenu(null)
       return
     }
-    setContextMenu({ id: practice.id, x: e.clientX, y: e.clientY })
+    setContextMenu({
+      id: practice.id,
+      x: e.clientX,
+      y: e.clientY,
+      canceled: practice.status === 'CANCELED' || practice.status === 'REJECTED',
+    })
   }
 
   const changeStatus = (id: string, status: string) => {
@@ -492,25 +513,26 @@ export function EntityList({
 
                         {/* Nombre + datos secundarios en una sola línea discreta */}
                         <div className="flex flex-col flex-1 min-w-[180px] truncate pr-4">
-                          <span className="text-[13.5px] font-semibold text-[#111827] truncate flex items-center gap-1.5">
+                          {/* Sin distintivo de «Borrador»: PENDING solo quiere
+                              decir que aún no se emitió la solicitud, y eso ya
+                              lo dice la píldora del final de la fila. */}
+                          <span className="text-[13.5px] font-semibold text-[#111827] truncate">
                             {practice.student.firstName} {practice.student.lastName}
-                            {practice.status === 'PENDING' && (
-                              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-300/80 shadow-2xs">
-                                Borrador
-                              </span>
-                            )}
                           </span>
                           {/* Solo lo que VARÍA entre compañeros; lo común vive en
-                              la cabecera. Si nada varía, la cédula da identidad. */}
-                          <span className="text-[12px] text-[#9ca3af] truncate">
-                            {(() => {
-                              const parts: string[] = []
-                              if (sharedLevel === null && practice.academicLevel) parts.push(practice.academicLevel.replace(' Nivel', ''))
-                              if (sharedHours === null) parts.push(`${practice.totalHours || 0} h`)
-                              if (sharedTutor === null && practice.tutorName) parts.push(practice.tutorName)
-                              return parts.length > 0 ? parts.join(' · ') : `CI ${practice.student.dni}`
-                            })()}
-                          </span>
+                              la cabecera. Si no varía nada, la línea no aparece:
+                              la cédula ocupaba sitio sin distinguir a nadie que
+                              el nombre no distinguiera ya, y está en la ficha. */}
+                          {(() => {
+                            const parts: string[] = []
+                            if (sharedLevel === null && practice.academicLevel) parts.push(practice.academicLevel.replace(' Nivel', ''))
+                            if (sharedHours === null) parts.push(`${practice.totalHours || 0} h`)
+                            if (sharedTutor === null && practice.tutorName) parts.push(practice.tutorName)
+                            if (parts.length === 0) return null
+                            return (
+                              <span className="text-[12px] text-[#9ca3af] truncate">{parts.join(' · ')}</span>
+                            )
+                          })()}
                         </div>
 
                         {/* Document Icons */}
@@ -639,31 +661,14 @@ export function EntityList({
                           </button>
                         )}
 
-                        {/* Estado: punto de color + texto, sin la píldora que gritaba */}
-                        <div className="flex items-center gap-2 w-[100px] shrink-0">
-                          <span className={cn(
-                            "w-1.5 h-1.5 rounded-full shrink-0",
-                            practice.status === 'COMPLETED' ? "bg-emerald-500" :
-                            practice.status === 'IN_PROGRESS' ? "bg-blue-500" :
-                            practice.status === 'DELAYED' ? "bg-rose-500" :
-                            practice.status === 'CANCELED' || practice.status === 'REJECTED' ? "bg-slate-300" :
-                            "bg-amber-400"
-                          )} />
-                          <span className={cn(
-                            "text-[12px] font-medium truncate",
-                            practice.status === 'COMPLETED' ? "text-emerald-700" :
-                            practice.status === 'IN_PROGRESS' ? "text-blue-700" :
-                            practice.status === 'DELAYED' ? "text-rose-700" :
-                            practice.status === 'CANCELED' || practice.status === 'REJECTED' ? "text-slate-400" :
-                            "text-amber-700"
-                          )}>
-                            {practice.status === 'COMPLETED' ? 'Horas cumplidas'
-                              : practice.status === 'IN_PROGRESS' ? 'En curso'
-                              : practice.status === 'DELAYED' ? 'Atrasado'
-                              : practice.status === 'CANCELED' ? 'Cancelado'
-                              : practice.status === 'REJECTED' ? 'Rechazado'
-                              : 'Pendiente'}
-                          </span>
+                        {/* Etiqueta de seguimiento; si no hay, se ve el estado
+                            derivado. Un clic abre el selector. */}
+                        <div className="flex items-center w-[132px] shrink-0" onClick={(e) => e.stopPropagation()}>
+                          {renderLabel ? (
+                            renderLabel(practice)
+                          ) : (
+                            <LabelPill label={practice.label} status={practice.status} />
+                          )}
                         </div>
 
                         {/* Actions */}
@@ -699,44 +704,38 @@ export function EntityList({
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="text-[11px] font-medium text-[#9ca3af] px-3 py-1.5 uppercase tracking-wider">Cambiar Estado</div>
-          <button 
-            onClick={() => changeStatus(contextMenu.id, 'PENDING')}
-            className="w-full text-left px-3 py-2 text-[13px] font-medium text-[#374151] hover:bg-[#f8fafc] hover:text-[#b54708] rounded-md transition-colors"
-          >
-            Pendiente
-          </button>
-          <button 
-            onClick={() => changeStatus(contextMenu.id, 'IN_PROGRESS')}
-            className="w-full text-left px-3 py-2 text-[13px] font-medium text-[#374151] hover:bg-[#f8fafc] hover:text-[#1d4ed8] rounded-md transition-colors"
-          >
-            En Curso
-          </button>
-          <button 
-            onClick={() => changeStatus(contextMenu.id, 'DELAYED')}
-            className="w-full text-left px-3 py-2 text-[13px] font-medium text-[#374151] hover:bg-[#f8fafc] hover:text-[#be123c] rounded-md transition-colors"
-          >
-            En Atrasado
-          </button>
-          <button 
-            onClick={() => changeStatus(contextMenu.id, 'COMPLETED')}
-            className="w-full text-left px-3 py-2 text-[13px] font-medium text-[#374151] hover:bg-[#f8fafc] hover:text-[#027a48] rounded-md transition-colors"
-          >
-            Finalizado
-          </button>
-          
-          <div className="h-[1px] bg-gray-100 my-1 w-full" />
-          
-          <button 
-            onClick={() => {
-              if(window.confirm('¿Estás seguro de que deseas cancelar/desvincular esta práctica? El historial se mantendrá pero ya no estará activa.')) {
-                changeStatus(contextMenu.id, 'CANCELED')
-              }
-            }}
-            className="w-full text-left px-3 py-2 text-[13px] font-semibold text-red-600 hover:bg-red-50 rounded-md transition-colors"
-          >
-            Cancelar Práctica
-          </button>
+          {/*
+            Aquí solo caben las decisiones que de verdad le corresponden a una
+            persona. No iniciado, En proceso y Finalizado los deduce el
+            sistema de los documentos emitidos: ponerlos a mano no servía de
+            nada —el siguiente recálculo los revertía— y «Finalizado» además
+            devolvía un error del servidor. Cancelar y reactivar sí perduran.
+          */}
+          {contextMenu.canceled ? (
+            <>
+              <div className="px-3 py-1.5 text-[11px] font-medium text-[#9ca3af] uppercase tracking-wider">
+                Práctica cancelada
+              </div>
+              <button
+                onClick={() => changeStatus(contextMenu.id, 'IN_PROGRESS')}
+                className="w-full text-left px-3 py-2 text-[13px] font-medium text-[#374151] hover:bg-[#f8fafc] hover:text-[#1d4ed8] rounded-md transition-colors"
+                title="Vuelve a dejar el estado en manos del sistema, que lo deducirá de los documentos"
+              >
+                Reactivar práctica
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                if (window.confirm('¿Cancelar esta práctica? El historial se conserva, pero dejará de estar activa y no podrá emitir documentos.')) {
+                  changeStatus(contextMenu.id, 'CANCELED')
+                }
+              }}
+              className="w-full text-left px-3 py-2 text-[13px] font-semibold text-red-600 hover:bg-red-50 rounded-md transition-colors"
+            >
+              Cancelar práctica
+            </button>
+          )}
         </div>
       )}
 

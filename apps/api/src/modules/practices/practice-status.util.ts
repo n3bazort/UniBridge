@@ -17,41 +17,62 @@ export interface StatusRelevantDoc {
  */
 export const MANUAL_STATUSES: PracticeStatus[] = ['REJECTED', 'CANCELED'];
 
+/** Cómo se nombra cada estado de cara al usuario. Fuente única del rótulo. */
+export const ETIQUETA_ESTADO: Record<string, string> = {
+  PENDING: 'No iniciado',
+  IN_PROGRESS: 'En proceso',
+  COMPLETED: 'Finalizado',
+  CANCELED: 'Cancelado',
+  REJECTED: 'Rechazado',
+  // Ya no se deriva; se conserva por si quedan filas antiguas.
+  DELAYED: 'Atrasado',
+};
+
 /**
  * Deriva el estado de una práctica a partir de HECHOS verificables
  * (documentos emitidos y firmas), no de datos escritos a mano.
  *
- *   PENDING     → todavía no hay solicitud vigente: no arrancó formalmente.
- *   IN_PROGRESS → hay solicitud vigente pero el certificado aún no tiene
- *                 las dos firmas (incluye "en circuito de firma").
- *   COMPLETED   → el certificado está firmado por Decano y Director.
- *   DELAYED     → sigue en curso pero su fecha de fin ya pasó.
+ * El recorrido documental tiene tres momentos, y el estado dice en cuál está:
  *
- * Ojo con el ciclo: COMPLETED significa "ya tiene su certificado firmado",
- * por eso emitir el certificado NO puede exigir estar COMPLETED. El requisito
- * para emitir es tener solicitud vigente + los datos que se imprimen.
+ *   PENDING     → «No iniciado». Sus datos están cargados y asignados, pero
+ *                 todavía no se le ha generado ningún documento.
+ *   IN_PROGRESS → «En proceso». Ya se generó al menos uno: el trámite arrancó.
+ *   COMPLETED   → «Finalizado». Tiene los tres documentos vigentes —solicitud,
+ *                 designación y certificado— y el certificado está suscrito por
+ *                 las dos autoridades.
+ *
+ * DELAYED quedó fuera a propósito: dependía de `endDate`, un dato que el
+ * sistema no recoge en ningún flujo (ni el formulario ni la importación de
+ * Excel lo piden), de modo que la condición no podía cumplirse nunca. Se
+ * conserva en el enum por las filas históricas, pero ya no se deriva.
+ *
+ * Ojo con el ciclo: COMPLETED es la consecuencia de tener el certificado
+ * firmado, así que emitir el certificado NO puede exigir estar COMPLETED.
  */
 export function derivePracticeStatus(
-  practice: { status: PracticeStatus; endDate?: Date | null },
+  practice: { status: PracticeStatus },
   docs: StatusRelevantDoc[],
 ): PracticeStatus {
   // Las decisiones humanas mandan sobre cualquier derivación
   if (MANUAL_STATUSES.includes(practice.status)) return practice.status;
 
-  const hasValidSolicitud = docs.some(
-    (d) => d.documentType === 'SOLICITUD' && d.status === 'VALID',
-  );
-  const hasSignedCertificate = docs.some(
+  const vigente = (tipo: string) =>
+    docs.some((d) => d.documentType === tipo && d.status === 'VALID');
+
+  const certificadoFirmado = docs.some(
     (d) => d.documentType === 'CERTIFICADO' && d.status === 'VALID' && d.signatureStatus === 'SIGNED',
   );
 
-  if (hasSignedCertificate) return 'COMPLETED';
-  if (!hasValidSolicitud) return 'PENDING';
+  // Finalizado exige el expediente completo, no solo el certificado: sin la
+  // designación el recorrido tiene un hueco aunque el certificado esté firmado.
+  if (vigente('SOLICITUD') && vigente('DESIGNACION') && certificadoFirmado) return 'COMPLETED';
 
-  // En curso: si además se pasó de la fecha de fin, se marca atrasada
-  if (practice.endDate && practice.endDate < new Date()) return 'DELAYED';
+  // Basta con que se haya generado algún documento, aunque después se anulara:
+  // una práctica cuya solicitud se invalidó ya arrancó, y lo que necesita es
+  // rehacerla, no aparecer como si nadie la hubiera tocado.
+  if (docs.length > 0) return 'IN_PROGRESS';
 
-  return 'IN_PROGRESS';
+  return 'PENDING';
 }
 
 /**

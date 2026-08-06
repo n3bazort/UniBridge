@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '@/lib/axios'
 import type { Practice } from './EntityList'
+import { leerEstado } from './labels/types'
 
 interface RightDetailPanelProps {
   selectedCount: number
@@ -119,10 +120,11 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
               </span>
             </div>
           </div>
+          {/* Mismo rótulo que la píldora de la lista: un solo nombre por estado */}
           <span className={`flex items-center h-[28px] px-[10px] rounded-full text-[12px] font-medium shrink-0
-            ${p.status === 'COMPLETED' ? 'bg-[#ecfdf3] text-[#027a48]' : p.status === 'IN_PROGRESS' ? 'bg-[#eff6ff] text-[#1d4ed8]' : 'bg-[#fffaeb] text-[#b54708]'}
+            ${p.status === 'COMPLETED' ? 'bg-[#ecfdf3] text-[#027a48]' : p.status === 'IN_PROGRESS' ? 'bg-[#eff6ff] text-[#1d4ed8]' : 'bg-[#f8fafc] text-[#64748b]'}
           `}>
-            {p.status === 'COMPLETED' ? 'Terminado' : p.status === 'IN_PROGRESS' ? 'En curso' : 'Pendiente'}
+            {leerEstado(p.status).texto}
           </span>
         </div>
 

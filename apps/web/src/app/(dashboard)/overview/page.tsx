@@ -90,19 +90,21 @@ export default function OverviewPage() {
   }
 
   // Mapeo de colores para el Donut Chart de Estados
+  // Mismos nombres que en la lista de prácticas, para que el resumen y el
+  // detalle no llamen distinto a lo mismo.
   const statusColors: Record<string, string> = {
+    'PENDING': '#94a3b8', // gris: aún sin ningún documento
     'IN_PROGRESS': '#3b82f6', // azul
     'COMPLETED': '#10b981', // verde
-    'PENDING': '#eab308', // amarillo
-    'DELAYED': '#f97316', // naranja
+    'CANCELED': '#cbd5e1',
     'REJECTED': '#ef4444' // rojo
   };
 
   const statusLabels: Record<string, string> = {
-    'IN_PROGRESS': 'En progreso',
-    'COMPLETED': 'Completadas',
-    'PENDING': 'Pendientes',
-    'DELAYED': 'Retrasadas',
+    'PENDING': 'No iniciadas',
+    'IN_PROGRESS': 'En proceso',
+    'COMPLETED': 'Finalizadas',
+    'CANCELED': 'Canceladas',
     'REJECTED': 'Rechazadas'
   };
 

@@ -17,12 +17,13 @@ const C = {
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  PENDING: 'Pendiente',
-  IN_PROGRESS: 'En curso',
+  PENDING: 'No iniciada',
+  IN_PROGRESS: 'En proceso',
   COMPLETED: 'Finalizada',
-  DELAYED: 'Atrasada',
   CANCELED: 'Cancelada',
   REJECTED: 'Rechazada',
+  // Ya no se deriva; se mantiene por si quedan filas antiguas guardadas así.
+  DELAYED: 'Atrasada',
 };
 
 @Injectable()
@@ -76,7 +77,7 @@ export class ReportsService {
 
     const completed = byStatus.get('COMPLETED') || 0;
     const inProgress = byStatus.get('IN_PROGRESS') || 0;
-    const alerts = (byStatus.get('DELAYED') || 0) + (byStatus.get('REJECTED') || 0);
+    const alerts = (byStatus.get('REJECTED') || 0) + (byStatus.get('CANCELED') || 0);
     const completionRate = total > 0 ? completed / total : 0;
     const certs = docs.filter((d) => d.documentType === 'CERTIFICADO');
     const signedCerts = certs.filter((d) => d.signatureStatus === 'SIGNED').length;

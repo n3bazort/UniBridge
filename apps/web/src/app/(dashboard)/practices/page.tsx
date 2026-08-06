@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import * as XLSX from 'xlsx'
-import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle, Loader2, Plus } from 'lucide-react'
+import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle, Loader2, Plus, Building2, UserCheck, List } from 'lucide-react'
 import { FilterChip } from '@/components/ui/filter-chip'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -16,6 +16,8 @@ import { RightDetailPanel } from '@/components/practices/RightDetailPanel'
 import { NewPracticeModal } from '@/components/practices/NewPracticeModal'
 import { MissingDataModal } from '@/components/practices/MissingDataModal'
 import { RoleGate } from '@/components/shared/role-gate'
+import { LabelPicker } from '@/components/practices/labels/LabelPicker'
+import { faltaParaCerrar, ESTADOS_DERIVADOS, type PracticeLabel } from '@/components/practices/labels/types'
 import { Button } from '@/components/ui/button'
 import { useSearchStore } from '@/store/search'
 import { toast } from 'sonner'
@@ -182,6 +184,71 @@ export default function PracticesPage() {
       createdAt: new Date().toISOString()
     }))
   }, [responseUnassigned])
+
+  // ── Etiquetas de seguimiento ──
+  // Son anotaciones del coordinador («la empresa no responde») y viven aparte
+  // del estado que el sistema deriva de los documentos: no lo modifican.
+  const { data: labels = [] } = useQuery<PracticeLabel[]>({
+    queryKey: ['practice-labels'],
+    queryFn: async () => (await api.get('/practice-labels')).data,
+  })
+
+  const refrescarPracticas = () => queryClient.invalidateQueries({ queryKey: ['practices-all'] })
+
+  /** Asigna la etiqueta a la práctica indicada, o a toda la selección si la incluye. */
+  const handleAssignLabel = async (practice: Practice, labelId: string | null) => {
+    const alcance = selectedIds.has(practice.id) ? Array.from(selectedIds) : [practice.id]
+    try {
+      const { data } = await api.patch('/practice-labels/assign', { practiceIds: alcance, labelId })
+      await refrescarPracticas()
+
+      const deshacer = async () => {
+        try {
+          await api.patch('/practice-labels/restore', { previous: data.previous })
+          await refrescarPracticas()
+          toast.success('Etiquetas devueltas a como estaban')
+        } catch {
+          toast.error('No se pudo deshacer el cambio de etiqueta')
+        }
+      }
+
+      const resumen = labelId
+        ? `${data.updated === 1 ? 'Etiqueta aplicada' : `Actualizamos ${data.updated} elementos`}: ${data.label?.name ?? ''}`
+        : `${data.updated === 1 ? 'Etiqueta retirada' : `Etiqueta retirada de ${data.updated} elementos`}`
+
+      toast.success(resumen, { action: { label: 'Deshacer', onClick: deshacer }, duration: 8000 })
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'No se pudo asignar la etiqueta')
+    }
+  }
+
+  const handleCreateLabel = async (name: string, color: string) => {
+    try {
+      await api.post('/practice-labels', { name, color })
+      await queryClient.invalidateQueries({ queryKey: ['practice-labels'] })
+      toast.success(`Etiqueta «${name}» creada`)
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'No se pudo crear la etiqueta')
+    }
+  }
+
+  const handleDeleteLabel = async (labelId: string) => {
+    const etiqueta = labels.find(l => l.id === labelId)
+    try {
+      const { data } = await api.delete(`/practice-labels/${labelId}`)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['practice-labels'] }),
+        refrescarPracticas(),
+      ])
+      toast.success(
+        data.practicesAffected > 0
+          ? `Etiqueta «${etiqueta?.name}» eliminada; ${data.practicesAffected} práctica(s) quedaron sin etiqueta`
+          : `Etiqueta «${etiqueta?.name}» eliminada`,
+      )
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'No se pudo eliminar la etiqueta')
+    }
+  }
 
   const rawPractices: Practice[] = activeTab === 'assigned' ? (response?.data || []) : unassignedPractices
   const isLoading = activeTab === 'assigned' ? isLoadingPractices : isLoadingUnassigned
@@ -519,8 +586,12 @@ export default function PracticesPage() {
   }
   const validatePracticeDataForDoc = (practice: Practice, docType: string): string[] => {
     const missing: string[] = []
-    if (practice.status === 'PENDING') {
-      missing.push('La práctica se encuentra en estado "Borrador"')
+    // Solo bloquean las decisiones humanas. Estar en «Pendiente» no es un dato
+    // que falte: el sistema marca así a toda práctica que todavía no tiene su
+    // solicitud, de modo que exigirlo impedía emitir justamente el documento
+    // que la sacaba de ese estado.
+    if (practice.status === 'CANCELED' || practice.status === 'REJECTED') {
+      missing.push(practice.status === 'CANCELED' ? 'La práctica está cancelada' : 'La práctica fue rechazada')
     }
     if (!practice.student) {
       missing.push('Estudiante asignado')
@@ -743,7 +814,7 @@ export default function PracticesPage() {
       'Estudiante': `${p.student?.firstName || ''} ${p.student?.lastName || ''}`.trim(),
       'Carrera / Programa': p.student?.program?.name || '',
       'Empresa': p.company?.name || 'Sin asignación',
-      'Estado': p.status === 'COMPLETED' ? 'Horas cumplidas' : p.status === 'IN_PROGRESS' ? 'En Curso' : p.status,
+      'Estado': ESTADOS_DERIVADOS[p.status]?.texto ?? p.status,
       'Horas Totales': p.totalHours || 0,
       'Tutor Académico': p.tutorName || '',
       'Tutor Empresarial': p.company?.contactName || '',
@@ -882,12 +953,11 @@ export default function PracticesPage() {
                   onChange={setFilterStatus}
                   options={[
                     { value: null, label: 'Todos' },
-                    { value: 'PENDING', label: 'Pendiente' },
-                    { value: 'IN_PROGRESS', label: 'En Curso' },
-                    { value: 'DELAYED', label: 'En Atrasado' },
-                    { value: 'COMPLETED', label: 'Horas cumplidas' },
+                    { value: 'PENDING', label: 'No iniciado' },
+                    { value: 'IN_PROGRESS', label: 'En proceso' },
+                    { value: 'COMPLETED', label: 'Finalizado' },
                     { value: 'CANCELED', label: 'Cancelado' },
-                  ]} 
+                  ]}
                 />
                 
                 <FilterChip 
@@ -902,7 +972,7 @@ export default function PracticesPage() {
                 />
                 
                 <FilterChip 
-                  label="Programa" 
+                  label="Carrera" 
                   className="hidden xl:block"
                   value={filterProgram} 
                   onChange={setFilterProgram}
@@ -933,21 +1003,27 @@ export default function PracticesPage() {
                   <span>Exportar Excel</span>
                 </button>
 
-                <div className="flex items-center gap-2 bg-white rounded-lg p-1 border shadow-soft shrink-0">
-                  <span className="text-[12px] font-medium text-gray-500 pl-2 pr-1">Agrupar por:</span>
-                  {(['none', 'company', 'tutor', 'level'] as const).map(option => (
-                    <button
-                      key={option}
-                      onClick={() => setGroupBy(option)}
-                      className={`px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors ${
-                        groupBy === option 
-                          ? 'bg-blue-50 text-blue-700' 
-                          : 'text-gray-600 hover:bg-gray-50'
-                      }`}
+                <div className="flex items-center gap-2 bg-[#f1f5f9] p-1 rounded-[10px] pr-2 shrink-0">
+                  <span className="text-[11.5px] font-medium text-[#64748b] pl-2 hidden sm:inline">Agrupar por:</span>
+                  <div className="relative flex items-center">
+                    <select
+                      value={groupBy}
+                      onChange={(e) => setGroupBy(e.target.value as any)}
+                      className="appearance-none bg-white border border-[#eef2f7] rounded-[8px] pl-8 pr-7 py-1.5 text-[11.5px] font-bold text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-pointer shadow-sm hover:border-[#cbd5e1] transition-colors"
                     >
-                      {option === 'none' ? 'No' : option === 'company' ? 'Empresa' : option === 'tutor' ? 'Tutor' : 'Nivel'}
-                    </button>
-                  ))}
+                      <option value="none">Sin agrupar</option>
+                      <option value="company">Empresa</option>
+                      <option value="tutor">Tutor</option>
+                      <option value="level">Nivel</option>
+                    </select>
+                    <div className="absolute left-2.5 text-blue-600 pointer-events-none">
+                      {groupBy === 'company' && <Building2 className="w-3.5 h-3.5" />}
+                      {groupBy === 'tutor' && <UserCheck className="w-3.5 h-3.5" />}
+                      {groupBy === 'level' && <List className="w-3.5 h-3.5" />}
+                      {groupBy === 'none' && <List className="w-3.5 h-3.5" />}
+                    </div>
+                    <ChevronDown className="w-3.5 h-3.5 absolute right-2 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
               </div>
             )}
@@ -990,21 +1066,35 @@ export default function PracticesPage() {
               )}
             </FloatingActionBar>
 
-            {/* ── Borradores ── */}
-            {activeTab === 'assigned' && !isLoading && (() => {
-              const drafts = (response?.data || []).filter((p: any) => p.status === 'PENDING')
-              if (!drafts.length) return null
+            {/*
+              Pendientes por completar.
+
+              Antes este bloque listaba las prácticas en estado PENDING y las
+              llamaba «borradores incompletos», pero PENDING no significa eso:
+              lo pone el sistema a toda práctica que aún no tiene su solicitud
+              emitida, que es el punto de partida normal de cualquiera. El aviso
+              señalaba como defectuosos registros que estaban completos.
+
+              Ahora mira los datos de verdad —los mismos que exige el oficio— y
+              vive en la pestaña de sin asignar, junto al resto de lo que está a
+              la espera de una acción.
+            */}
+            {activeTab === 'unassigned' && !isLoading && (() => {
+              const incompletas = (response?.data || [])
+                .map((p: any) => ({ p, falta: validatePracticeDataForDoc(p, 'SOLICITUD') }))
+                .filter((x: any) => x.falta.length > 0)
+              if (!incompletas.length) return null
               return (
                 <div className="mt-2 bg-amber-50 border border-amber-200/70 rounded-2xl p-4 flex flex-col gap-2">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
                     <span className="text-[12px] font-bold text-amber-800 uppercase tracking-wider">
-                      Borradores incompletos ({drafts.length})
+                      Pendientes por completar ({incompletas.length})
                     </span>
-                    <span className="text-[11.5px] text-amber-600 ml-1">· No pueden emitir documentos hasta completarse</span>
+                    <span className="text-[11.5px] text-amber-600 ml-1">· Les falta algún dato que el oficio imprime</span>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    {drafts.map((p: any) => (
+                    {incompletas.map(({ p, falta }: any) => (
                       <div
                         key={p.id}
                         className="flex items-center justify-between bg-white rounded-xl px-4 py-2.5 border border-amber-100 shadow-xs"
@@ -1013,15 +1103,11 @@ export default function PracticesPage() {
                           <span className="text-[13px] font-semibold text-slate-800 truncate">
                             {p.student
                               ? `${p.student.firstName} ${p.student.lastName}`
-                              : <span className="text-slate-400 italic">Sin estudiante</span>
-                            }
+                              : <span className="text-slate-400 italic">Sin estudiante</span>}
                           </span>
-                          <span className="text-[11.5px] text-slate-400 truncate">
-                            {[
-                              p.company?.name,
-                              p.tutorName,
-                              p.academicPeriod,
-                            ].filter(Boolean).join(' · ') || 'Sin datos completos'}
+                          {/* Se dice qué falta exactamente, no solo que falta algo */}
+                          <span className="text-[11.5px] text-amber-700 truncate" title={falta.join(' · ')}>
+                            Falta: {falta.join(' · ')}
                           </span>
                         </div>
                         <button
@@ -1086,6 +1172,18 @@ export default function PracticesPage() {
                 recentlyInvalidatedDocIds={recentlyInvalidatedDocIds}
                 generatingCertIds={generatingCertIds}
                 onDocumentClick={handleDocumentClick}
+                renderLabel={(practice) => (
+                  <LabelPicker
+                    labels={labels}
+                    current={practice.label}
+                    status={practice.status}
+                    missingForCompletion={faltaParaCerrar(practice.student.generatedDocs)}
+                    selectionCount={selectedIds.has(practice.id) ? selectedIds.size : 1}
+                    onAssign={(labelId) => handleAssignLabel(practice, labelId)}
+                    onCreate={handleCreateLabel}
+                    onDelete={handleDeleteLabel}
+                  />
+                )}
               />
             )}
           </div>
