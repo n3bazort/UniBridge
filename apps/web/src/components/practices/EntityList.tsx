@@ -21,21 +21,69 @@ export interface GeneratedDoc {
  * cuando las dos autoridades ya suscribieron; en los pasos intermedios avisa de
  * en qué punto del circuito está, y si aún no se ha enviado, lo dice.
  */
+/**
+ * Estado visual del ícono de firma.
+ * El "anillo de progreso" del contorno indica cuántas firmas se han completado:
+ *
+ * ─ Sin PDF / sin enviar (NONE):
+ *     Sin color. Solo un contorno muy sutil (border-1) en gris claro.
+ *     El ícono está atenuado. No hay relleno de fondo.
+ *
+ * ─ Enviado al circuito (IN_SIGNING) — 0 firmas completadas:
+ *     Color activo. Contorno delgado (ring-1) para indicar que está en marcha.
+ *
+ * ─ Primera firma completa (PARTIALLY_SIGNED) — 1 de 2:
+ *     Color activo. Contorno de grosor medio (ring-[1.5px]) → "mitad de barra".
+ *
+ * ─ Ambas firmas (SIGNED) — 2 de 2:
+ *     Color activo. Contorno grueso (ring-2) → "barra completa, negrita".
+ *
+ * ─ Rechazado: color de alerta con contorno fino.
+ */
 function getFirmaState(pdf?: GeneratedDoc) {
+  // Sin certificado emitido: completamente inactivo, sin color
   if (!pdf) {
-    return { cls: 'bg-slate-50 text-slate-300 cursor-default', title: 'Sin certificado emitido: primero hay que generarlo', activo: false }
+    return {
+      cls: 'border border-slate-200 text-slate-300 cursor-default bg-transparent',
+      title: 'Sin certificado emitido: primero hay que generarlo',
+      activo: false,
+    }
   }
   switch (pdf.signatureStatus) {
     case 'SIGNED':
-      return { cls: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 cursor-pointer', title: `Firmado por ambas autoridades — ver en Certificados`, activo: true }
+      // Ambas firmas → contorno grueso ("negrita")
+      return {
+        cls: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 ring-2 ring-emerald-400 cursor-pointer',
+        title: 'Firmado por ambas autoridades — ver en Certificados',
+        activo: true,
+      }
     case 'PARTIALLY_SIGNED':
-      return { cls: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-500 cursor-pointer', title: 'En circuito de firma: falta el Responsable de Prácticas — ver en Certificados', activo: true }
+      // 1 firma → contorno medio
+      return {
+        cls: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-500 ring-[1.5px] ring-indigo-400 cursor-pointer',
+        title: 'En circuito de firma: falta el Responsable de Prácticas — ver en Certificados',
+        activo: true,
+      }
     case 'IN_SIGNING':
-      return { cls: 'bg-blue-50 hover:bg-blue-100 text-blue-500 cursor-pointer', title: 'En circuito de firma: pendiente del Decano — ver en Certificados', activo: true }
+      // Enviado, pendiente primera firma → contorno delgado
+      return {
+        cls: 'bg-blue-50 hover:bg-blue-100 text-blue-500 ring-1 ring-blue-300 cursor-pointer',
+        title: 'En circuito de firma: pendiente del Decano — ver en Certificados',
+        activo: true,
+      }
     case 'REJECTED':
-      return { cls: 'bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer', title: 'Firma rechazada: hay que revisarlo — ver en Certificados', activo: true }
+      return {
+        cls: 'bg-rose-50 hover:bg-rose-100 text-rose-500 ring-1 ring-rose-300 cursor-pointer',
+        title: 'Firma rechazada: hay que revisarlo — ver en Certificados',
+        activo: true,
+      }
     default:
-      return { cls: 'bg-amber-50 hover:bg-amber-100 text-amber-500 cursor-pointer', title: 'Sin enviar a firma: mándalo al circuito desde Certificados', activo: true }
+      // PDF existe pero aún no enviado a firma: sin color (solo border sutil)
+      return {
+        cls: 'border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-500 cursor-pointer bg-transparent',
+        title: 'Sin enviar a firma: mándalo al circuito desde Certificados',
+        activo: true,
+      }
   }
 }
 
@@ -568,11 +616,6 @@ export function EntityList({
                                       title={firma.title}
                                     >
                                       <PenLine className="w-4 h-4" />
-                                      {pdf?.signatureStatus === 'SIGNED' && (
-                                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 text-white flex items-center justify-center leading-none">
-                                          <Check className="w-2 h-2" strokeWidth={4} />
-                                        </span>
-                                      )}
                                     </button>
                                   )
                                 })()}
