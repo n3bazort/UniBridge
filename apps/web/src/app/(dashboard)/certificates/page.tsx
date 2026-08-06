@@ -21,6 +21,8 @@ import {
   FileOutput,
   Printer,
   Loader2,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -207,6 +209,7 @@ function CertificatesPageInner() {
   const [localSearch, setLocalSearch] = useState('')
   const [filterState, setFilterState] = useState<'ALL' | 'READY' | 'IN_SIGNATURE' | 'SIGNED' | 'ARCHIVED'>('ALL')
   const [viewMode, setViewMode] = useState<'documents' | 'batches'>('documents')
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
 
   const [showInvalidateModal, setShowInvalidateModal] = useState(false)
   const [docToInvalidate, setDocToInvalidate] = useState<string | null>(null)
@@ -1086,22 +1089,43 @@ function CertificatesPageInner() {
                   return (
                     <div key={companyName} className="bg-white rounded-[16px] border border-[#eef2f7] shadow-soft overflow-hidden">
                       {/* Cabecera de empresa: el nombre se escribe UNA vez */}
-                      <div className="flex items-center gap-3 px-4 py-3 bg-[#fdfdfd] border-b border-[#f3f4f6]">
+                      <div 
+                        className="flex items-center gap-3 px-4 py-3 bg-[#fdfdfd] border-b border-[#f3f4f6] cursor-pointer hover:bg-slate-50 transition-colors"
+                        onClick={() => setCollapsedGroups(prev => ({ ...prev, [companyName]: !prev[companyName] }))}
+                      >
                         <input
                           type="checkbox"
                           checked={allSelected}
                           disabled={selectable.length === 0}
-                          onChange={() => toggleGroup(docs)}
+                          onChange={(e) => {
+                            e.stopPropagation()
+                            toggleGroup(docs)
+                          }}
+                          onClick={(e) => e.stopPropagation()}
                           className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-25 cursor-pointer shrink-0"
                           title={selectable.length > 0 ? `Seleccionar los ${selectable.length} enviables` : 'Ninguno disponible para firma'}
                         />
                         <div className="w-7 h-7 rounded-[8px] bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                           <Building2 className="w-3.5 h-3.5" />
                         </div>
-                        <span className="text-[13.5px] font-bold text-[#111827] truncate">{companyName}</span>
-                        <span className="text-[11.5px] font-medium text-[#9ca3af]">{docs.length} doc{docs.length > 1 ? 's' : ''}</span>
+                        <span className="text-[13.5px] font-bold text-[#111827] truncate select-none">{companyName}</span>
+                        <span className="text-[11.5px] font-medium text-[#9ca3af] select-none">{docs.length} doc{docs.length > 1 ? 's' : ''}</span>
+                        
+                        <div className="ml-auto text-slate-400">
+                          {collapsedGroups[companyName] ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </div>
                       </div>
-                      {layout === 'grid' ? (
+                      
+                      <AnimatePresence initial={false}>
+                        {!collapsedGroups[companyName] && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            {layout === 'grid' ? (
                         <div
                           className="grid gap-1 p-3 pl-6"
                           style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${iconSize + 40}px, 1fr))` }}
@@ -1153,6 +1177,9 @@ function CertificatesPageInner() {
                           </AnimatePresence>
                         </div>
                       )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   )
                 })}
