@@ -1221,7 +1221,7 @@ function CertificatesPageInner() {
                                 </span>
                               </div>
                             ) : renderDocCard(cluster[0])
-                          )}
+                          })}
                         </div>
                       ) : (
                         // Sangría: los documentos son "hijos" de la empresa
