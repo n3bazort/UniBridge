@@ -24,6 +24,44 @@ import { useSearchStore } from '@/store/search'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
+function CompactFilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+  className,
+}: {
+  label: string
+  value: string | null
+  onChange: (val: any) => void
+  options: Array<{ value: string | null; label: string }>
+  className?: string
+}) {
+  const isSelected = value !== null
+
+  return (
+    <div className={cn("relative inline-flex items-center shrink-0", className)}>
+      <select
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
+        className={cn(
+          "appearance-none h-8 pl-3 pr-7 rounded-lg text-[12px] font-semibold transition-all cursor-pointer shadow-xs border focus:outline-none focus:ring-2 focus:ring-blue-500/10",
+          isSelected
+            ? "bg-blue-50/90 border-blue-200 text-blue-700 font-bold"
+            : "bg-white border-[#eef2f7] text-slate-600 hover:text-slate-900 hover:border-slate-300"
+        )}
+      >
+        {options.map((opt, i) => (
+          <option key={i} value={opt.value ?? ''}>
+            {label}: {opt.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className={cn("w-3.5 h-3.5 absolute right-2 pointer-events-none", isSelected ? "text-blue-500" : "text-slate-400")} />
+    </div>
+  )
+}
+
 export default function PracticesPage() {
   const router = useRouter()
   const { searchQuery } = useSearchStore()
@@ -898,43 +936,8 @@ export default function PracticesPage() {
     e.preventDefault();
     isDragging.current = true;
     document.body.style.cursor = 'col-resize';
-function CompactFilterSelect({
-  label,
-  value,
-  onChange,
-  options,
-  className,
-}: {
-  label: string
-  value: string | null
-  onChange: (val: any) => void
-  options: Array<{ value: string | null; label: string }>
-  className?: string
-}) {
-  const isSelected = value !== null
-
-  return (
-    <div className={cn("relative inline-flex items-center shrink-0", className)}>
-      <select
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
-        className={cn(
-          "appearance-none h-8 pl-3 pr-7 rounded-lg text-[12px] font-semibold transition-all cursor-pointer shadow-xs border focus:outline-none focus:ring-2 focus:ring-blue-500/10",
-          isSelected
-            ? "bg-blue-50/90 border-blue-200 text-blue-700 font-bold"
-            : "bg-white border-[#eef2f7] text-slate-600 hover:text-slate-900 hover:border-slate-300"
-        )}
-      >
-        {options.map((opt, i) => (
-          <option key={i} value={opt.value ?? ''}>
-            {label}: {opt.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown className={cn("w-3.5 h-3.5 absolute right-2 pointer-events-none", isSelected ? "text-blue-500" : "text-slate-400")} />
-    </div>
-  )
-}
+    document.body.style.userSelect = 'none';
+  };
 
   return (
     <RoleGate allowedRoles={['ADMIN', 'COORDINATOR']}>
