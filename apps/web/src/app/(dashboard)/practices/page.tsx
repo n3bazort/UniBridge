@@ -4,11 +4,10 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import * as XLSX from 'xlsx'
-import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle, Loader2, Plus, Building2, UserCheck, List, MoreHorizontal } from 'lucide-react'
+import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle, Loader2, Plus, Building2, UserCheck, List } from 'lucide-react'
 import { FilterChip } from '@/components/ui/filter-chip'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
 import { EntityList, type Group, type Practice } from '@/components/practices/EntityList'
 import { ReassignCompanyModal, rememberRecentCompany, type ReassignImpact } from '@/components/practices/ReassignCompanyModal'
 import { FloatingActionBar } from '@/components/practices/FloatingActionBar'
@@ -23,44 +22,6 @@ import { Button } from '@/components/ui/button'
 import { useSearchStore } from '@/store/search'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-
-function CompactFilterSelect({
-  label,
-  value,
-  onChange,
-  options,
-  className,
-}: {
-  label: string
-  value: string | null
-  onChange: (val: any) => void
-  options: Array<{ value: string | null; label: string }>
-  className?: string
-}) {
-  const isSelected = value !== null
-
-  return (
-    <div className={cn("relative inline-flex items-center shrink-0", className)}>
-      <select
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
-        className={cn(
-          "appearance-none h-8 pl-3 pr-7 rounded-lg text-[12px] font-semibold transition-all cursor-pointer shadow-xs border focus:outline-none focus:ring-2 focus:ring-blue-500/10",
-          isSelected
-            ? "bg-blue-50/90 border-blue-200 text-blue-700 font-bold"
-            : "bg-white border-[#eef2f7] text-slate-600 hover:text-slate-900 hover:border-slate-300"
-        )}
-      >
-        {options.map((opt, i) => (
-          <option key={i} value={opt.value ?? ''}>
-            {label}: {opt.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown className={cn("w-3.5 h-3.5 absolute right-2 pointer-events-none", isSelected ? "text-blue-500" : "text-slate-400")} />
-    </div>
-  )
-}
 
 export default function PracticesPage() {
   const router = useRouter()
@@ -122,19 +83,6 @@ export default function PracticesPage() {
   // Modal de Nueva Práctica (Google / Monday style)
   const [isNewPracticeModalOpen, setIsNewPracticeModalOpen] = useState(false)
   const [practiceToEdit, setPracticeToEdit] = useState<any | null>(null)
-
-  const [showActionsMenu, setShowActionsMenu] = useState(false)
-  const actionsMenuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target as Node)) {
-        setShowActionsMenu(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   // Guardafuegos de emisión: modal de diagnóstico de datos faltantes
   const [missingDataGuard, setMissingDataGuard] = useState<{
@@ -302,13 +250,8 @@ export default function PracticesPage() {
     }
   }
 
-  const rawPractices: Practice[] = useMemo(() => {
-    if (filterStatus === 'UNASSIGNED') return unassignedPractices
-    if (!filterStatus) return [...(response?.data || []), ...unassignedPractices]
-    return response?.data || []
-  }, [filterStatus, response?.data, unassignedPractices])
-
-  const isLoading = isLoadingPractices || isLoadingUnassigned
+  const rawPractices: Practice[] = activeTab === 'assigned' ? (response?.data || []) : unassignedPractices
+  const isLoading = activeTab === 'assigned' ? isLoadingPractices : isLoadingUnassigned
 
   // Dynamic filter options based on raw data
   const periods = useMemo(() => Array.from(new Set((rawPractices as any[]).map(p => p.academicPeriod || '2024-1'))).sort(), [rawPractices])
@@ -327,7 +270,7 @@ export default function PracticesPage() {
         p.tutorName?.toLowerCase().includes(searchStr)
 
       const matchesPeriod = !filterPeriod || p.academicPeriod === filterPeriod
-      const matchesStatus = !filterStatus || (filterStatus === 'UNASSIGNED' ? p.company?.name === 'Sin empresa' : p.status === filterStatus)
+      const matchesStatus = !filterStatus || p.status === filterStatus
       const pFaculty = p.faculty?.name || 'Ciencias de la Vida y Tecnología'
       const matchesFaculty = !filterFaculty || pFaculty === filterFaculty
       const pProgram = p.student?.program?.name || 'Tecnologías de la Información'
@@ -943,132 +886,146 @@ export default function PracticesPage() {
     <RoleGate allowedRoles={['ADMIN', 'COORDINATOR']}>
       <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8] pt-6 pb-12 px-4 lg:px-8">
         
+        {/* Tabs + Actions Row */}
+        <div className="flex items-center justify-between gap-6 mb-6 border-b border-gray-200 w-full max-w-[1600px] mx-auto pb-2.5">
+          <div className="flex items-center gap-6">
+            <button
+              onClick={() => { setActiveTab('assigned'); setSelectedIds(new Set()); }}
+              className={`pb-2.5 text-[15px] font-semibold transition-colors relative ${activeTab === 'assigned' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Estudiantes Asignados
+              {activeTab === 'assigned' && <div className="absolute -bottom-2.5 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />}
+            </button>
+            <button
+              onClick={() => { setActiveTab('unassigned'); setSelectedIds(new Set()); setGroupBy('none'); }}
+              className={`pb-2.5 text-[15px] font-semibold transition-colors relative ${activeTab === 'unassigned' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Estudiantes Sin Asignar
+              {activeTab === 'unassigned' && <div className="absolute -bottom-2.5 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 pb-0.5">
+            <Button
+              onClick={() => { setPracticeToEdit(null); setIsNewPracticeModalOpen(true); }}
+              className="bg-[#111827] hover:bg-[#1f2937] text-white font-bold px-3.5 py-2 text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4 text-blue-400" />
+              <span>Nueva Práctica</span>
+            </Button>
+            {activeTab === 'unassigned' && selectedIds.size > 0 && (
+              <Button 
+                onClick={() => toast.info('La interfaz de vinculación a Empresa estará disponible en la próxima actualización.')}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs py-2 px-3 shrink-0"
+              >
+                Vincular a Empresa ({selectedIds.size})
+              </Button>
+            )}
+          </div>
+        </div>
+
         {/* Main Grid: Entity List + Right Panel */}
         <div 
           id="main-grid-container"
-          className="flex flex-col xl:flex-row gap-[24px] items-stretch w-full max-w-[1600px] mx-auto relative mt-0"
+          className="flex flex-col xl:flex-row gap-[24px] items-stretch w-full max-w-[1600px] mx-auto relative mt-2"
         >
           
           {/* Left Column: Entity List + Filters */}
-          <div className="w-full xl:flex-1 flex flex-col gap-4 min-w-0">
+          <div className="w-full xl:flex-1 flex flex-col gap-6 min-w-0">
             
-            {/* Minimalist Single-Row Toolbar */}
-            <div className="flex flex-wrap items-center gap-2 w-full bg-white p-2 rounded-[14px] border border-[#eef2f7] shadow-soft">
-              <CompactFilterSelect 
-                label="Periodo" 
-                value={filterPeriod} 
-                onChange={setFilterPeriod}
-                options={[
-                  { value: null, label: 'Todos' },
-                  ...periods.map(p => ({ value: p as string, label: p as string }))
-                ]} 
-              />
-              
-              <CompactFilterSelect 
-                label="Estado" 
-                value={filterStatus} 
-                onChange={setFilterStatus}
-                options={[
-                  { value: null, label: 'Todos' },
-                  { value: 'UNASSIGNED', label: 'Sin asignar (Sin empresa)' },
-                  { value: 'PENDING', label: 'No iniciado' },
-                  { value: 'IN_PROGRESS', label: 'En proceso' },
-                  { value: 'COMPLETED', label: 'Finalizado' },
-                  { value: 'CANCELED', label: 'Cancelado' },
-                ]}
-              />
-              
-              <CompactFilterSelect 
-                label="Facultad" 
-                className="hidden md:inline-flex"
-                value={filterFaculty} 
-                onChange={setFilterFaculty}
-                options={[
-                  { value: null, label: 'Todas' },
-                  ...faculties.map(f => ({ value: f as string, label: f as string === 'Ciencias de la Vida y Tecnología' ? 'FCVT' : f as string }))
-                ]} 
-              />
-              
-              <CompactFilterSelect 
-                label="Carrera" 
-                className="hidden xl:inline-flex"
-                value={filterProgram} 
-                onChange={setFilterProgram}
-                options={[
-                  { value: null, label: 'Todas' },
-                  ...programs.map(p => ({ value: p as string, label: p as string }))
-                ]} 
-              />
+            {/* Filter Chips Bar */}
+            {activeTab === 'assigned' && (
+              <div className="flex flex-wrap items-center gap-3 w-full">
+                <FilterChip 
+                  label="Periodo" 
+                  value={filterPeriod} 
+                  onChange={setFilterPeriod}
+                  options={[
+                    { value: null, label: 'Todos' },
+                    ...periods.map(p => ({ value: p as string, label: p as string }))
+                  ]} 
+                />
+                
+                <FilterChip 
+                  label="Estado" 
+                  value={filterStatus} 
+                  onChange={setFilterStatus}
+                  options={[
+                    { value: null, label: 'Todos' },
+                    { value: 'PENDING', label: 'No iniciado' },
+                    { value: 'IN_PROGRESS', label: 'En proceso' },
+                    { value: 'COMPLETED', label: 'Finalizado' },
+                    { value: 'CANCELED', label: 'Cancelado' },
+                  ]}
+                />
+                
+                <FilterChip 
+                  label="Facultad" 
+                  className="hidden md:block"
+                  value={filterFaculty} 
+                  onChange={setFilterFaculty}
+                  options={[
+                    { value: null, label: 'Todas' },
+                    ...faculties.map(f => ({ value: f as string, label: f as string === 'Ciencias de la Vida y Tecnología' ? 'FCVT' : f as string }))
+                  ]} 
+                />
+                
+                <FilterChip 
+                  label="Carrera" 
+                  className="hidden xl:block"
+                  value={filterProgram} 
+                  onChange={setFilterProgram}
+                  options={[
+                    { value: null, label: 'Todos' },
+                    ...programs.map(p => ({ value: p as string, label: p as string }))
+                  ]} 
+                />
 
-              <div className="flex-1 min-w-[8px]" />
+                <div className="flex-1" />
 
-              {/* GroupBy dropdown */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[11.5px] font-medium text-[#64748b] hidden sm:inline">Agrupar por:</span>
-                <div className="relative flex items-center">
-                  <select
-                    value={groupBy}
-                    onChange={(e) => setGroupBy(e.target.value as any)}
-                    className="appearance-none bg-slate-50 border border-[#eef2f7] rounded-lg pl-7 pr-6 h-8 text-[11.5px] font-bold text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-pointer hover:bg-slate-100 transition-colors"
-                  >
-                    <option value="none">Sin agrupar</option>
-                    <option value="company">Empresa</option>
-                    <option value="tutor">Tutor</option>
-                    <option value="level">Nivel</option>
-                  </select>
-                  <div className="absolute left-2 text-blue-600 pointer-events-none">
-                    {groupBy === 'company' && <Building2 className="w-3.5 h-3.5" />}
-                    {groupBy === 'tutor' && <UserCheck className="w-3.5 h-3.5" />}
-                    {groupBy === 'level' && <List className="w-3.5 h-3.5" />}
-                    {groupBy === 'none' && <List className="w-3.5 h-3.5" />}
-                  </div>
-                  <ChevronDown className="w-3 h-3 absolute right-1.5 text-slate-400 pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Actions Dropdown Menu */}
-              <div className="relative shrink-0" ref={actionsMenuRef}>
+                {/* Emisión masiva: todo el período electivo, filtrado por carrera */}
                 <button
-                  onClick={() => setShowActionsMenu(prev => !prev)}
-                  className="flex items-center gap-1 h-8 px-2.5 rounded-lg bg-slate-50 border border-[#eef2f7] text-[11.5px] font-bold text-[#374151] hover:bg-slate-100 transition-colors cursor-pointer"
+                  onClick={openPeriodCertModal}
+                  className="flex items-center gap-1.5 h-[34px] px-3 rounded-lg bg-white border shadow-soft text-[12.5px] font-medium text-gray-600 hover:text-[#111827] hover:bg-slate-50 transition-colors shrink-0"
+                  title="Emitir los certificados de todos los elegibles de un período"
                 >
-                  <MoreHorizontal className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Acciones</span>
-                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                  <FileText className="w-3.5 h-3.5 text-rose-500" />
+                  Emitir período…
                 </button>
 
-                {showActionsMenu && (
-                  <div 
-                    className="absolute right-0 mt-1.5 w-56 bg-white rounded-[12px] border border-[#eef2f7] shadow-lg p-1.5 z-40"
-                    onClick={() => setShowActionsMenu(false)}
-                  >
-                    <button
-                      onClick={openPeriodCertModal}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-slate-50 rounded-[8px] transition-colors cursor-pointer"
-                    >
-                      <FileText className="w-4 h-4 text-rose-500 shrink-0" />
-                      <span>Emitir certificados de período...</span>
-                    </button>
-                    <button
-                      onClick={handleExportPracticesExcel}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-slate-50 rounded-[8px] transition-colors cursor-pointer"
-                    >
-                      <Download className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Exportar a Excel (.xlsx)</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+                <button
+                  onClick={handleExportPracticesExcel}
+                  className="flex items-center gap-1.5 h-[34px] px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[12.5px] font-bold shadow-soft transition-colors shrink-0 cursor-pointer"
+                  title="Exportar reporte de prácticas actual a un archivo de Excel (.xlsx)"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-100" />
+                  <span>Exportar Excel</span>
+                </button>
 
-              {/* + Nueva Práctica Button */}
-              <Button
-                onClick={() => { setPracticeToEdit(null); setIsNewPracticeModalOpen(true); }}
-                className="bg-[#111827] hover:bg-[#1f2937] text-white font-bold h-8 px-3 text-[11.5px] rounded-lg shadow-sm transition-all flex items-center gap-1 cursor-pointer shrink-0 ml-1"
-              >
-                <Plus className="w-3.5 h-3.5 text-blue-400" />
-                <span>Nueva Práctica</span>
-              </Button>
-            </div>
+                <div className="flex items-center gap-2 bg-[#f1f5f9] p-1 rounded-[10px] pr-2 shrink-0">
+                  <span className="text-[11.5px] font-medium text-[#64748b] pl-2 hidden sm:inline">Agrupar por:</span>
+                  <div className="relative flex items-center">
+                    <select
+                      value={groupBy}
+                      onChange={(e) => setGroupBy(e.target.value as any)}
+                      className="appearance-none bg-white border border-[#eef2f7] rounded-[8px] pl-8 pr-7 py-1.5 text-[11.5px] font-bold text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-pointer shadow-sm hover:border-[#cbd5e1] transition-colors"
+                    >
+                      <option value="none">Sin agrupar</option>
+                      <option value="company">Empresa</option>
+                      <option value="tutor">Tutor</option>
+                      <option value="level">Nivel</option>
+                    </select>
+                    <div className="absolute left-2.5 text-blue-600 pointer-events-none">
+                      {groupBy === 'company' && <Building2 className="w-3.5 h-3.5" />}
+                      {groupBy === 'tutor' && <UserCheck className="w-3.5 h-3.5" />}
+                      {groupBy === 'level' && <List className="w-3.5 h-3.5" />}
+                      {groupBy === 'none' && <List className="w-3.5 h-3.5" />}
+                    </div>
+                    <ChevronDown className="w-3.5 h-3.5 absolute right-2 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Barra de acciones flotante: acompaña la selección durante todo
                 el scroll, así no hay que volver arriba para actuar. */}
