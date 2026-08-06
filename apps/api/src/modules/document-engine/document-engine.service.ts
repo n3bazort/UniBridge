@@ -112,19 +112,34 @@ export class DocumentEngineService {
 
     let mimetype = 'application/pdf';
     if (type === 'PDF') {
-      // Si el fondo del template vive en MinIO (key "templates/backgrounds/..."),
-      // lo descargamos y lo incrustamos como data URI antes de renderizar,
-      // así el motor no depende de red ni de credenciales al generar el PDF.
+      // Si el fondo del template vive en MinIO o es una URL, lo descargamos
+      // e incrustamos como data URI antes de renderizar.
       let tpl = templateContent as KonvaTemplateJson;
       const bg = (tpl as any)?.background;
-      if (typeof bg === 'string' && bg.startsWith('templates/backgrounds/')) {
+      if (typeof bg === 'string' && bg && !bg.startsWith('data:image')) {
         try {
-          const buf = await this.minioService.getObjectBuffer(bg);
-          const ext = (bg.split('.').pop() || 'png').toLowerCase();
-          const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
-          tpl = { ...tpl, background: `data:${mime};base64,${buf.toString('base64')}` };
-        } catch (e) {
-          console.error('No se pudo cargar el fondo desde MinIO:', e);
+          const keyMatch = bg.match(/(templates\/backgrounds\/[^\?#]+)/);
+          const key = keyMatch ? keyMatch[1] : (bg.startsWith('templates/') ? bg : null);
+
+          let buf: Buffer | null = null;
+          if (key) {
+            buf = await this.minioService.getObjectBuffer(key);
+          } else if (bg.startsWith('http')) {
+            const resp = await fetch(bg);
+            if (resp.ok) {
+              const arrayBuf = await resp.arrayBuffer();
+              buf = Buffer.from(arrayBuf);
+            }
+          }
+
+          if (buf) {
+            const extMatch = (key || bg).match(/\.(jpg|jpeg|png|webp|gif)$/i);
+            const ext = extMatch ? extMatch[1].toLowerCase() : 'png';
+            const mime = (ext === 'jpg' || ext === 'jpeg') ? 'image/jpeg' : `image/${ext}`;
+            tpl = { ...tpl, background: `data:${mime};base64,${buf.toString('base64')}` };
+          }
+        } catch (e: any) {
+          console.error('No se pudo cargar el fondo para el PDF:', e?.message || e);
         }
       }
       await this.pdfDriver.generatePdf(tpl, data, outputPath);

@@ -34,9 +34,12 @@ export class PdfDriver {
     // Inyectar datos en la plantilla JSON
     let jsonString = JSON.stringify(template);
     for (const key of Object.keys(data)) {
+      const val = data[key] !== undefined && data[key] !== null ? String(data[key]) : '';
       const regex = new RegExp(`{{${key}}}`, 'g');
-      jsonString = jsonString.replace(regex, data[key]);
+      jsonString = jsonString.replace(regex, val);
     }
+    // Reemplazar placeholders no definidos por vacío para evitar imprimir {{variable}}
+    jsonString = jsonString.replace(/{{[a-zA-Z0-9_]+}}/g, '');
     const processedTemplate: KonvaTemplateJson = JSON.parse(jsonString);
 
     const pdfDoc = await PDFDocument.create();
@@ -79,7 +82,8 @@ export class PdfDriver {
         // Invertir Y (Konva es top-left, pdf-lib es bottom-left)
         // Además, pdf-lib dibuja desde la línea base (baseline), así que ajustamos por el tamaño de la fuente.
         const pdfYOffset = processedTemplate.height - el.y - size + (size * 0.2); 
-        const lines = (el.content || '').toString().split('\n');
+        const cleanContent = (el.content || '').toString().replace(/<[^>]*>/g, '');
+        const lines = cleanContent.split('\n');
         const lineHeight = size * 1.2;
         
         lines.forEach((line, index) => {

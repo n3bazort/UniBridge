@@ -263,6 +263,7 @@ export function CertificateDesignerFull() {
           width: DOC_W, height: DOC_H,
           background: bgImageKey || bgImageUrl,
           elements: elements.map(({ id, ...rest }) => rest),
+          isDefault: isDefaultTemplate,
         },
       }
       if (templateId) {

@@ -250,6 +250,9 @@ export class GeneratedDocumentsService implements OnModuleInit {
       // Certificado: lleva las firmas de AMBAS autoridades configuradas
       deanName,
       directorName,
+      responsableName: directorName,
+      responsablePracticasName: directorName,
+      decanoName: deanName,
       currentDate: new Date().toLocaleDateString('es-ES'),
     };
 
