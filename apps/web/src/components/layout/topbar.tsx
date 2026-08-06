@@ -1,13 +1,14 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { Search, X, Menu, KeyRound, LogOut } from 'lucide-react'
+import { Search, X, Menu } from 'lucide-react'
 import { useSearchStore } from '@/store/search'
 import { useAuthStore } from '@/store/auth-store'
 import { useSidebarStore } from '@/store/sidebar'
 import { useAuth } from '@/hooks/use-auth'
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal'
+import { UserMenu } from '@/components/layout/user-menu'
 
 export function Topbar() {
   const { searchQuery, setSearchQuery } = useSearchStore()
@@ -15,23 +16,9 @@ export function Topbar() {
   const user = useAuthStore((state) => state.user)
   const { openMobileSidebar } = useSidebarStore()
   const { logout } = useAuth()
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
 
   const isPractices = pathname === '/practices'
-
-  /* ── Close user menu on outside click ── */
-  useEffect(() => {
-    if (!isUserMenuOpen) return
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setIsUserMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [isUserMenuOpen])
 
   /* ── Page titles ── */
   const titles: Record<string, string> = {
@@ -87,16 +74,18 @@ export function Topbar() {
         </div>
 
         {/* CENTER: search (only on practices page) */}
-        <div className="flex-1 flex justify-center px-4">
+        {/* min-w-0 lets this flex child actually shrink below its content on narrow
+            viewports instead of overflowing the row — flex items default to min-width: auto */}
+        <div className="flex-1 min-w-0 flex justify-center px-2 md:px-4">
           {isPractices && (
-            <div className="relative flex items-center w-full max-w-md">
-              <Search className="absolute left-3 h-4 w-4 text-gray-400" strokeWidth={1.8} />
+            <div className="relative flex items-center w-full max-w-md min-w-0">
+              <Search className="absolute left-3 h-4 w-4 text-gray-400 shrink-0" strokeWidth={1.8} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar..."
-                className="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-8 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                className="h-9 w-full min-w-0 rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-8 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
               />
               {searchQuery && (
                 <button
@@ -112,37 +101,24 @@ export function Topbar() {
 
         {/* RIGHT: user menu */}
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
-          {/* User button + dropdown */}
-          <div ref={menuRef} className="relative ml-1">
-            <button
-              type="button"
-              onClick={() => setIsUserMenuOpen((v) => !v)}
-              className="flex h-9 items-center rounded-lg bg-gray-900 px-4 text-[13px] font-semibold text-white hover:bg-gray-800 active:scale-[0.97] transition-all select-none"
-              aria-label={`Usuario: ${fullName || 'Usuario'}`}
-              aria-expanded={isUserMenuOpen}
-            >
-              {displayName}
-            </button>
-
-            {isUserMenuOpen && (
-              <div className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
-                <p className="px-3 py-1.5 text-[11px] font-medium text-gray-400 truncate">{fullName || 'Usuario'}</p>
+          <div className="ml-1">
+            <UserMenu
+              side="bottom"
+              align="end"
+              contentClassName="w-52"
+              header={<p className="px-3 py-1.5 text-[11px] font-medium text-gray-400 truncate">{fullName || 'Usuario'}</p>}
+              onChangePassword={() => setShowPasswordModal(true)}
+              onLogout={logout}
+              trigger={
                 <button
                   type="button"
-                  onClick={() => { setIsUserMenuOpen(false); setShowPasswordModal(true) }}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  className="flex h-9 max-w-[9rem] items-center rounded-lg bg-gray-900 px-4 text-[13px] font-semibold text-white hover:bg-gray-800 active:scale-[0.97] transition-all select-none sm:max-w-[14rem]"
+                  aria-label={`Usuario: ${fullName || 'Usuario'}`}
                 >
-                  <KeyRound className="h-4 w-4" /> Cambiar contraseña
+                  <span className="truncate">{displayName}</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
-                >
-                  <LogOut className="h-4 w-4" /> Cerrar sesión
-                </button>
-              </div>
-            )}
+              }
+            />
           </div>
         </div>
       </header>

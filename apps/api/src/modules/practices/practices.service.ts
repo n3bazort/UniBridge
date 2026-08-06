@@ -366,6 +366,37 @@ export class PracticesService {
     return rows.map(r => r.tutorName).filter(Boolean) as string[];
   }
 
+  /**
+   * Devuelve los valores más frecuentes de un campo de texto libre en prácticas.
+   * Útil para mostrar sugerencias contextuales en el formulario.
+   * Campos permitidos: workArea | academicPeriod | academicLevel | practiceLevel
+   */
+  async getTopFieldValues(field: 'workArea' | 'academicPeriod' | 'academicLevel' | 'practiceLevel', search?: string, limit = 5): Promise<string[]> {
+    const allowedFields = ['workArea', 'academicPeriod', 'academicLevel', 'practiceLevel'];
+    if (!allowedFields.includes(field)) return [];
+
+    const where: any = { deletedAt: null };
+    if (search && search.trim()) {
+      where[field] = { contains: search.trim(), mode: 'insensitive' };
+    } else {
+      where[field] = { not: null };
+    }
+
+    // Fetch distinct values and return ordered by frequency
+    const rows = await this.prisma.$queryRawUnsafe<{ value: string; count: bigint }[]>(
+      `SELECT "${field}" AS value, COUNT(*) AS count
+       FROM practices
+       WHERE "${field}" IS NOT NULL AND deleted_at IS NULL
+       ${search && search.trim() ? `AND LOWER("${field}") LIKE LOWER($1)` : ''}
+       GROUP BY "${field}"
+       ORDER BY count DESC
+       LIMIT ${limit}`,
+      ...(search && search.trim() ? [`%${search.trim()}%`] : [])
+    );
+
+    return rows.map(r => r.value).filter(Boolean);
+  }
+
   async bulkImport(programName: string, students: any[], facultyId?: string) {
     // Validate or auto-create active period
     let activePeriod = await this.prisma.academicPeriod.findFirst({ where: { isActive: true } });

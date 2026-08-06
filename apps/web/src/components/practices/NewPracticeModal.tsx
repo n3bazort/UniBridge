@@ -161,6 +161,118 @@ function Typeahead({ label, required, placeholder, value, onSearch, onSelect, on
 
 /* ────────────────────────────────────── */
 
+/**
+ * Input de texto libre con sugerencias de los valores más usados en prácticas previas.
+ * Al enfocar muestra los más frecuentes (top); al escribir filtra por coincidencia.
+ * Si no hay coincidencias, muestra un aviso sutil.
+ */
+interface SuggestInputProps {
+  label: string
+  required?: boolean
+  placeholder: string
+  value: string
+  onChange: (v: string) => void
+  field: 'workArea' | 'academicPeriod'
+  note?: string
+}
+
+function SuggestInput({ label, required, placeholder, value, onChange, field, note }: SuggestInputProps) {
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [open, setOpen] = useState(false)
+  const [searched, setSearched] = useState(false) // si ya se hizo al menos una búsqueda
+  const ref = useRef<HTMLDivElement>(null)
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Cierra al click fuera
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const fetchSuggestions = async (search?: string) => {
+    try {
+      const params = new URLSearchParams({ field })
+      if (search && search.trim()) params.append('search', search.trim())
+      const res = await api.get(`/practices/field-suggestions?${params}`)
+      const list: string[] = res.data || []
+      setSuggestions(list)
+      setSearched(true)
+      setOpen(true)
+    } catch {
+      setSuggestions([])
+      setSearched(true)
+      setOpen(true)
+    }
+  }
+
+  const handleFocus = () => {
+    // Al enfocar sin texto, muestra los más usados
+    if (!value.trim()) fetchSuggestions()
+    else fetchSuggestions(value)
+  }
+
+  const handleChange = (v: string) => {
+    onChange(v)
+    if (debounce.current) clearTimeout(debounce.current)
+    if (!v.trim()) {
+      fetchSuggestions() // sin filtro → mostrar más usados
+      return
+    }
+    debounce.current = setTimeout(() => fetchSuggestions(v), 280)
+  }
+
+  const hasResults = suggestions.length > 0
+  const showEmpty = searched && open && !hasResults && value.trim().length > 0
+
+  return (
+    <div ref={ref} className="relative">
+      <label className="text-[12px] font-bold text-slate-700 block mb-1">
+        {label} {required && <span className="text-rose-500">*</span>}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => handleChange(e.target.value)}
+        onFocus={handleFocus}
+        placeholder={placeholder}
+        className="w-full h-10 px-3 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-medium text-slate-900"
+      />
+      {note && <p className="text-[10.5px] text-slate-400 mt-1">{note}</p>}
+
+      {/* Dropdown de sugerencias */}
+      {open && hasResults && (
+        <div className="absolute z-[400] top-full left-0 right-0 mt-1 bg-white border border-slate-100 rounded-xl shadow-lg overflow-hidden">
+          <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Más usadas
+          </div>
+          {suggestions.map((s, i) => (
+            <button
+              key={i}
+              type="button"
+              onMouseDown={() => { onChange(s); setOpen(false) }}
+              className="w-full text-left px-3 py-2 hover:bg-indigo-50 transition-colors border-t border-slate-50 text-xs font-medium text-slate-800"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Sin coincidencias — sutil y minimalista */}
+      {showEmpty && (
+        <p className="absolute mt-1 text-[10.5px] text-slate-400 italic left-0">
+          Sin coincidencias registradas
+        </p>
+      )}
+    </div>
+  )
+}
+
+/* ────────────────────────────────────── */
+
 export function NewPracticeModal({
   isOpen,
   onClose,
@@ -451,20 +563,16 @@ export function NewPracticeModal({
                   )}
                 </div>
 
-                {/* Área de Trabajo */}
-                <div>
-                  <label className="text-[12px] font-bold text-slate-700 block mb-1">
-                    Área de Trabajo en Empresa <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={workArea}
-                    onChange={(e) => setWorkArea(e.target.value)}
-                    placeholder="Ej. Desarrollo de Software / TI / Soporte"
-                    className="w-full h-10 px-3 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-medium text-slate-900"
-                  />
-                  <p className="text-[10.5px] text-slate-400 mt-1">Se imprime en la Solicitud PAP-001 ("en el área de...").</p>
-                </div>
+                {/* Área de Trabajo — SuggestInput con valores más usados */}
+                <SuggestInput
+                  label="Área de Trabajo en Empresa"
+                  required
+                  field="workArea"
+                  placeholder="Ej. Desarrollo de Software / TI / Soporte"
+                  value={workArea}
+                  onChange={setWorkArea}
+                  note='Se imprime en la Solicitud PAP-001 ("en el área de...").'
+                />
               </div>
             </div>
 
@@ -477,16 +585,14 @@ export function NewPracticeModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 
                 {/* Período */}
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Período Académico</label>
-                  <input
-                    type="text"
-                    value={academicPeriod}
-                    onChange={(e) => setAcademicPeriod(e.target.value)}
-                    placeholder="2024-1"
-                    className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 font-medium text-slate-800"
-                  />
-                </div>
+                {/* Período — SuggestInput con períodos más usados */}
+                <SuggestInput
+                  label="Período Académico"
+                  field="academicPeriod"
+                  placeholder="2024-1"
+                  value={academicPeriod}
+                  onChange={setAcademicPeriod}
+                />
 
                 {/* Nivel de Práctica — solo valores reales */}
                 <div>

@@ -58,6 +58,17 @@ export class PracticesController {
     return this.practicesService.searchTutorNames(search.trim())
   }
 
+  // Sugerencias de valores más usados para campos de texto libre (workArea, academicPeriod, etc.)
+  @Get('field-suggestions')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Valores más frecuentes de un campo de práctica para mostrar como sugerencias' })
+  async getFieldSuggestions(
+    @Query('field') field: 'workArea' | 'academicPeriod' | 'academicLevel' | 'practiceLevel',
+    @Query('search') search?: string,
+  ) {
+    return this.practicesService.getTopFieldValues(field, search, 5)
+  }
+
   @Get(':id')
   @Roles(Role.ADMIN, Role.COORDINATOR, Role.STUDENT)
   @ApiOperation({ summary: 'Obtener detalle de práctica' })
