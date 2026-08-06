@@ -301,6 +301,8 @@ function CertificatesPageInner() {
   useEffect(() => {
     if (!highlightId || documents.length === 0) return
 
+    setViewMode('documents')
+
     const targetDoc = documents.find(d => d.id === highlightId)
     if (targetDoc) {
       let groupKey = 'Otros'
@@ -312,13 +314,19 @@ function CertificatesPageInner() {
       setCollapsedGroups(prev => ({ ...prev, [groupKey]: false }))
     }
 
-    const t = setTimeout(() => {
+    let attempts = 0
+    const interval = setInterval(() => {
+      attempts++
       const el = document.getElementById(`doc-${highlightId}`)
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        clearInterval(interval)
+      } else if (attempts >= 12) {
+        clearInterval(interval)
       }
-    }, 350)
-    return () => clearTimeout(t)
+    }, 150)
+
+    return () => clearInterval(interval)
   }, [highlightId, documents, groupBy])
 
   const toggleSelected = (id: string) => {
@@ -704,12 +712,14 @@ function CertificatesPageInner() {
     const doc = cluster[0]
     const state = docState(doc)
     const isDocxFile = (doc.signedFileKey || doc.fileUrl || '').endsWith('.docx')
-    const isHighlighted = cluster.some(d => d.id === highlightId)
+    const matchDoc = cluster.find(d => d.id === highlightId)
+    const isHighlighted = !!matchDoc
+    const rowId = matchDoc ? `doc-${matchDoc.id}` : `doc-${doc.id}`
 
     return (
       <div
         key={`shared-${doc.documentCode}-${doc.status}`}
-        id={`doc-${doc.id}`}
+        id={rowId}
         className={cn(
           'flex items-center gap-3 px-4 py-3 border-b border-[#f3f4f6] last:border-0 transition-colors hover:bg-slate-50/70',
           isHighlighted && 'ring-2 ring-blue-400 ring-inset rounded-[10px] bg-blue-50/40'
@@ -1170,13 +1180,19 @@ function CertificatesPageInner() {
                           className="grid gap-1 p-3 pl-6"
                           style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${iconSize + 40}px, 1fr))` }}
                         >
-                          {clusterDocs(docs).map(cluster =>
-                            cluster.length > 1 ? (
+                          {clusterDocs(docs).map(cluster => {
+                            const matchDoc = cluster.find(d => d.id === highlightId)
+                            const isHighlighted = !!matchDoc
+                            const rowId = matchDoc ? `doc-${matchDoc.id}` : `doc-${cluster[0].id}`
+                            return cluster.length > 1 ? (
                               <div
                                 key={`shared-${cluster[0].documentCode}-${cluster[0].status}`}
-                                id={`doc-${cluster[0].id}`}
+                                id={rowId}
                                 onClick={() => ((cluster[0].signedFileKey || cluster[0].fileUrl || '').endsWith('.docx') ? handleDownload(cluster[0].id) : handleView(cluster[0].id))}
-                                className="relative flex flex-col items-center gap-1.5 p-3 rounded-[12px] border border-transparent cursor-pointer transition-colors hover:bg-slate-50 hover:border-[#eef2f7]"
+                                className={cn(
+                                  'relative flex flex-col items-center gap-1.5 p-3 rounded-[12px] border border-transparent cursor-pointer transition-colors hover:bg-slate-50 hover:border-[#eef2f7]',
+                                  isHighlighted && 'ring-2 ring-blue-400 ring-inset bg-blue-50/40'
+                                )}
                                 title={`${getClusterTypeName(cluster[0].documentType)} ${cluster[0].documentCode} — ${cluster.length} estudiantes`}
                               >
                                 {(() => {
