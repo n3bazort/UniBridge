@@ -210,7 +210,7 @@ function CertificatesPageInner() {
   const [filterState, setFilterState] = useState<'ALL' | 'READY' | 'IN_SIGNATURE' | 'SIGNED' | 'ARCHIVED'>('ALL')
   const [viewMode, setViewMode] = useState<'documents' | 'batches'>('documents')
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
-  const [groupBy, setGroupBy] = useState<'COMPANY' | 'DOCUMENT_TYPE' | 'STUDENT' | 'NONE'>('COMPANY')
+  const [groupBy, setGroupBy] = useState<'COMPANY' | 'STUDENT'>('COMPANY')
 
   const [showInvalidateModal, setShowInvalidateModal] = useState(false)
   const [docToInvalidate, setDocToInvalidate] = useState<string | null>(null)
@@ -376,19 +376,14 @@ function CertificatesPageInner() {
   }, [documents, combinedSearch, filterState])
 
   /**
-   * Los documentos se pueden agrupar por empresa, tipo de oficio o estudiante.
+   * Los documentos se pueden agrupar por empresa o estudiante.
    */
   const groupedDocuments = useMemo(() => {
-    if (groupBy === 'NONE') {
-      return [['Documentos', filteredDocuments]] as [string, GeneratedDocument[]][]
-    }
     const groups: Record<string, GeneratedDocument[]> = {}
     filteredDocuments.forEach(doc => {
       let key = 'Otros'
       if (groupBy === 'COMPANY') {
         key = doc.student?.practices?.[0]?.company?.name || 'Sin empresa'
-      } else if (groupBy === 'DOCUMENT_TYPE') {
-        key = getClusterTypeName(doc.documentType)
       } else if (groupBy === 'STUDENT') {
         key = `${doc.student?.firstName || ''} ${doc.student?.lastName || ''}`.trim() || 'Desconocido'
       }
@@ -999,15 +994,11 @@ function CertificatesPageInner() {
                       className="appearance-none bg-white border border-[#eef2f7] rounded-[8px] pl-8 pr-7 py-1.5 text-[11.5px] font-bold text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-pointer shadow-sm hover:border-[#cbd5e1] transition-colors"
                     >
                       <option value="COMPANY">Empresa</option>
-                      <option value="DOCUMENT_TYPE">Tipo de Oficio</option>
                       <option value="STUDENT">Estudiante</option>
-                      <option value="NONE">Sin agrupar</option>
                     </select>
                     <div className="absolute left-2.5 text-blue-600 pointer-events-none">
                       {groupBy === 'COMPANY' && <Building2 className="w-3.5 h-3.5" />}
-                      {groupBy === 'DOCUMENT_TYPE' && <FileText className="w-3.5 h-3.5" />}
                       {groupBy === 'STUDENT' && <UserCheck className="w-3.5 h-3.5" />}
-                      {groupBy === 'NONE' && <List className="w-3.5 h-3.5" />}
                     </div>
                     <ChevronDown className="w-3.5 h-3.5 absolute right-2 text-slate-400 pointer-events-none" />
                   </div>
@@ -1141,9 +1132,7 @@ function CertificatesPageInner() {
                         />
                         <div className="w-7 h-7 rounded-[8px] bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                           {groupBy === 'COMPANY' && <Building2 className="w-3.5 h-3.5" />}
-                          {groupBy === 'DOCUMENT_TYPE' && <FileText className="w-3.5 h-3.5" />}
                           {groupBy === 'STUDENT' && <UserCheck className="w-3.5 h-3.5" />}
-                          {groupBy === 'NONE' && <List className="w-3.5 h-3.5" />}
                         </div>
                         <span className="text-[13.5px] font-bold text-[#111827] truncate select-none">{groupName}</span>
                         <span className="text-[11.5px] font-medium text-[#9ca3af] select-none">{docs.length} doc{docs.length > 1 ? 's' : ''}</span>
