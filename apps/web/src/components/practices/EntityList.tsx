@@ -41,46 +41,47 @@ export interface GeneratedDoc {
  * ─ Rechazado: color de alerta con contorno fino.
  */
 function getFirmaState(pdf?: GeneratedDoc) {
-  // Sin certificado emitido: completamente inactivo, sin color
+  // Sin certificado: ícono apagado, sin fondo ni contorno
   if (!pdf) {
     return {
-      cls: 'border border-slate-200 text-slate-300 cursor-default bg-transparent',
+      cls: 'bg-slate-50 text-slate-300 cursor-default',
       title: 'Sin certificado emitido: primero hay que generarlo',
       activo: false,
     }
   }
   switch (pdf.signatureStatus) {
     case 'SIGNED':
-      // Ambas firmas → contorno grueso ("negrita")
+      // 2 firmas → contorno grueso ("negrita")
       return {
         cls: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 ring-2 ring-emerald-400 cursor-pointer',
         title: 'Firmado por ambas autoridades — ver en Certificados',
         activo: true,
       }
     case 'PARTIALLY_SIGNED':
-      // 1 firma → contorno medio
+      // 1 firma → contorno medio (aparece por primera vez)
       return {
         cls: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-500 ring-[1.5px] ring-indigo-400 cursor-pointer',
         title: 'En circuito de firma: falta el Responsable de Prácticas — ver en Certificados',
         activo: true,
       }
     case 'IN_SIGNING':
-      // Enviado, pendiente primera firma → contorno delgado
+      // Enviado pero sin firmas aún: sin contorno, solo color suave
       return {
-        cls: 'bg-blue-50 hover:bg-blue-100 text-blue-500 ring-1 ring-blue-300 cursor-pointer',
+        cls: 'bg-blue-50 hover:bg-blue-100 text-blue-500 cursor-pointer',
         title: 'En circuito de firma: pendiente del Decano — ver en Certificados',
         activo: true,
       }
     case 'REJECTED':
+      // Sin contorno, color de alerta
       return {
-        cls: 'bg-rose-50 hover:bg-rose-100 text-rose-500 ring-1 ring-rose-300 cursor-pointer',
+        cls: 'bg-rose-50 hover:bg-rose-100 text-rose-500 cursor-pointer',
         title: 'Firma rechazada: hay que revisarlo — ver en Certificados',
         activo: true,
       }
     default:
-      // PDF existe pero aún no enviado a firma: sin color (solo border sutil)
+      // PDF existe pero no enviado: sin contorno, ícono neutro
       return {
-        cls: 'border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-500 cursor-pointer bg-transparent',
+        cls: 'bg-slate-50 hover:bg-slate-100 text-slate-400 cursor-pointer',
         title: 'Sin enviar a firma: mándalo al circuito desde Certificados',
         activo: true,
       }
