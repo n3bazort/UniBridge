@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FileText, Hash } from 'lucide-react'
 import { getAssetUrl } from '@/lib/utils'
+import { DocxPreviewModal } from '@/components/shared/DocxPreviewModal'
 
 interface DocumentTemplate {
   id: string
@@ -283,6 +284,11 @@ export default function DocumentsPage() {
   const [codeModal, setCodeModal] = useState<{ show: boolean, template: DocumentTemplate | null }>({ show: false, template: null })
   const [docTypeAbbr, setDocTypeAbbr] = useState('')
   const [codeSuffix, setCodeSuffix] = useState('')
+  const [periodCertModal, setPeriodCertModal] = useState(false)
+  const [massPeriod, setMassPeriod] = useState('')
+  const [massProgram, setMassProgram] = useState('ALL')
+  
+  const [previewTemplate, setPreviewTemplate] = useState<{ url: string, title: string } | null>(null)
   /** Vacío = usa el patrón que el sistema trae para ese formato */
   const [codePattern, setCodePattern] = useState('')
   /** A cuantos estudiantes ampara un mismo papel */
@@ -320,7 +326,21 @@ export default function DocumentsPage() {
         URL.revokeObjectURL(url)
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'No se pudo descargar la plantilla')
+      toast.error(err.response?.data?.message || 'No se pudo descargar la plantilla')
+    }
+  }
+
+  const handlePreviewTemplate = async (template: DocumentTemplate, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    try {
+      const { data } = await api.get(`/document-templates/${template.id}/download`)
+      if (data.kind === 'url') {
+        setPreviewTemplate({ url: data.url, title: template.name })
+      } else {
+        toast.error('Solo las plantillas de Word (.docx) pueden previsualizarse aquí.')
+      }
+    } catch (err: any) {
+      toast.error('No se pudo cargar la previsualización')
     }
   }
 
@@ -483,7 +503,7 @@ export default function DocumentsPage() {
           <div className="flex flex-col gap-4 mt-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-[20px] font-semibold text-[#111827]">Oficios en Word</h2>
+                <h2 className="text-[20px] font-semibold text-[#111827] ">Oficios en Word</h2>
                 <p className="text-[13px] text-[#6b7280] mt-0.5">
                   La Facultad emite dos formatos: uno pide las vacantes y el otro designa al estudiante con su tutor.
                 </p>
@@ -612,6 +632,16 @@ export default function DocumentsPage() {
                         {template.name}
                       </h3>
                       <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => handlePreviewTemplate(template, e)}
+                          className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#3b82f6] hover:bg-blue-50 rounded-[8px] transition-colors"
+                          title="Previsualizar formato sin descargarlo"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                          </svg>
+                        </button>
                         <button
                           onClick={(e) => handleDownloadTemplate(template, e)}
                           className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#111827] hover:bg-slate-100 rounded-[8px] transition-colors"
@@ -899,6 +929,12 @@ export default function DocumentsPage() {
             </div>
           )}
 
+          <DocxPreviewModal
+            isOpen={!!previewTemplate}
+            onClose={() => setPreviewTemplate(null)}
+            url={previewTemplate?.url || null}
+            title={previewTemplate?.title}
+          />
         </div>
       </div>
     </RoleGate>
