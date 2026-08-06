@@ -42,9 +42,6 @@ interface PracticeData {
   workArea?: string
   totalHours?: number
   status?: string
-  // Datos anidados que vienen del API/Practice cuando se edita
-  student?: { firstName?: string; lastName?: string; dni?: string }
-  company?: { name?: string }
 }
 
 interface NewPracticeModalProps {
@@ -327,16 +324,9 @@ export function NewPracticeModal({
   useEffect(() => {
     if (practiceToEdit) {
       setStudentId(practiceToEdit.studentId || '')
-      // Derivan el label del objeto anidado `student` si viene disponible
-      const sLabel = practiceToEdit.student
-        ? `${practiceToEdit.student.firstName || ''} ${practiceToEdit.student.lastName || ''}`.trim()
-        : ''
-      setStudentLabel(sLabel)
-
-      setCompanyId(practiceToEdit.companyId || '')
-      // Deriva el label del objeto anidado `company`
-      setCompanyLabel(practiceToEdit.company?.name || '')
-
+      setStudentLabel(practiceToEdit.student ? `${practiceToEdit.student.firstName} ${practiceToEdit.student.lastName}` : '')
+      setCompanyId(practiceToEdit.companyId || (practiceToEdit.company?.id) || '')
+      setCompanyLabel(practiceToEdit.company ? practiceToEdit.company.name : '')
       setTutorName(practiceToEdit.tutorName || '')
       setTutorQuery(practiceToEdit.tutorName || '')
       setAcademicPeriod(practiceToEdit.academicPeriod || '2024-1')
