@@ -1222,7 +1222,7 @@ export default function PracticesPage() {
           >
             {/* Resizer Handle */}
             <div 
-              className="sticky top-[96px] float-left -ml-[16px] w-[8px] h-[calc(100vh-120px)] cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 rounded-full transition-colors z-[80]"
+              className="sticky top-[80px] float-left -ml-[16px] w-[8px] h-[calc(100vh-100px)] cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 rounded-full transition-colors z-[80]"
               onMouseDown={handleMouseDown}
             />
             <RightDetailPanel

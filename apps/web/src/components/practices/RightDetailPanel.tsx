@@ -60,7 +60,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
 
   if (!selectedPractice && selectedCount === 0) {
     return (
-      <div className="sticky top-[96px] flex flex-col items-center justify-center gap-4 w-full h-[calc(100vh-120px)] bg-white rounded-[18px] border border-dashed border-[#eef2f7]">
+      <div className="sticky top-[80px] flex flex-col items-center justify-center gap-4 w-full h-[calc(100vh-100px)] bg-white rounded-[18px] border border-dashed border-[#eef2f7]">
         <FileText className="w-12 h-12 text-[#e5e7eb]" />
         <p className="text-[#9ca3af] font-medium text-[14px]">Selecciona un registro para ver detalles</p>
       </div>
@@ -71,7 +71,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
   // acciones de la selección viven en la barra flotante, que sigue el scroll.
   if (!selectedPractice && selectedCount > 0) {
     return (
-      <div className="sticky top-[96px] flex flex-col items-center justify-center gap-3 w-full h-[calc(100vh-120px)] bg-white rounded-[18px] border border-dashed border-[#eef2f7] px-6 text-center">
+      <div className="sticky top-[80px] flex flex-col items-center justify-center gap-3 w-full h-[calc(100vh-100px)] bg-white rounded-[18px] border border-dashed border-[#eef2f7] px-6 text-center">
         <div className="w-11 h-11 rounded-full bg-slate-50 flex items-center justify-center">
           <FileText className="w-5 h-5 text-slate-400" />
         </div>
@@ -86,7 +86,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
   const p = selectedPractice!
 
   return (
-    <div className="sticky top-[96px] flex flex-col gap-[24px] w-full h-[calc(100vh-120px)] overflow-y-auto no-scrollbar pb-10">
+    <div className="sticky top-[80px] flex flex-col gap-3.5 w-full h-[calc(100vh-100px)] overflow-y-auto no-scrollbar pb-10">
       
       {/* Top Actions Block — la emisión de certificados vive en la barra
           flotante de la selección; aquí solo se cierra la ficha. */}
