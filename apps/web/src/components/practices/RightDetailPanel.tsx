@@ -88,24 +88,19 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
   return (
     <div className="sticky top-[80px] flex flex-col gap-3.5 w-full h-[calc(100vh-100px)] overflow-y-auto no-scrollbar pb-10">
       
-      {/* Top Actions Block — la emisión de certificados vive en la barra
-          flotante de la selección; aquí solo se cierra la ficha. */}
-      <div className="flex items-center justify-between">
-        <span className="text-[14px] font-semibold text-[#111827]">Detalles</span>
+      {/* Main Detail Card */}
+      <div className="relative flex flex-col p-[20px] bg-white rounded-[18px] shadow-soft gap-[24px]">
+        {/* Close Button */}
         <button
           onClick={onClearSelection}
-          className="flex items-center justify-center w-[36px] h-[36px] text-[#9ca3af] hover:text-[#111827] bg-white rounded-[10px] border border-[#eef2f7] hover:bg-[#f8fafc] transition-colors"
+          className="absolute top-4 right-4 flex items-center justify-center w-7 h-7 text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer z-10"
           title="Cerrar ficha"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
-      </div>
-
-      {/* Main Detail Card */}
-      <div className="flex flex-col p-[20px] bg-white rounded-[18px] shadow-soft gap-[24px]">
         
         {/* Header (Student) */}
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between pr-8">
           <div className="flex items-center gap-4">
             <img 
               src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${p.student.firstName}${p.student.lastName}`} 
