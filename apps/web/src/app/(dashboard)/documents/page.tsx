@@ -617,7 +617,11 @@ export default function DocumentsPage() {
                   >
                     {esDesignacion ? 'Designación' : 'Solicitud'}
                   </span>
-                  <div className={`w-full h-32 rounded-[12px] border flex items-center justify-center mb-3 ${esDesignacion ? 'bg-violet-50/50 border-violet-100' : 'bg-[#f8fafc] border-[#eef2f7]'}`}>
+                  <div 
+                    onClick={(e) => handlePreviewTemplate(template, e)}
+                    className={`w-full h-32 rounded-[12px] border flex items-center justify-center mb-3 cursor-pointer hover:bg-opacity-80 transition-opacity ${esDesignacion ? 'bg-violet-50/50 border-violet-100 hover:bg-violet-100/50' : 'bg-[#f8fafc] border-[#eef2f7] hover:bg-blue-50/50'}`}
+                    title="Clic para previsualizar la plantilla"
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={esDesignacion ? 'text-violet-500' : 'text-[#3b82f6]'}>
                       <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
                       <polyline points="14 2 14 8 20 8"></polyline>
@@ -632,16 +636,6 @@ export default function DocumentsPage() {
                         {template.name}
                       </h3>
                       <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => handlePreviewTemplate(template, e)}
-                          className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#3b82f6] hover:bg-blue-50 rounded-[8px] transition-colors"
-                          title="Previsualizar formato sin descargarlo"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                          </svg>
-                        </button>
                         <button
                           onClick={(e) => handleDownloadTemplate(template, e)}
                           className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#111827] hover:bg-slate-100 rounded-[8px] transition-colors"
