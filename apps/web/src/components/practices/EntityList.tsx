@@ -383,24 +383,8 @@ export function EntityList({
                   tiene su oficio vigente, se informa y no se invita a rehacerlo. */}
               {onGenerateSolicitud && solicitudAction.kind === 'none' ? (
                 <div className="flex items-center gap-2 shrink-0">
-                  <span
-                    className="flex items-center gap-1.5 text-[12px] font-medium text-emerald-600 pr-1"
-                    title="Todos los estudiantes de esta empresa ya están incluidos en un oficio vigente"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    Solicitud vigente
-                  </span>
-                  {onGenerateDesignacion && puedeDesignar && (
-                    designacionAction.kind === 'none' ? (
-                      <span
-                        className="flex items-center gap-1.5 text-[12px] font-medium text-violet-600"
-                        title="Todos los estudiantes de esta empresa ya tienen designación vigente"
-                      >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        Designación vigente
-                      </span>
-                    ) : (
-                      <button
+                  {onGenerateDesignacion && puedeDesignar && designacionAction.kind !== 'none' && (
+                    <button
                         onClick={(e) => {
                           e.stopPropagation()
                           onGenerateDesignacion(group.items)

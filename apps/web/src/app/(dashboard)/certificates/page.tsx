@@ -297,15 +297,29 @@ function CertificatesPageInner() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Llegada desde Prácticas con ?highlight=docId: scroll + resaltado temporal
+  // Llegada desde Prácticas con ?highlight=docId: descolapsar grupo + scroll + resaltado temporal
   useEffect(() => {
     if (!highlightId || documents.length === 0) return
+
+    const targetDoc = documents.find(d => d.id === highlightId)
+    if (targetDoc) {
+      let groupKey = 'Otros'
+      if (groupBy === 'COMPANY') {
+        groupKey = targetDoc.student?.practices?.[0]?.company?.name || 'Sin empresa'
+      } else if (groupBy === 'STUDENT') {
+        groupKey = `${targetDoc.student?.firstName || ''} ${targetDoc.student?.lastName || ''}`.trim() || 'Desconocido'
+      }
+      setCollapsedGroups(prev => ({ ...prev, [groupKey]: false }))
+    }
+
     const t = setTimeout(() => {
       const el = document.getElementById(`doc-${highlightId}`)
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }, 250)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }, 350)
     return () => clearTimeout(t)
-  }, [highlightId, documents.length])
+  }, [highlightId, documents, groupBy])
 
   const toggleSelected = (id: string) => {
     setSelectedIds(prev => {

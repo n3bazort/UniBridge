@@ -752,10 +752,15 @@ export class GeneratedDocumentsService implements OnModuleInit {
         })),
       });
 
+      const firstDoc = await this.prisma.generatedDocument.findFirst({
+        where: { fileUrl: storedKey, status: 'VALID' },
+        select: { id: true },
+      });
+
       // URL prefirmada para descarga inmediata desde la UI (el bucket es privado)
       const downloadUrl = await this.minio.getPresignedUrl(storedKey, 900, nombreVisible);
 
-      return { fileUrl: storedKey, downloadUrl, documentCode: oficioCode, fileName: nombreVisible, students: lote.length };
+      return { id: firstDoc?.id || '', fileUrl: storedKey, downloadUrl, documentCode: oficioCode, fileName: nombreVisible, students: lote.length };
     };
 
     // 4. ¿Un oficio para todo el grupo o uno por estudiante?

@@ -73,6 +73,7 @@ export class PracticesService {
               user: { select: { email: true } },
               program: { select: { name: true } },
               generatedDocs: {
+                where: { deletedAt: null },
                 select: {
                   id: true,
                   status: true,
