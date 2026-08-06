@@ -80,21 +80,50 @@ export class PdfDriver {
         }
 
         // Invertir Y (Konva es top-left, pdf-lib es bottom-left)
-        // Además, pdf-lib dibuja desde la línea base (baseline), así que ajustamos por el tamaño de la fuente.
         const pdfYOffset = processedTemplate.height - el.y - size + (size * 0.2); 
         const cleanContent = (el.content || '').toString().replace(/<[^>]*>/g, '');
-        const lines = cleanContent.split('\n');
-        const lineHeight = size * 1.2;
+        const paragraphs = cleanContent.split('\n');
+        const lineHeight = size * 1.3;
         
-        lines.forEach((line, index) => {
+        const maxWidth = el.width && el.width > 0 
+          ? el.width 
+          : Math.max(100, processedTemplate.width - el.x - 40);
+
+        const wrappedLines: string[] = [];
+
+        for (const paragraph of paragraphs) {
+          if (!paragraph.trim()) {
+            wrappedLines.push('');
+            continue;
+          }
+          const words = paragraph.split(' ');
+          let currentLine = '';
+
+          for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const testWidth = font.widthOfTextAtSize(testLine, size);
+
+            if (maxWidth && testWidth > maxWidth && currentLine) {
+              wrappedLines.push(currentLine);
+              currentLine = word;
+            } else {
+              currentLine = testLine;
+            }
+          }
+          if (currentLine) {
+            wrappedLines.push(currentLine);
+          }
+        }
+
+        wrappedLines.forEach((line, index) => {
+           if (!line) return;
            let pdfX = el.x;
-           // Alineación simple
+           const lineTextWidth = font.widthOfTextAtSize(line, size);
+           // Alineación
            if (el.textAlign === 'center' && el.width) {
-              const textWidth = font.widthOfTextAtSize(line, size);
-              pdfX = el.x + (el.width / 2) - (textWidth / 2);
+              pdfX = el.x + (el.width / 2) - (lineTextWidth / 2);
            } else if (el.textAlign === 'right' && el.width) {
-              const textWidth = font.widthOfTextAtSize(line, size);
-              pdfX = el.x + el.width - textWidth;
+              pdfX = el.x + el.width - lineTextWidth;
            }
            
            page.drawText(line, {
