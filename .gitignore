@@ -99,3 +99,17 @@ scripts/windows/*.bat
 !benchmarks/evidencia/
 !benchmarks/evidencia/*.log
 !benchmarks/*.json
+
+# Plantillas con firma y sello del Decano: nunca en el repo ni en public/
+plantillas-oficiales/
+!plantillas-oficiales/LEEME.md
+
+# Scripts de auditoría (temporales, no forman parte del sistema)
+.qa-audit/
+
+# Herramientas y respaldos locales del entorno de trabajo (no forman parte del sistema)
+.claude/skills/
+skills-lock.json
+.backups/
+.impeccable/
+*.bak
