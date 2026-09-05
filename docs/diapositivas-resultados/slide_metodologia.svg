@@ -1,0 +1,241 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap');
+      text { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+      .bg { fill: #FFFFFF; }
+      .category-line { stroke: #2563EB; stroke-width: 4; stroke-linecap: round; }
+      .category-text { font-size: 16px; font-weight: 800; fill: #2563EB; letter-spacing: 1.8px; text-transform: uppercase; }
+      .title { font-size: 46px; font-weight: 800; fill: #0F172A; letter-spacing: -1px; }
+      .subtitle { font-size: 19px; font-weight: 500; fill: #64748B; }
+      
+      .card-bg { fill: #F8FAFC; stroke: #E2E8F0; stroke-width: 1.5; rx: 24px; }
+      .inner-card-bg { fill: #FFFFFF; stroke: #E2E8F0; stroke-width: 1.5; rx: 18px; }
+      
+      .section-title { font-size: 22px; font-weight: 700; fill: #0F172A; }
+      .label-title { font-size: 12px; font-weight: 800; fill: #64748B; letter-spacing: 1.2px; text-transform: uppercase; }
+      
+      .pill-blue { fill: #EFF6FF; stroke: #BFDBFE; stroke-width: 1; rx: 20px; }
+      .pill-blue-text { font-size: 15px; font-weight: 700; fill: #1D4ED8; }
+
+      .pill-purple { fill: #F5F3FF; stroke: #DDD6FE; stroke-width: 1; rx: 20px; }
+      .pill-purple-text { font-size: 15px; font-weight: 700; fill: #6D28D9; }
+
+      .pill-emerald { fill: #ECFDF5; stroke: #A7F3D0; stroke-width: 1; rx: 20px; }
+      .pill-emerald-text { font-size: 15px; font-weight: 700; fill: #047857; }
+
+      .pill-slate { fill: #F1F5F9; stroke: #CBD5E1; stroke-width: 1; rx: 20px; }
+      .pill-slate-text { font-size: 15px; font-weight: 700; fill: #334155; }
+      
+      .body-text { font-size: 15px; font-weight: 600; fill: #1E293B; }
+      .muted-text { font-size: 13.5px; font-weight: 500; fill: #64748B; }
+
+      .footer-bg { fill: #EFF6FF; stroke: #BFDBFE; stroke-width: 1.5; rx: 16px; }
+      .footer-badge-bg { fill: #2563EB; rx: 8px; }
+      .footer-badge-text { font-size: 12px; font-weight: 800; fill: #FFFFFF; letter-spacing: 1px; text-transform: uppercase; }
+      .footer-text { font-size: 16px; font-weight: 600; fill: #1E3A8A; }
+    </style>
+
+    <filter id="subtle-shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#0F172A" flood-opacity="0.03" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect class="bg" width="1920" height="1080" />
+
+  <!-- HEADER -->
+  <g transform="translate(80, 75)">
+    <line x1="0" y1="-8" x2="32" y2="-8" class="category-line" />
+    <text x="44" y="-3" class="category-text">Capítulo III · Marco Investigativo</text>
+    <text x="0" y="52" class="title">Metodología y Fuentes</text>
+    <text x="0" y="88" class="subtitle">Estructura metodológica del proyecto, informantes clave y fuentes de información institucional</text>
+  </g>
+
+  <!-- LEFT COLUMN: DISEÑO DE LA INVESTIGACIÓN -->
+  <g transform="translate(80, 205)">
+    <rect class="card-bg" width="800" height="710" filter="url(#subtle-shadow)" />
+    
+    <!-- Card Header -->
+    <g transform="translate(36, 40)">
+      <rect x="0" y="0" width="44" height="44" rx="12" fill="#2563EB" />
+      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" fill="#FFFFFF" />
+      <text x="58" y="29" class="section-title">Diseño de la Investigación</text>
+    </g>
+
+    <!-- Rows inside Left Card -->
+    <!-- Row 1 -->
+    <g transform="translate(36, 110)">
+      <rect class="inner-card-bg" width="728" height="96" />
+      <text x="24" y="34" class="label-title">TIPO DE INVESTIGACIÓN</text>
+      <g transform="translate(24, 46)">
+        <rect class="pill-blue" x="0" y="0" width="120" height="34" />
+        <text class="pill-blue-text" x="60" y="22" text-anchor="middle">Aplicada</text>
+
+        <rect class="pill-blue" x="132" y="0" width="140" height="34" />
+        <text class="pill-blue-text" x="202" y="22" text-anchor="middle">Descriptiva</text>
+      </g>
+    </g>
+
+    <!-- Row 2 -->
+    <g transform="translate(36, 222)">
+      <rect class="inner-card-bg" width="728" height="96" />
+      <text x="24" y="34" class="label-title">DISEÑO METODOLÓGICO</text>
+      <g transform="translate(24, 46)">
+        <rect class="pill-purple" x="0" y="0" width="170" height="34" />
+        <text class="pill-purple-text" x="85" y="22" text-anchor="middle">No Experimental</text>
+      </g>
+    </g>
+
+    <!-- Row 3 -->
+    <g transform="translate(36, 334)">
+      <rect class="inner-card-bg" width="728" height="96" />
+      <text x="24" y="34" class="label-title">CORTE TEMPORAL</text>
+      <g transform="translate(24, 46)">
+        <rect class="pill-blue" x="0" y="0" width="140" height="34" />
+        <text class="pill-blue-text" x="70" y="22" text-anchor="middle">Transversal</text>
+      </g>
+    </g>
+
+    <!-- Row 4 -->
+    <g transform="translate(36, 446)">
+      <rect class="inner-card-bg" width="728" height="96" />
+      <text x="24" y="34" class="label-title">ENFOQUE DE INVESTIGACIÓN</text>
+      <g transform="translate(24, 46)">
+        <rect class="pill-emerald" x="0" y="0" width="280" height="34" />
+        <text class="pill-emerald-text" x="140" y="22" text-anchor="middle">Predominantemente Cualitativo</text>
+      </g>
+    </g>
+
+    <!-- Row 5 -->
+    <g transform="translate(36, 558)">
+      <rect class="inner-card-bg" width="728" height="96" />
+      <text x="24" y="34" class="label-title">MÉTODOS APLICADOS</text>
+      <g transform="translate(24, 46)">
+        <rect class="pill-slate" x="0" y="0" width="210" height="34" />
+        <text class="pill-slate-text" x="105" y="22" text-anchor="middle">Inductivo y Deductivo</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- RIGHT COLUMN: INFORMANTES & FUENTES -->
+  <!-- TOP CARD: INFORMANTES CLAVE -->
+  <g transform="translate(920, 205)">
+    <rect class="card-bg" width="920" height="340" filter="url(#subtle-shadow)" />
+
+    <g transform="translate(36, 32)">
+      <rect x="0" y="0" width="44" height="44" rx="12" fill="#2563EB" />
+      <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="#FFFFFF" />
+      
+      <text x="58" y="29" class="section-title">Informantes Clave</text>
+
+      <rect class="pill-blue" x="430" y="4" width="418" height="34" />
+      <text class="pill-blue-text" x="639" y="26" text-anchor="middle" font-size="13">100% del personal a cargo del proceso (2)</text>
+    </g>
+
+    <!-- Two Inner Cards -->
+    <!-- Informant 1 -->
+    <g transform="translate(36, 100)">
+      <rect class="inner-card-bg" width="408" height="205" />
+      
+      <g transform="translate(24, 24)">
+        <circle cx="24" cy="24" r="24" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1" />
+        <path d="M24 24c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="#1D4ED8" />
+
+        <text x="60" y="22" font-size="16" font-weight="700" fill="#0F172A">Funcionaria</text>
+        <text x="60" y="42" font-size="13" font-weight="600" fill="#2563EB">Ejecuta el trámite</text>
+
+        <line x1="0" y1="62" x2="360" y2="62" stroke="#F1F5F9" stroke-width="1.5" />
+
+        <text x="0" y="88" class="label-title" font-size="11">TÉCNICA DE RECOLECCIÓN</text>
+        <text x="0" y="112" class="body-text">Entrevista en profundidad</text>
+        <text x="0" y="132" class="muted-text">(Cuestionario de 12 preguntas)</text>
+      </g>
+    </g>
+
+    <!-- Informant 2 -->
+    <g transform="translate(476, 100)">
+      <rect class="inner-card-bg" width="408" height="205" />
+
+      <g transform="translate(24, 24)">
+        <circle cx="24" cy="24" r="24" fill="#F5F3FF" stroke="#DDD6FE" stroke-width="1" />
+        <path d="M17 25.18v4L24 33l7-3.82v-4L24 29l-7-3.82zM24 15l-11 6 11 6 9-4.91V29h2V21L24 15z" fill="#6D28D9" />
+
+        <text x="60" y="22" font-size="16" font-weight="700" fill="#0F172A">Docente Responsable</text>
+        <text x="60" y="42" font-size="13" font-weight="600" fill="#6D28D9">Supervisa el proceso</text>
+
+        <line x1="0" y1="62" x2="360" y2="62" stroke="#F1F5F9" stroke-width="1.5" />
+
+        <text x="0" y="88" class="label-title" font-size="11">TÉCNICA DE RECOLECCIÓN</text>
+        <text x="0" y="112" class="body-text">Cuestionario estructurado</text>
+        <text x="0" y="132" class="muted-text">(Instrumento autoadministrado)</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- BOTTOM CARD: FUENTES DE INFORMACIÓN -->
+  <g transform="translate(920, 575)">
+    <rect class="card-bg" width="920" height="340" filter="url(#subtle-shadow)" />
+
+    <g transform="translate(36, 32)">
+      <rect x="0" y="0" width="44" height="44" rx="12" fill="#2563EB" />
+      <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" fill="#FFFFFF" />
+
+      <text x="58" y="29" class="section-title">Fuentes de Información</text>
+    </g>
+
+    <!-- Two Inner Cards -->
+    <!-- Primarias -->
+    <g transform="translate(36, 100)">
+      <rect class="inner-card-bg" width="408" height="205" />
+
+      <g transform="translate(24, 24)">
+        <rect class="pill-emerald" x="0" y="0" width="110" height="28" />
+        <text class="pill-emerald-text" x="55" y="19" text-anchor="middle" font-size="13">Primarias</text>
+
+        <g transform="translate(0, 48)">
+          <circle cx="6" cy="12" r="3" fill="#047857" />
+          <text x="18" y="16" class="body-text" font-size="14">Entrevistas a informantes clave</text>
+
+          <circle cx="6" cy="44" r="3" fill="#047857" />
+          <text x="18" y="48" class="body-text" font-size="14">Registros de emisión oficial</text>
+
+          <circle cx="6" cy="76" r="3" fill="#047857" />
+          <text x="18" y="80" class="body-text" font-size="14">Formatos oficiales (PAP-01, actas)</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- Secundarias -->
+    <g transform="translate(476, 100)">
+      <rect class="inner-card-bg" width="408" height="205" />
+
+      <g transform="translate(24, 24)">
+        <rect class="pill-slate" x="0" y="0" width="120" height="28" />
+        <text class="pill-slate-text" x="60" y="19" text-anchor="middle" font-size="13">Secundarias</text>
+
+        <g transform="translate(0, 48)">
+          <circle cx="6" cy="12" r="3" fill="#475569" />
+          <text x="18" y="16" class="body-text" font-size="14">Manual e instructivo PAP-01</text>
+
+          <circle cx="6" cy="44" r="3" fill="#475569" />
+          <text x="18" y="48" class="body-text" font-size="14">Literatura sobre arquitectura web</text>
+
+          <circle cx="6" cy="76" r="3" fill="#475569" />
+          <text x="18" y="80" class="body-text" font-size="14">Trabajos de titulación previos</text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- FOOTER BANNER -->
+  <g transform="translate(80, 945)">
+    <rect class="footer-bg" width="1760" height="64" />
+    <rect class="footer-badge-bg" x="24" y="16" width="195" height="32" />
+    <text class="footer-badge-text" x="121" y="37" text-anchor="middle">Síntesis Metodológica</text>
+    
+    <text class="footer-text" x="235" y="38">
+      Investigación cualitativa aplicada de corte transversal, respaldada en la totalidad del personal a cargo del proceso y evidencia documental directa.
+    </text>
+  </g>
+</svg>

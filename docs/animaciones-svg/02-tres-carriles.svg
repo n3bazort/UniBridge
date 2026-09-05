@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>UniBridge — relevo entre los tres roles</title>
+  <rect id="bg" x="0" y="0" width="1920" height="1080" fill="#FFFFFF"/>
+
+  <path id="pista-base"
+        d="M 300 300 H 1580 Q 1620 300 1620 340 V 500 Q 1620 540 1580 540 H 340 Q 300 540 300 580 V 740 Q 300 780 340 780 H 1620"
+        fill="none" stroke="#CBD5E1" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g id="etiquetas-rol" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" letter-spacing="4" fill="#0F172A">
+    <text x="300" y="230">ADMINISTRADOR</text>
+    <text x="300" y="470">COORDINADOR</text>
+    <text x="300" y="710">FIRMANTE</text>
+  </g>
+  <g id="etiquetas-paso" font-family="Arial, Helvetica, sans-serif" font-size="24" letter-spacing="2" fill="#94A3B8" text-anchor="middle">
+    <text x="640" y="368">CARGA</text>
+    <text x="1180" y="368">VALIDA</text>
+    <text x="1180" y="608">ASIGNA</text>
+    <text x="640" y="608">GENERA</text>
+    <text x="640" y="848">FIRMA</text>
+    <text x="1180" y="848">ENTREGA</text>
+  </g>
+
+  <g id="estado-inicial">
+    <g id="nodos-apagados" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="12">
+      <circle cx="640" cy="300" r="30"/>
+      <circle cx="1180" cy="300" r="30"/>
+      <circle cx="1180" cy="540" r="30"/>
+      <circle cx="640" cy="540" r="30"/>
+      <circle cx="640" cy="780" r="30"/>
+      <circle cx="1180" cy="780" r="30"/>
+    </g>
+    <circle id="viajero-inicio" cx="300" cy="300" r="20" fill="#2563EB"/>
+  </g>
+
+  <g id="estado-final">
+    <!-- Copia exacta de la pista: es la que se pinta de azul al avanzar -->
+    <path id="pista-avance"
+          d="M 300 300 H 1580 Q 1620 300 1620 340 V 500 Q 1620 540 1580 540 H 340 Q 300 540 300 580 V 740 Q 300 780 340 780 H 1620"
+          fill="none" stroke="#2563EB" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+    <g id="nodos-encendidos" fill="#2563EB" stroke="#2563EB" stroke-width="12">
+      <circle id="nodo-1" cx="640" cy="300" r="30"/>
+      <circle id="nodo-2" cx="1180" cy="300" r="30"/>
+      <circle id="nodo-3" cx="1180" cy="540" r="30"/>
+      <circle id="nodo-4" cx="640" cy="540" r="30"/>
+      <circle id="nodo-5" cx="640" cy="780" r="30"/>
+      <circle id="nodo-6" cx="1180" cy="780" r="30"/>
+    </g>
+    <circle id="viajero-fin" cx="1620" cy="780" r="20" fill="#2563EB"/>
+  </g>
+</svg>

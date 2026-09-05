@@ -1,0 +1,1183 @@
+<meta charset="utf-8">
+<title>Guion de Sustentación UniBridge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap">
+
+<style>
+  :root {
+    --ground:      #fbfbfc;
+    --surface:     #ffffff;
+    --surface-2:   #f5f5f8;
+    --ink:         #14141a;
+    --ink-soft:    #5b5b66;
+    --ink-faint:   #8a8a95;
+    --line:        #e3e3e8;
+    --line-strong: #c9c9d2;
+    --accent:      #2563eb;
+    --accent-deep: #1e3a8a;
+    --accent-soft: #eef3fe;
+    --good:        #157e3c;
+    --good-soft:   #ecf7f0;
+    --warn:        #a95c04;
+    --warn-soft:   #fdf4e7;
+    --info:        #0b6d9d;
+    --info-soft:   #eaf5fb;
+    --danger:      #c62828;
+
+    --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --sans:  "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono:  "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0d0d11;
+      --surface:     #16161c;
+      --surface-2:   #1d1d25;
+      --ink:         #ececf1;
+      --ink-soft:    #a0a0ac;
+      --ink-faint:   #74747f;
+      --line:        #2a2a33;
+      --line-strong: #3d3d49;
+      --accent:      #7ba4ff;
+      --accent-deep: #a8c2ff;
+      --accent-soft: #18233f;
+      --good:        #52c47c;
+      --good-soft:   #14261b;
+      --warn:        #e0a44a;
+      --warn-soft:   #2a2015;
+      --info:        #55b8e0;
+      --info-soft:   #12242e;
+      --danger:      #ef6b6b;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #0d0d11;
+    --surface:     #16161c;
+    --surface-2:   #1d1d25;
+    --ink:         #ececf1;
+    --ink-soft:    #a0a0ac;
+    --ink-faint:   #74747f;
+    --line:        #2a2a33;
+    --line-strong: #3d3d49;
+    --accent:      #7ba4ff;
+    --accent-deep: #a8c2ff;
+    --accent-soft: #18233f;
+    --good:        #52c47c;
+    --good-soft:   #14261b;
+    --warn:        #e0a44a;
+    --warn-soft:   #2a2015;
+    --info:        #55b8e0;
+    --info-soft:   #12242e;
+    --danger:      #ef6b6b;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 96px; }
+
+  /* ───────── Cabecera ───────── */
+  .head {
+    display: flex; flex-direction: column; gap: 18px;
+    padding: 64px 0 32px;
+    border-bottom: 3px solid var(--ink);
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--accent);
+  }
+  .head h1 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(2rem, 1.4rem + 2.4vw, 3.1rem);
+    line-height: 1.1; letter-spacing: -.02em; text-wrap: balance; margin: 0;
+  }
+  .head p { max-width: 62ch; color: var(--ink-soft); margin: 0; font-size: 17px; }
+  .head-meta {
+    display: flex; flex-wrap: wrap; gap: 8px 28px;
+    font-family: var(--mono); font-size: 12px; color: var(--ink-faint);
+  }
+  .head-meta b { color: var(--ink); font-weight: 500; }
+
+  /* ───────── Secciones ───────── */
+  .section { padding-top: 56px; }
+  .section > h2 {
+    font-family: var(--serif); font-size: 1.6rem; font-weight: 600;
+    letter-spacing: -.01em; margin: 0 0 6px;
+  }
+  .section > .lede { color: var(--ink-soft); max-width: 66ch; margin: 0 0 26px; }
+
+  .rule {
+    display: flex; align-items: baseline; gap: 14px;
+    margin: 0 0 22px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .rule .num {
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    color: var(--accent); letter-spacing: .1em;
+  }
+
+  /* ───────── Paleta ───────── */
+  .swatches { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+  .sw {
+    border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+    background: var(--surface);
+  }
+  .sw .chip { height: 58px; border-bottom: 1px solid var(--line); }
+  .sw .body { padding: 11px 13px 13px; }
+  .sw .name { font-weight: 600; font-size: 14px; }
+  .sw .hex {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    letter-spacing: .02em; display: block; margin-top: 1px;
+  }
+  .sw .use { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; margin-top: 6px; }
+
+  /* ───────── Tablas ───────── */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft);
+    background: var(--surface-2); white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.n, th.n { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.n { color: var(--ink-soft); }
+
+  /* ───────── Ficha de diapositiva ───────── */
+  .slide {
+    display: grid; grid-template-columns: 92px 1fr; gap: 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; overflow: hidden; margin-bottom: 20px;
+  }
+  .slide > .rail {
+    border-right: 1px solid var(--line); background: var(--surface-2);
+    padding: 18px 12px; display: flex; flex-direction: column; gap: 3px; align-items: center;
+  }
+  .rail .no {
+    font-family: var(--mono); font-size: 26px; font-weight: 600;
+    color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums;
+  }
+  .rail .time {
+    font-family: var(--mono); font-size: 12px; color: var(--ink); font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .rail .acc { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  .slide > .body { padding: 18px 22px 22px; min-width: 0; }
+  .slide h3 {
+    font-family: var(--serif); font-size: 1.28rem; font-weight: 600;
+    margin: 0 0 3px; letter-spacing: -.01em;
+  }
+  .slide .src { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); margin: 0 0 16px; }
+
+  .zone { margin-top: 16px; }
+  .zone > .label {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+    letter-spacing: .13em; text-transform: uppercase; color: var(--ink-faint);
+    margin-bottom: 7px;
+  }
+  .zone p { margin: 0 0 8px; }
+  .zone p:last-child { margin-bottom: 0; }
+
+  /* Lo que va impreso en la diapositiva */
+  .canvas {
+    border: 1px solid var(--line-strong); border-top: 4px solid var(--accent);
+    border-radius: 6px; background: var(--ground); padding: 16px 18px;
+  }
+  .canvas.deep { border-top-color: var(--accent-deep); background: var(--accent-soft); }
+  .canvas .t {
+    font-family: var(--serif); font-size: 1.15rem; font-weight: 600;
+    margin: 0 0 4px; letter-spacing: -.01em;
+  }
+  .canvas .sub { color: var(--ink-soft); font-size: 14px; margin: 0 0 12px; }
+  .canvas .kicker {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .13em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 8px;
+  }
+  .canvas ul { margin: 0; padding-left: 20px; }
+  .canvas li { margin-bottom: 5px; font-size: 14.5px; }
+  .canvas li:last-child { margin-bottom: 0; }
+  .canvas .fine { font-size: 12.5px; color: var(--ink-soft); margin: 12px 0 0; }
+
+  /* Cifras destacadas */
+  .figs { display: flex; flex-wrap: wrap; gap: 26px; margin: 4px 0 12px; }
+  .figs .f .v {
+    font-family: var(--mono); font-size: 34px; font-weight: 600;
+    color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums;
+  }
+  .figs .f .k { font-size: 12.5px; color: var(--ink-soft); margin-top: 4px; max-width: 20ch; }
+
+  /* Bloques de dos partes: qué hicieron / qué se recoge */
+  .pair { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card {
+    border: 1px solid var(--line); border-radius: 8px;
+    background: var(--surface); padding: 13px 15px;
+  }
+  .card .tag {
+    font-family: var(--mono); font-size: 10px; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--accent);
+    display: block; margin-bottom: 5px;
+  }
+  .card .who { font-weight: 600; font-size: 14.5px; margin: 0 0 7px; }
+  .card dl { margin: 0; font-size: 13.5px; }
+  .card dt {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-faint); margin-top: 7px;
+  }
+  .card dt:first-child { margin-top: 0; }
+  .card dd { margin: 2px 0 0; color: var(--ink); line-height: 1.5; }
+
+  /* Guion hablado */
+  .say {
+    border-left: 3px solid var(--accent); background: var(--surface-2);
+    border-radius: 0 8px 8px 0; padding: 14px 18px;
+    font-size: 15.5px; line-height: 1.68;
+  }
+  .say p { margin: 0 0 10px; }
+  .say p:last-child { margin-bottom: 0; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip-i {
+    font-family: var(--mono); font-size: 11.5px; padding: 3px 9px;
+    border: 1px solid var(--line-strong); border-radius: 999px; color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .chip-i b { color: var(--accent); font-weight: 600; }
+
+  .note {
+    border: 1px solid var(--line); border-left: 3px solid var(--warn);
+    background: var(--warn-soft); border-radius: 0 8px 8px 0;
+    padding: 13px 16px; font-size: 14.5px; margin-top: 14px;
+  }
+  .note b { color: var(--warn); }
+
+  mark { background: var(--accent-soft); color: var(--ink); padding: 0 3px; border-radius: 3px; }
+  code {
+    font-family: var(--mono); font-size: .88em; background: var(--surface-2);
+    border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
+  }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+  @media (max-width: 640px) {
+    .slide { grid-template-columns: 1fr; }
+    .slide > .rail {
+      flex-direction: row; align-items: baseline; gap: 12px;
+      border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 18px;
+    }
+    .rail .no { font-size: 20px; }
+    .slide > .body { padding: 16px 18px 20px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="head">
+    <div class="eyebrow">Documento de construcción · v1</div>
+    <h1>Guion de sustentación</h1>
+    <p>Especificación completa del mazo de diapositivas: sistema visual, texto literal de cada lámina y guion hablado. Todo el contenido procede de <i>vrealTesis Bazurto correcciones tribunal.docx</i>. Ninguna cifra se inventa.</p>
+    <div class="head-meta">
+      <span><b>22</b> diapositivas</span>
+      <span><b>10:00</b> exactos</span>
+      <span>Formato <b>16:9</b> · 33,87 × 19,05 cm</span>
+      <span>Bloque 2: <b>demo en vivo</b>, 10 min aparte</span>
+    </div>
+  </header>
+
+  <!-- ══════════ 1. SISTEMA VISUAL ══════════ -->
+  <section class="section">
+    <div class="rule"><span class="num">PARTE 01</span><h2 style="font-family:var(--serif);font-size:1.6rem;font-weight:600;margin:0;">Sistema visual</h2></div>
+
+    <h3 style="font-family:var(--sans);font-size:1rem;font-weight:600;margin:0 0 4px;">Primarios — la marca</h3>
+    <p class="lede" style="margin-bottom:16px;">Los tres primeros son los tokens reales de UniBridge, tomados de <code>globals.css</code>. El azul profundo es una extensión para diapositivas: da fondo a portada y cierre.</p>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#2563EB"></div><div class="body"><div class="name">Azul UniBridge</div><span class="hex">#2563EB</span><p class="use">Color de acción. Títulos de sección, cifras destacadas, líneas de énfasis, iconos activos.</p></div></div>
+      <div class="sw"><div class="chip" style="background:#1E3A8A"></div><div class="body"><div class="name">Azul profundo</div><span class="hex">#1E3A8A</span><p class="use">Fondo de portada y cierre. Nunca detrás de texto de cuerpo.</p></div></div>
+      <div class="sw"><div class="chip" style="background:#FFFFFF;box-shadow:inset 0 0 0 1px #e3e3e8"></div><div class="body"><div class="name">Blanco</div><span class="hex">#FFFFFF</span><p class="use">Fondo de las 20 diapositivas de contenido.</p></div></div>
+      <div class="sw"><div class="chip" style="background:#F7F7F8;box-shadow:inset 0 0 0 1px #e3e3e8"></div><div class="body"><div class="name">Lienzo</div><span class="hex">#F7F7F8</span><p class="use">Fondo de tarjetas y bloques agrupados dentro de la lámina.</p></div></div>
+    </div>
+
+    <h3 style="font-family:var(--sans);font-size:1rem;font-weight:600;margin:30px 0 4px;">Secundarios — estructura y texto</h3>
+    <p class="lede" style="margin-bottom:16px;">Neutros con sesgo frío (matiz 240°), no grises puros: acompañan al azul en vez de pelearse con él.</p>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#09090B"></div><div class="body"><div class="name">Tinta</div><span class="hex">#09090B</span><p class="use">Títulos y texto principal.</p></div></div>
+      <div class="sw"><div class="chip" style="background:#6C6C75"></div><div class="body"><div class="name">Gris texto</div><span class="hex">#6C6C75</span><p class="use">Subtítulos, notas al pie, numeración, etiquetas.</p></div></div>
+      <div class="sw"><div class="chip" style="background:#E4E4E7"></div><div class="body"><div class="name">Borde</div><span class="hex">#E4E4E7</span><p class="use">Filas de tabla, separadores, contorno de tarjetas.</p></div></div>
+    </div>
+
+    <h3 style="font-family:var(--sans);font-size:1rem;font-weight:600;margin:30px 0 4px;">Semánticos — solo cuando significan algo</h3>
+    <p class="lede" style="margin-bottom:16px;">Regla que ya rige tu interfaz y que se respeta aquí: <mark>lo que está en orden va en gris; el color se reserva para lo que exige atención</mark>. Una diapositiva donde todo es de color no destaca nada.</p>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#157E3C"></div><div class="body"><div class="name">Verde</div><span class="hex">#157E3C</span><p class="use">Casos de prueba superados, firma completada, coincidencia entre fuentes.</p></div></div>
+      <div class="sw"><div class="chip" style="background:#A95C04"></div><div class="body"><div class="name">Ámbar</div><span class="hex">#A95C04</span><p class="use">Limitaciones declaradas, divergencias, pendientes.</p></div></div>
+      <div class="sw"><div class="chip" style="background:#0B6D9D"></div><div class="body"><div class="name">Cian</div><span class="hex">#0B6D9D</span><p class="use">Citas de campo y datos informativos.</p></div></div>
+      <div class="sw"><div class="chip" style="background:#EF4444"></div><div class="body"><div class="name">Rojo</div><span class="hex">#EF4444</span><p class="use">Únicamente en el diagrama causa-efecto, para los puntos de fallo del proceso manual.</p></div></div>
+    </div>
+
+    <h3 style="font-family:var(--sans);font-size:1rem;font-weight:600;margin:30px 0 4px;">Institucional — ULEAM</h3>
+    <p class="lede" style="margin-bottom:16px;">Del archivo <code>logo-uleam.svg</code>. Aparecen <b>solo dentro del escudo</b>, en portada y cierre. El verde institucional choca con el azul de marca, así que no se mezclan en el cuerpo.</p>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#93C01F"></div><div class="body"><div class="name">Verde ULEAM</div><span class="hex">#93C01F</span></div></div>
+      <div class="sw"><div class="chip" style="background:#E20613"></div><div class="body"><div class="name">Rojo ULEAM</div><span class="hex">#E20613</span></div></div>
+      <div class="sw"><div class="chip" style="background:#575756"></div><div class="body"><div class="name">Gris ULEAM</div><span class="hex">#575756</span></div></div>
+    </div>
+
+    <h3 style="font-family:var(--sans);font-size:1rem;font-weight:600;margin:34px 0 10px;">Tipografía y retícula</h3>
+    <p class="lede" style="margin-bottom:16px;"><b>Arial en todo el mazo.</b> Dos razones: es la tipografía de tu tesis, y está instalada en cualquier computador. Una fuente que no carga te arruina el diseño en el peor momento posible.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Nivel</th><th class="n">Tamaño</th><th class="n">Peso</th><th>Color</th><th>Uso</th></tr></thead>
+        <tbody>
+          <tr><td>Título de lámina</td><td class="n">32 pt</td><td class="n">Bold</td><td><code>#09090B</code></td><td>Una línea, alineado a la izquierda, en el margen superior</td></tr>
+          <tr><td>Bajada</td><td class="n">16 pt</td><td class="n">Regular</td><td><code>#6C6C75</code></td><td>Opcional, una sola línea bajo el título</td></tr>
+          <tr><td>Cuerpo</td><td class="n">14 pt</td><td class="n">Regular</td><td><code>#09090B</code></td><td>Máximo 12 palabras por viñeta</td></tr>
+          <tr><td>Cifra destacada</td><td class="n">54 pt</td><td class="n">Bold</td><td><code>#2563EB</code></td><td>Nunca más de tres por lámina</td></tr>
+          <tr><td>Etiqueta</td><td class="n">10 pt</td><td class="n">Bold</td><td><code>#2563EB</code></td><td>Versalitas, interletrado +10 %</td></tr>
+          <tr><td>Nota al pie</td><td class="n">10 pt</td><td class="n">Regular</td><td><code>#6C6C75</code></td><td>Fuente del dato, cuando aplique</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lede" style="margin:16px 0 0;"><b>Retícula:</b> márgenes de 2 cm en los cuatro lados. Numeración en <code>#6C6C75</code>, 10 pt, abajo a la derecha. Doce columnas con canal de 0,5 cm.</p>
+    <p class="lede" style="margin:10px 0 0;"><b>Motivo repetido:</b> cada lámina de contenido abre con un <i>rótulo de capítulo</i> en versalitas azules de 10 pt sobre el título —«Capítulo I · Planteamiento del problema»—. Cumple una función, no adorna: le dice al tribunal en qué parte de la tesis está lo que ve. Sustituye al filete azul superior que figuraba en la primera versión de este documento: una barra de color a todo el ancho no aporta información y envejece mal.</p>
+    <p class="lede" style="margin:10px 0 0;"><b>Transiciones:</b> ninguna, salvo <i>Transformación</i> (Morph) entre las cuatro láminas de conclusiones, donde la plantilla se repite y el movimiento refuerza la correspondencia. Sin animaciones de entrada: distraen y se descoordinan al hablar.</p>
+  </section>
+
+  <!-- ══════════ 2. ORDEN DE MARCHA ══════════ -->
+  <section class="section">
+    <div class="rule"><span class="num">PARTE 02</span><h2 style="font-family:var(--serif);font-size:1.6rem;font-weight:600;margin:0;">Orden de marcha</h2></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="n">#</th><th>Diapositiva</th><th class="n">Dura</th><th class="n">Acum.</th><th>Origen en la tesis</th></tr></thead>
+        <tbody>
+          <tr><td class="n">01</td><td>Portada</td><td class="n">0:10</td><td class="n">0:10</td><td>—</td></tr>
+          <tr><td class="n">02</td><td>Planteamiento del problema</td><td class="n">0:45</td><td class="n">0:55</td><td>1.4</td></tr>
+          <tr><td class="n">03</td><td>Diagrama causa y efecto</td><td class="n">0:25</td><td class="n">1:20</td><td>1.5 · Figura 1 · Tabla 1</td></tr>
+          <tr><td class="n">04</td><td>Objetivos</td><td class="n">0:40</td><td class="n">2:00</td><td>1.6</td></tr>
+          <tr><td class="n">05</td><td>Investigaciones relacionadas</td><td class="n">0:40</td><td class="n">2:40</td><td>2.4</td></tr>
+          <tr><td class="n">06</td><td>Marco normativo institucional</td><td class="n">0:25</td><td class="n">3:05</td><td>2.3</td></tr>
+          <tr><td class="n">07</td><td>Metodología y fuentes consultadas</td><td class="n">0:30</td><td class="n">3:35</td><td>3.2 – 3.7</td></tr>
+          <tr><td class="n">08</td><td>Resultados de la entrevista</td><td class="n">0:30</td><td class="n">4:05</td><td>3.9.1 · Anexo A</td></tr>
+          <tr><td class="n">09</td><td>Resultados del cuestionario</td><td class="n">0:25</td><td class="n">4:30</td><td>3.9.2 · Anexo J</td></tr>
+          <tr><td class="n">10</td><td>Requisitos derivados</td><td class="n">0:30</td><td class="n">5:00</td><td>4.5.1 · 4.5.2</td></tr>
+          <tr><td class="n">11</td><td>Determinación de recursos</td><td class="n">0:25</td><td class="n">5:25</td><td>4.4 · Tablas 7 y 8</td></tr>
+          <tr><td class="n">12</td><td>Planificación de las iteraciones</td><td class="n">0:30</td><td class="n">5:55</td><td>4.5</td></tr>
+          <tr><td class="n">13</td><td>Arquitectura del sistema</td><td class="n">0:35</td><td class="n">6:30</td><td>2.6 · 4.5</td></tr>
+          <tr><td class="n">14</td><td>Circuito documental y firma electrónica</td><td class="n">0:40</td><td class="n">7:10</td><td>Iteraciones 4 y 5</td></tr>
+          <tr><td class="n">15</td><td>Evaluación — matriz de casos de prueba</td><td class="n">0:35</td><td class="n">7:45</td><td>5.2 · Tabla 15</td></tr>
+          <tr><td class="n">16</td><td>Limitaciones</td><td class="n">0:20</td><td class="n">8:05</td><td>5.4</td></tr>
+          <tr><td class="n">17</td><td>Conclusión · Objetivo 1</td><td class="n">0:20</td><td class="n">8:25</td><td>6.1</td></tr>
+          <tr><td class="n">18</td><td>Conclusión · Objetivo 2</td><td class="n">0:20</td><td class="n">8:45</td><td>6.1</td></tr>
+          <tr><td class="n">19</td><td>Conclusión · Objetivo 3</td><td class="n">0:20</td><td class="n">9:05</td><td>6.1</td></tr>
+          <tr><td class="n">20</td><td>Conclusión · Objetivo 4</td><td class="n">0:20</td><td class="n">9:25</td><td>6.1</td></tr>
+          <tr><td class="n">21</td><td>Recomendaciones</td><td class="n">0:25</td><td class="n">9:50</td><td>6.2</td></tr>
+          <tr><td class="n">22</td><td>Cierre</td><td class="n">0:10</td><td class="n">10:00</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══════════ 3. LÁMINA POR LÁMINA ══════════ -->
+  <section class="section">
+    <div class="rule"><span class="num">PARTE 03</span><h2 style="font-family:var(--serif);font-size:1.6rem;font-weight:600;margin:0;">Lámina por lámina</h2></div>
+    <p class="lede">Cada ficha trae tres zonas: <b>lo que se ve</b> (composición y elementos gráficos), <b>lo que está impreso</b> (el texto literal que va en la lámina, tal cual) y <b>lo que usted dice</b> (el guion, que irá también en las notas del orador).</p>
+
+    <!-- 01 -->
+    <article class="slide">
+      <div class="rail"><span class="no">01</span><span class="time">0:10</span><span class="acc">0:10</span></div>
+      <div class="body">
+        <h3>Portada</h3>
+        <p class="src">Fondo azul profundo · sin filete superior</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Fondo <code>#1E3A8A</code> a sangre completa. El puente de UniBridge, en blanco al 7 % de opacidad, ocupa el tercio derecho desbordando el borde. Escudo ULEAM a color, 2,2 cm de alto, esquina superior izquierda. Logo UniBridge en blanco, esquina inferior derecha. Todo el texto en blanco, alineado a la izquierda sobre las siete primeras columnas.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas deep">
+            <p class="kicker">Sustentación de trabajo de titulación · Manta, Ecuador · 2026</p>
+            <p class="t">Aplicación web para la gestión automatizada de solicitudes y certificados de prácticas preprofesionales en la Carrera de Tecnologías de la Información de la ULEAM</p>
+            <p class="fine" style="margin-top:14px;"><b>Autor:</b> Dilian Josué Bazurto García &nbsp;·&nbsp; <b>Tutor:</b> Ing. John Antonio Cevallos Macías</p>
+            <p class="fine" style="margin-top:10px;">UNIVERSIDAD LAICA ELOY ALFARO DE MANABÍ<br>FACULTAD DE CIENCIAS DE LA VIDA Y TECNOLOGÍAS · CARRERA DE INGENIERÍA EN TECNOLOGÍAS DE LA INFORMACIÓN</p>
+          </div>
+          
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say"><p>«Buenos días. Señores miembros del tribunal, presento el desarrollo de UniBridge, una aplicación web para automatizar la emisión de solicitudes, designaciones y certificados de prácticas preprofesionales en la Carrera de Tecnologías de la Información.»</p></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 02 -->
+    <article class="slide">
+      <div class="rail"><span class="no">02</span><span class="time">0:45</span><span class="acc">0:55</span></div>
+      <div class="body">
+        <h3>Planteamiento del problema</h3>
+        <p class="src">Tesis 1.4 · Problematización, génesis y estado actual</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Título arriba a la izquierda. Debajo, tres cifras en azul de 54 pt separadas por filetes verticales finos, cada una con su leyenda en gris. En el tercio inferior, una franja de lienzo <code>#F7F7F8</code> con los cinco pasos del trámite manual encadenados por flechas grises; el paso «Remitir a firma, uno por uno» lleva un punto rojo <code>#EF4444</code> de 8 pt. Al pie, la nota de fuente.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Planteamiento del problema</p>
+            <p class="sub">Un procedimiento enteramente manual, sostenido sobre plantillas ofimáticas y carpetas dispersas</p>
+            <div class="figs">
+              <div class="f"><div class="v">6 min</div><div class="k">por certificado, cuando la información está completa</div></div>
+              <div class="f"><div class="v">124</div><div class="k">certificados emitidos en el período 2025-1</div></div>
+              <div class="f"><div class="v">120</div><div class="k">certificados emitidos en el período 2024-2</div></div>
+            </div>
+            <p class="kicker" style="margin-top:6px;">El trámite hoy</p>
+            <ul>
+              <li>Revisar los requisitos del estudiante</li>
+              <li>Transcribir sus datos en la plantilla de Word</li>
+              <li>Elaborar el documento, uno por uno</li>
+              <li>Remitir a firma, uno por uno</li>
+              <li>Archivar en carpetas sin estructura común</li>
+            </ul>
+            <p class="fine">Nota. Cifras tomadas de los registros institucionales de emisión de la Comisión de Prácticas, no de una estimación.</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say">
+            <p>«El procedimiento es hoy enteramente manual. El personal traslada los datos de cada estudiante a plantillas de Word, elabora los documentos uno por uno y los archiva en carpetas. Emitir un certificado toma unos seis minutos cuando la información está completa.»</p>
+            <p>«El problema no es hacer uno. La Comisión distribuyó ciento veinticuatro certificados en el período 2025-1 y ciento veinte en el 2024-2, y esas cifras salen de los registros institucionales, no de una estimación. A eso se suma que cada documento se remite a firma por separado, de modo que la emisión queda supeditada a la agenda de quien firma y llega a demorarse varios días.»</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 03 -->
+    <article class="slide">
+      <div class="rail"><span class="no">03</span><span class="time">0:25</span><span class="acc">1:20</span></div>
+      <div class="body">
+        <h3>Diagrama causa y efecto</h3>
+        <p class="src">Tesis 1.5 · Figura 1 y Tabla 1 · nueve causas en cuatro categorías</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Ishikawa redibujado con la paleta, ocupando dos tercios del ancho: espina central gris, cuatro ramas con el nombre de la categoría en versalitas azules y sus causas en gris de 12 pt. La cabeza del pez, en rojo <code>#EF4444</code>, contiene el efecto. A la derecha, en la columna restante, la pregunta de investigación en un recuadro <code>#EEF3FE</code> con filete azul a la izquierda.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Diagrama causa y efecto</p>
+            <p class="sub">Nueve causas identificadas, agrupadas en cuatro categorías</p>
+            <div class="pair">
+              <div class="card"><span class="tag">Métodos de trabajo</span><dl><dd>Elaboración individual de cada documento</dd><dd>Transcripción repetida de los datos del estudiante</dd><dd>Recolección de firmas por vía física</dd></dl></div>
+              <div class="card"><span class="tag">Recursos tecnológicos</span><dl><dd>Ausencia de un sistema centralizado</dd><dd>Plantillas ofimáticas desvinculadas de los datos académicos</dd></dl></div>
+              <div class="card"><span class="tag">Manejo documental</span><dl><dd>Archivos dispersos en carpetas sin estructura común</dd><dd>Copias físicas como único respaldo</dd></dl></div>
+              <div class="card"><span class="tag">Control del proceso</span><dl><dd>Falta de registro del estado de cada trámite</dd><dd>Imposibilidad de generar reportes de avance</dd></dl></div>
+            </div>
+            <p class="fine" style="color:var(--danger);"><b>Efecto:</b> ineficiencia en la emisión de solicitudes, designaciones y certificados de prácticas preprofesionales.</p>
+            <p class="fine" style="border-left:3px solid var(--accent);padding-left:12px;margin-top:12px;color:var(--ink);"><b>¿De qué manera una aplicación web puede automatizar la emisión de solicitudes, designaciones y certificados, reduciendo los tiempos de atención y asegurando la trazabilidad de los documentos oficiales?</b></p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say"><p>«Ordené las causas en un diagrama de Ishikawa: nueve causas agrupadas en cuatro categorías. Y cada grupo terminó definiendo un módulo del sistema. De ahí surge la pregunta que guía la investigación: de qué manera una aplicación web puede automatizar esta emisión, reduciendo los tiempos de atención y asegurando la trazabilidad de los documentos oficiales.»</p></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 04 -->
+    <article class="slide">
+      <div class="rail"><span class="no">04</span><span class="time">0:40</span><span class="acc">2:00</span></div>
+      <div class="body">
+        <h3>Objetivos</h3>
+        <p class="src">Tesis 1.6 · un general y cuatro específicos</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Banda azul <code>#2563EB</code> a todo el ancho con el objetivo general en blanco, 18 pt. Debajo, cuatro columnas iguales separadas por filetes verticales; cada una encabezada por su número en azul de 40 pt sobre fondo lienzo circular. Al pie, en gris de 10 pt, la promesa que se cumple en las láminas 17 a 20.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Objetivos</p>
+            <p class="fine" style="background:var(--accent);color:#fff;padding:11px 14px;border-radius:6px;margin:0 0 14px;font-size:14px;"><b>General.</b> Desarrollar una aplicación web para la gestión automatizada de solicitudes y certificados de prácticas preprofesionales en la Carrera de Tecnologías de la Información de la Universidad Laica Eloy Alfaro de Manabí.</p>
+            <div class="pair">
+              <div class="card"><span class="tag">Específico 1</span><dd style="margin:0;">Analizar el procedimiento actual de emisión, con el fin de establecer los requerimientos funcionales y no funcionales de la aplicación web.</dd></div>
+              <div class="card"><span class="tag">Específico 2</span><dd style="margin:0;">Determinar la arquitectura de software, las herramientas tecnológicas y la metodología de desarrollo más adecuadas.</dd></div>
+              <div class="card"><span class="tag">Específico 3</span><dd style="margin:0;">Desarrollar la aplicación web bajo un enfoque iterativo e incremental, cubriendo la generación documental y el circuito de firma electrónica.</dd></div>
+              <div class="card"><span class="tag">Específico 4</span><dd style="margin:0;">Validar el funcionamiento de la aplicación mediante pruebas de sus requerimientos funcionales.</dd></div>
+            </div>
+            <p class="fine">Cada objetivo se retoma al cierre con su conclusión.</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say">
+            <p>«El objetivo general fue desarrollar la aplicación web. Se desagregó en cuatro específicos que recorren el ciclo completo del proyecto: analizar el procedimiento vigente para levantar los requerimientos; determinar la arquitectura, las herramientas y la metodología; desarrollar la aplicación de forma iterativa, cubriendo la generación documental y el circuito de firma; y validar el funcionamiento mediante pruebas de cada requerimiento.»</p>
+            <p>«Al cierre de esta exposición retomo cada uno con su conclusión correspondiente.»</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 05 -->
+    <article class="slide">
+      <div class="rail"><span class="no">05</span><span class="time">0:40</span><span class="acc">2:40</span></div>
+      <div class="body">
+        <h3>Investigaciones relacionadas</h3>
+        <p class="src">Tesis 2.4 · tres antecedentes, con el aporte que se recoge de cada uno</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Tres tarjetas de igual ancho, fondo lienzo, contorno <code>#E4E4E7</code>, esquina 8 pt. Cada una: etiqueta temática en versalitas azules, autor · año · país en negrita, y dos bloques rotulados <span style="font-family:var(--mono);font-size:11px;">QUÉ HICIERON</span> y <span style="font-family:var(--mono);font-size:11px;">QUÉ SE RECOGE</span>. El segundo bloque lleva filete azul a la izquierda: es lo que importa.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Investigaciones relacionadas</p>
+            <p class="sub">Tres antecedentes y la decisión técnica que aportó cada uno</p>
+            <div class="pair">
+              <div class="card">
+                <span class="tag">Registro único de datos</span>
+                <p class="who">Delgado y Osorio (2024) · Ecuador · UIDE</p>
+                <dl>
+                  <dt>Qué hicieron</dt><dd>Sistema de gestión automatizada de prácticas: asignación de estudiantes a empresas receptoras, registro de horas y coordinación de la evaluación de los mentores.</dd>
+                  <dt>Qué se recoge</dt><dd>La documentación debe elaborarse a partir de datos preexistentes, no de transcripciones.</dd>
+                </dl>
+              </div>
+              <div class="card">
+                <span class="tag">Flujo documental por estados</span>
+                <p class="who">Enríquez (2021) · Ecuador · UTA</p>
+                <dl>
+                  <dt>Qué hicieron</dt><dd>Sistema web de gestión documental en ASP.NET con un motor de flujo de trabajo que representa actores, tareas y decisiones del procedimiento.</dd>
+                  <dt>Qué se recoge</dt><dd>La noción de documento que avanza por estados, base del circuito de firma de los certificados.</dd>
+                </dl>
+              </div>
+              <div class="card">
+                <span class="tag">Plantillas editables por el usuario</span>
+                <p class="who">Bornais (s. f.) · código abierto</p>
+                <dl>
+                  <dt>Qué hicieron</dt><dd>Generador de certificados que opera desde el navegador: la plantilla se configura arrastrando campos y los datos se cargan desde un CSV.</dd>
+                  <dt>Qué se recoge</dt><dd>Quien administra las plantillas deja de depender de un programador para ajustarlas.</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say">
+            <p>«La revisión de experiencias previas aportó tres decisiones técnicas concretas. Delgado y Osorio, en la Universidad Iberoamericana del Ecuador, demostraron el valor de un registro único que relacione estudiante, empresa y horas; de ahí que en mi sistema los documentos se generen a partir de datos ya almacenados y no de transcripciones.»</p>
+            <p>«Enríquez, en la Universidad Técnica de Ambato, implementó un motor de flujo de trabajo con estados por documento, idea que recojo en el circuito de firma. Y Bornais desarrolló un generador de certificados configurable desde el navegador; esa idea sustenta el editor visual de plantillas, que permite a la Comisión modificar los formatos sin intervención de un programador.»</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 06 -->
+    <article class="slide">
+      <div class="rail"><span class="no">06</span><span class="time">0:25</span><span class="acc">3:05</span></div>
+      <div class="body">
+        <h3>Marco normativo institucional</h3>
+        <p class="src">Tesis 2.3 · manual PAP-01 de la Dirección de Gestión y Aseguramiento de la Calidad</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Cuatro bloques en línea horizontal, encadenados, con cabecera azul <code>#2563EB</code> —las cuatro iguales: el color identifica la etapa, no el alcance— y sus formatos debajo. El alcance se marca <b>formato por formato</b>: los tres que el sistema emite llevan fondo <code>#EFF5FF</code> con barra lateral azul; los otros cinco van en gris al 60 %. Leyenda arriba y banda de alcance al pie.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Marco normativo institucional</p>
+            <p class="sub">Manual PAP-01 — Planificación, ejecución, supervisión y evaluación de prácticas preprofesionales</p>
+            <div class="pair">
+              <div class="card"><span class="tag">1 · Planificación</span><dd style="margin:0;color:var(--ink-soft)">PAP-01-F-001 Planificación semestral<br><b style="color:var(--accent)">PAP-01-F-006</b> <span style="color:var(--ink)">Solicitud de prácticas</span><br><b style="color:var(--accent)">Designación</b> <span style="color:var(--ink)">de estudiante y tutor</span></dd></div>
+              <div class="card"><span class="tag">2 · Ejecución</span><dd style="margin:0;color:var(--ink-soft)">PAP-01-F-002 Registro de actividades diarias<br><i>Lo llena el estudiante.</i></dd></div>
+              <div class="card"><span class="tag">3 · Supervisión</span><dd style="margin:0;color:var(--ink-soft)">PAP-01-F-003 Ficha de supervisión<br><i>La llena el tutor asignado.</i></dd></div>
+              <div class="card"><span class="tag">4 · Evaluación</span><dd style="margin:0;color:var(--ink-soft)">PAP-01-F-004 Informe final<br>PAP-01-F-005 Evaluación general<br><b style="color:var(--accent)">Certificado</b> <span style="color:var(--ink)">de culminación de horas</span></dd></div>
+            </div>
+            <p class="fine"><b>Alcance declarado:</b> de los seis formatos normalizados del manual el sistema emite uno, la solicitud (F-006). A ese se suman dos documentos que la Facultad tramita con formato propio y sin código en el manual: la designación y el certificado de culminación. Los cinco formatos restantes conservan íntegra su tramitación actual.</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say">
+            <p>«Conviene subrayar que las prácticas de la ULEAM no se gobiernan por la costumbre de cada unidad, sino por un procedimiento codificado: el manual PAP-01, que fija cuatro etapas y sus formatos normalizados.»</p>
+            <p>«Quiero ser preciso con el alcance, porque no cubre el manual entero. De los seis formatos normalizados, el sistema emite uno: la solicitud de prácticas. A ese se suman dos documentos que la Facultad tramita con formato propio y que no llevan código en el manual: la designación de estudiante y tutor, y el certificado de culminación de horas. Tres documentos en total.»</p>
+            <p>«Los otros cinco formatos quedan fuera, y no por una limitación técnica: es que no son trámite que la Comisión emita, sino registro de lo que ocurre durante la práctica. El F-002 lo llena el estudiante con sus actividades diarias; el F-003, el tutor asignado, y con ella lo evalúa. Conservan íntegra su tramitación actual.»</p>
+            <p>«Esto importa porque permite afirmar que el sistema automatiza un tramo del procedimiento oficial de la universidad, y no una práctica local surgida de la conveniencia de quien lo ejecuta.»</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 07 -->
+    <article class="slide">
+      <div class="rail"><span class="no">07</span><span class="time">0:30</span><span class="acc">3:35</span></div>
+      <div class="body">
+        <h3>Metodología y fuentes consultadas</h3>
+        <p class="src">Tesis 3.2 a 3.7 · tipo, métodos, enfoque, informantes, fuentes</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Dos columnas de 6 y 6. Izquierda: cuatro etiquetas del diseño metodológico apiladas, cada una con su valor. Derecha: tarjeta cian <code>#EAF5FB</code> con los informantes y, debajo, dos listas de fuentes; la cifra <b>56</b> en azul de 40 pt cierra la columna.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Metodología y fuentes consultadas</p>
+            <div class="pair">
+              <div class="card">
+                <span class="tag">Diseño de la investigación</span>
+                <dl>
+                  <dt>Tipo</dt><dd>Aplicada y descriptiva</dd>
+                  <dt>Diseño</dt><dd>No experimental, de corte transversal</dd>
+                  <dt>Enfoque</dt><dd>Predominantemente cualitativo</dd>
+                  <dt>Métodos</dt><dd>Inductivo y deductivo</dd>
+                </dl>
+              </div>
+              <div class="card">
+                <span class="tag">Informantes clave — población: 2 personas</span>
+                <dl>
+                  <dt>Entrevista semiestructurada</dt><dd>Funcionaria que ejecuta materialmente el trámite · 12 preguntas · Anexo A</dd>
+                  <dt>Cuestionario autoadministrado</dt><dd>Docente responsable del proceso de prácticas · Anexo J</dd>
+                </dl>
+              </div>
+              <div class="card">
+                <span class="tag">Fuentes primarias</span>
+                <dd style="margin:0;">Entrevistas al personal a cargo · Registros institucionales de emisión · Formatos oficiales vigentes</dd>
+              </div>
+              <div class="card">
+                <span class="tag">Fuentes secundarias</span>
+                <dd style="margin:0;">Normativa PAP-01 · Trabajos de titulación y artículos científicos · Literatura sobre gestión documental y UX<br><b style="color:var(--accent);font-size:18px;">56 referencias bibliográficas</b></dd>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say">
+            <p>«La investigación es aplicada y descriptiva, no experimental y transversal, con enfoque predominantemente cualitativo. Un punto que quiero precisar, porque podría llamarles la atención: la población es de dos personas, porque solo dos intervienen en la emisión documental. Ante una población de dos, un muestreo probabilístico carece de sentido; se recurrió a la figura del informante clave, procedente cuando unas pocas personas concentran el conocimiento del fenómeno.»</p>
+            <p>«Como fuentes primarias usé las entrevistas y los registros institucionales de emisión; como secundarias, la normativa, trabajos de titulación y literatura especializada, con cincuenta y seis referencias en total.»</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 08 -->
+    <article class="slide">
+      <div class="rail"><span class="no">08</span><span class="time">0:30</span><span class="acc">4:05</span></div>
+      <div class="body">
+        <h3>Resultados de la entrevista</h3>
+        <p class="src">Tesis 3.9.1 · funcionaria a cargo del proceso documental</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Cita textual a todo el ancho sobre fondo cian <code>#EAF5FB</code>, en 22 pt cursiva, con comillas angulares grandes en cian al 25 %. Debajo, dos columnas: a la izquierda tres hallazgos con viñeta cuadrada azul; a la derecha, los cuatro requisitos que se derivaron, numerados.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Resultados de la entrevista</p>
+            <p class="fine" style="background:var(--info-soft);border-left:3px solid var(--info);padding:12px 14px;margin:0 0 14px;font-size:15px;font-style:italic;color:var(--ink);">«El problema no es hacer uno; el problema es el final del semestre.»</p>
+            <div class="pair">
+              <div class="card">
+                <span class="tag">Tres hallazgos</span>
+                <dl>
+                  <dt>Tiempo</dt><dd>El trámite consume un tiempo desproporcionado a su complejidad</dd>
+                  <dt>Fiabilidad</dt><dd>Al reutilizar un certificado anterior como base, queda el nombre del estudiante previo; se detecta cuando ya está firmado</dd>
+                  <dt>Preservación</dt><dd>Carpetas, impresos y nube, sin criterio común: no hay repositorio único</dd>
+                </dl>
+              </div>
+              <div class="card">
+                <span class="tag">Cuatro requisitos derivados</span>
+                <dd style="margin:0;">1. Llenado automático de plantillas desde datos ya almacenados<br>2. Entrega en Word y en PDF, cada formato para un uso distinto<br>3. Circuito de firma que respete el orden entre autoridades<br>4. Accesos delimitados por rol: el decano solo requiere firmar</dd>
+              </div>
+            </div>
+            <p class="fine">El origen del error no está en el descuido, sino en el método.</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say">
+            <p>«La entrevista permitió dimensionar el costo real del procedimiento. Además del tiempo, la entrevistada describió un error conocido: al reutilizar un certificado anterior como base, a veces queda el nombre del estudiante previo, y se detecta cuando el documento ya está firmado. Ese dato fue decisivo para el diseño, porque señala que el origen del error no es el descuido, sino el método.»</p>
+            <p>«Hubo también una reticencia que resultó muy productiva: que la herramienta no fuera más complicada que un procesador de textos. De la conversación se desprenden cuatro requisitos concretos, entre ellos la entrega en Word y en PDF, y un circuito que respete el orden entre las autoridades.»</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 09 -->
+    <article class="slide">
+      <div class="rail"><span class="no">09</span><span class="time">0:25</span><span class="acc">4:30</span></div>
+      <div class="body">
+        <h3>Resultados del cuestionario</h3>
+        <p class="src">Tesis 3.9.2 · docente responsable del proceso · contraste entre fuentes</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Estructura de contraste: a la izquierda, bajo el rótulo <span style="font-family:var(--mono);font-size:11px;">COINCIDEN</span>, tres filas con marca de verificación en verde <code>#157E3C</code>. A la derecha, bajo <span style="font-family:var(--mono);font-size:11px;">DIVERGE</span>, una sola fila con marca ámbar <code>#A95C04</code>. Un filete vertical gris separa ambas mitades.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Resultados del cuestionario</p>
+            <p class="sub">Contraste con lo recogido en la entrevista</p>
+            <div class="pair">
+              <div class="card" style="border-left:3px solid var(--good)">
+                <span class="tag" style="color:var(--good)">Coinciden las dos fuentes</span>
+                <dd style="margin:0;">Los errores se originan en los criterios con que se llenan los formularios<br>Los documentos físicos pueden perderse<br>La coordinación de la firma es un trámite manual</dd>
+              </div>
+              <div class="card" style="border-left:3px solid var(--warn)">
+                <span class="tag" style="color:var(--warn)">Diverge</span>
+                <dd style="margin:0;">Mencionó PDF y Excel como formatos de salida. El sistema emite en PDF y Word, y reserva la hoja de cálculo para la importación de datos.<br><br><b>Queda registrada como divergencia, no corregida.</b></dd>
+              </div>
+            </div>
+            <p class="fine">Aporte propio del cuestionario: ante un documento emitido por error, el sistema debe permitir su corrección y mantenerlo editable.</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say"><p>«El cuestionario al docente responsable cumplió la función de contrastar, y coincide con la entrevista en los tres puntos centrales. Hubo una divergencia que dejo registrada antes que disimularla: al preguntar por los formatos de salida mencionó Excel, y el sistema reserva la hoja de cálculo para la importación, no para la salida documental. Se atribuye a que el instrumento no permitió precisar el uso previsto de cada formato. Aportó además un criterio propio que sí se implementó: ante un documento emitido por error, el sistema debe permitir su corrección y mantenerlo editable.»</p></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 10 -->
+    <article class="slide">
+      <div class="rail"><span class="no">10</span><span class="time">0:30</span><span class="acc">5:00</span></div>
+      <div class="body">
+        <h3>Requisitos derivados</h3>
+        <p class="src">Tesis 4.5.1 y 4.5.2 · 15 funcionales y 7 no funcionales</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Rejilla de 5 × 3 con los quince requisitos funcionales: cada ficha lleva el código en mono azul de 11 pt y el enunciado corto en 12 pt. Franja inferior de lienzo con los siete no funcionales en línea, separados por puntos medios. Sin iconos: quince iconos distintos serían ruido.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Requisitos derivados del levantamiento</p>
+            <p class="sub">15 funcionales · 7 no funcionales</p>
+            <div class="chips" style="margin-bottom:12px;">
+              <span class="chip-i"><b>RF-01</b> Autenticación y roles</span>
+              <span class="chip-i"><b>RF-02</b> Estructura académica</span>
+              <span class="chip-i"><b>RF-03</b> Cuentas de usuario</span>
+              <span class="chip-i"><b>RF-04</b> Estudiantes y empresas</span>
+              <span class="chip-i"><b>RF-05</b> Importación masiva desde Excel</span>
+              <span class="chip-i"><b>RF-06</b> Registro y seguimiento de prácticas</span>
+              <span class="chip-i"><b>RF-07</b> Plantillas documentales</span>
+              <span class="chip-i"><b>RF-08</b> Generación automática de documentos</span>
+              <span class="chip-i"><b>RF-09</b> Codificación secuencial</span>
+              <span class="chip-i"><b>RF-10</b> Lotes de firma</span>
+              <span class="chip-i"><b>RF-11</b> Firmantes por invitación</span>
+              <span class="chip-i"><b>RF-12</b> Flujo secuencial de firma</span>
+              <span class="chip-i"><b>RF-13</b> Invalidación y control de versiones</span>
+              <span class="chip-i"><b>RF-14</b> Trazabilidad y auditoría</span>
+              <span class="chip-i"><b>RF-15</b> Reportes y panel de seguimiento</span>
+            </div>
+            <p class="kicker">No funcionales</p>
+            <div class="chips">
+              <span class="chip-i">Arquitectura modular</span>
+              <span class="chip-i">Procesamiento asíncrono</span>
+              <span class="chip-i">bcrypt · JWT 15 min · refresh 7 días</span>
+              <span class="chip-i">Aislamiento por facultad</span>
+              <span class="chip-i">Contenerización integral</span>
+              <span class="chip-i">Rendimiento de interfaz</span>
+              <span class="chip-i">Almacenamiento de objetos S3</span>
+            </div>
+            <p class="fine">Cada requisito admite contrastarse con el formato institucional que le da origen o con lo referido en la fase de campo.</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say"><p>«Del levantamiento salieron quince requisitos funcionales y siete no funcionales. Los funcionales cubren la autenticación por roles, la estructura académica, la gestión de estudiantes y empresas, la importación masiva desde Excel, el motor documental, la codificación secuencial, los lotes y el circuito de firma, la invalidación con historial y la auditoría. Ninguno descansa sobre un supuesto: cada requisito admite contrastarse con el formato institucional que le da origen o con algo referido en la fase de campo.»</p></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 11 -->
+    <article class="slide">
+      <div class="rail"><span class="no">11</span><span class="time">0:25</span><span class="acc">5:25</span></div>
+      <div class="body">
+        <h3>Determinación de recursos</h3>
+        <p class="src">Tesis 4.4 · Tablas 7 y 8</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Tres columnas iguales con encabezado en versalitas azules, al modo de la lámina de referencia. La tercera columna cierra con la cifra <b>USD 0,00</b> en azul de 40 pt, que es el dato que se recuerda.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Determinación de recursos</p>
+            <div class="pair">
+              <div class="card">
+                <span class="tag">Humanos</span>
+                <dl>
+                  <dt>Desarrollador / investigador</dt><dd>Levantamiento, modelo de datos, desarrollo full-stack, entorno Docker, firma electrónica y pruebas</dd>
+                  <dt>Tutor académico</dt><dd>Supervisión metodológica y validación de la arquitectura</dd>
+                  <dt>Expertos y usuarios</dt><dd>Comisión de Prácticas y autoridades: formatos reales y pruebas de aceptación</dd>
+                </dl>
+              </div>
+              <div class="card">
+                <span class="tag">Tecnológicos</span>
+                <dd style="margin:0;">Equipo propio: portátil AMD Ryzen 3, 16 GB RAM, SSD 512 GB<br><br>Node.js 20 · NestJS 10 · Prisma 5 · BullMQ · ExcelJS<br>Next.js 14 · React 18 · Tailwind · React Konva<br>PostgreSQL 15 · Redis 7 · MinIO<br>docxtemplater · pdf-lib · LibreOffice headless<br>Docker · Turborepo · Git</dd>
+              </div>
+              <div class="card">
+                <span class="tag">Económicos</span>
+                <dd style="margin:0;">Ningún componente exige pago de licencias. Todo el stack es software libre; el control de versiones opera en plan gratuito de uso académico.<br><br><b style="color:var(--accent);font-size:22px;">USD 0,00</b><br>en licenciamiento e infraestructura de desarrollo</dd>
+              </div>
+            </div>
+            <p class="fine">El único desembolso previsible aparece en una etapa posterior: la puesta en línea. Se trata en las recomendaciones.</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say"><p>«Los recursos humanos fueron el autor como desarrollador, el tutor del trabajo de titulación, y la Comisión de Prácticas y las autoridades como expertos que aportaron los formatos reales y participaron en las pruebas de aceptación. En lo tecnológico, el desarrollo se sostuvo íntegramente sobre software libre y sobre mi equipo personal, y esa decisión no obedeció solo a la disponibilidad de recursos, sino a un criterio de sostenibilidad. En lo económico, la construcción no demandó inversión en licenciamiento ni en infraestructura: el único desembolso previsible aparece en la puesta en línea.»</p></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 12 -->
+    <article class="slide">
+      <div class="rail"><span class="no">12</span><span class="time">0:30</span><span class="acc">5:55</span></div>
+      <div class="body">
+        <h3>Planificación de las iteraciones</h3>
+        <p class="src">Tesis 4.5 · seis iteraciones quincenales, Programación Extrema</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Línea de tiempo horizontal: seis bloques encadenados sobre un eje azul, cada uno con su número en círculo, el nombre de la iteración y, debajo, el módulo que quedó utilizable. El eje se engrosa progresivamente para sugerir acumulación de producto.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Planificación de las iteraciones</p>
+            <p class="sub">Seis iteraciones quincenales · cada una cerrada con un módulo utilizable</p>
+            <div class="pair">
+              <div class="card"><span class="tag">Iteración 1</span><p class="who">Configuración inicial y núcleo de datos</p><dd style="margin:0;">Modelo relacional: facultades, carreras, períodos, estudiantes, prácticas y documentos</dd></div>
+              <div class="card"><span class="tag">Iteración 2</span><p class="who">Autenticación y control de acceso</p><dd style="margin:0;">Acceso diferenciado por los tres roles, con JWT y refresh rotativo</dd></div>
+              <div class="card"><span class="tag">Iteración 3</span><p class="who">Gestión académica y paneles</p><dd style="margin:0;">Administración académica con importación masiva desde hojas de cálculo</dd></div>
+              <div class="card"><span class="tag">Iteración 4</span><p class="who">Motor documental</p><dd style="margin:0;">Generación de solicitudes y certificados, con editor visual de plantillas</dd></div>
+              <div class="card"><span class="tag">Iteración 5</span><p class="who">Circuito de firma electrónica</p><dd style="margin:0;">Lotes, orden entre autoridades y verificación al recibir</dd></div>
+              <div class="card"><span class="tag">Iteración 6</span><p class="who">Empaquetado y entrega</p><dd style="margin:0;">Contenerización completa y procesamiento por colas para emisiones en lote</dd></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say"><p>«El desarrollo siguió un enfoque iterativo e incremental con prácticas de Programación Extrema, en seis iteraciones quincenales. Cada una cerró con un módulo utilizable, no con un avance parcial: primero el núcleo de datos, luego el acceso diferenciado por roles, la gestión académica con importación masiva, el motor documental, el circuito de firma electrónica y, finalmente, el empaquetado en contenedores con el procesamiento por colas para las emisiones en lote.»</p></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 13 -->
+    <article class="slide">
+      <div class="rail"><span class="no">13</span><span class="time">0:35</span><span class="acc">6:30</span></div>
+      <div class="body">
+        <h3>Arquitectura del sistema</h3>
+        <p class="src">Tesis 2.6 y 4.5 · cinco capas, cada una elegida por comparación</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Cinco bandas apiladas de arriba abajo, numeradas al margen izquierdo con dígitos azules de 28 pt, al modo de la lámina 9 del PDF de referencia. Cada banda: nombre de la capa en negrita, tecnologías en mono de 12 pt y, a la derecha, en gris, la razón de la elección. Fondos alternos blanco y lienzo.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Arquitectura del sistema</p>
+            <div class="pair">
+              <div class="card"><span class="tag">Nivel 1 · Cliente</span><dl><dt>Tecnología</dt><dd>Next.js 14 · React 18 · Tailwind · React Query · React Konva</dd><dt>Por qué</dt><dd>Renderizado del lado del servidor y caché en cliente; Konva sostiene el editor visual de certificados</dd></dl></div>
+              <div class="card"><span class="tag">Nivel 2 · Lógica de negocio</span><dl><dt>Tecnología</dt><dd>NestJS 10 · JWT · Prisma ORM 5</dd><dt>Por qué</dt><dd>Impone una estructura por dominios que mantiene ordenada la lógica conforme el sistema crece</dd></dl></div>
+              <div class="card"><span class="tag">Nivel 3 · Persistencia</span><dl><dt>Tecnología</dt><dd>PostgreSQL 15</dd><dt>Por qué</dt><dd>Integridad transaccional garantizada por el motor y soporte nativo de JSON para los diseños de plantilla</dd></dl></div>
+              <div class="card"><span class="tag">Nivel 4 · Archivos y colas</span><dl><dt>Tecnología</dt><dd>MinIO (S3) · Redis 7 · BullMQ</dd><dt>Por qué</dt><dd>Los binarios no residen en el disco de la base; la generación en lote se encola y no bloquea la interfaz</dd></dl></div>
+              <div class="card"><span class="tag">Nivel 5 · Motor documental</span><dl><dt>Tecnología</dt><dd>docxtemplater · LibreOffice headless · pdf-lib</dd><dt>Por qué</dt><dd>Rellenar una plantilla de Word, convertirla a PDF y dibujar un certificado desde coordenadas son tres problemas distintos</dd></dl></div>
+            </div>
+            <p class="fine">Todo el ecosistema se orquesta con Docker Compose y se levanta con un solo comando.</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say">
+            <p>«Cada capa se resolvió comparando alternativas antes de comprometer una decisión, y no enumerando lo ya conocido. NestJS impone una estructura por dominios que mantiene ordenada la lógica conforme el sistema crece; PostgreSQL aporta integridad transaccional y soporte nativo de JSON, que uso para guardar los diseños de plantilla.»</p>
+            <p>«En la generación documental conviven tres herramientas, porque rellenar una plantilla de Word, convertirla a PDF y dibujar un certificado desde coordenadas son tres problemas distintos y no uno. Todo el ecosistema se orquesta con Docker Compose.»</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 14 -->
+    <article class="slide">
+      <div class="rail"><span class="no">14</span><span class="time">0:40</span><span class="acc">7:10</span></div>
+      <div class="body">
+        <h3>Circuito documental y firma electrónica</h3>
+        <p class="src">Tesis · Iteraciones 4 y 5 · RF-08 a RF-13</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Mitad superior: el SVG del recorrido del expediente sobre el puente de la marca, exportado desde <code>recorrido-expediente.tsx</code> y reescalado — cuatro hitos, tramo recorrido en azul, dos firmas al final. Mitad inferior: cuatro pasos del circuito de firma en línea, y a la derecha un candado ámbar <code>#A95C04</code> con la advertencia sobre el certificado digital.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Circuito documental y firma electrónica</p>
+            <p class="kicker">El recorrido del expediente</p>
+            <p style="margin:0 0 12px;font-size:14.5px;"><b>Solicitud</b> → <b>Designación</b> → <b>Acta del docente</b> → <b>Certificado</b></p>
+            <div class="pair">
+              <div class="card"><span class="tag">Circuito de firma</span><dd style="margin:0;">1. El coordinador empaqueta los documentos en un lote<br>2. Las autoridades descargan el lote<br>3. Lo suscriben con FirmaEC, aplicativo oficial del MINTEL<br>4. Lo devuelven al sistema, que verifica y libera</dd></div>
+              <div class="card" style="border-left:3px solid var(--warn)"><span class="tag" style="color:var(--warn)">Decisión de diseño</span><dd style="margin:0;">El sistema <b>nunca almacena</b> el certificado digital de las autoridades. La firma ocurre en el equipo del firmante; UniBridge solo entrega el lote y lo recibe firmado.</dd></div>
+            </div>
+            <p class="fine">Cada documento recibe un código único y correlativo por período. Ningún documento alcanza validez mientras le falte alguna de las dos rúbricas.</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say">
+            <p>«Este es el recorrido de un expediente en el sistema. Comienza con la solicitud dirigida a la empresa, sigue con la designación del estudiante y su tutor, continúa con el acta del docente, y solo entonces se habilita el certificado. Cada documento recibe además un código único y correlativo por período, de modo que la numeración oficial la garantiza el sistema y no quien lo redacta.»</p>
+            <p>«La firma respeta el orden entre las dos autoridades, y ningún documento alcanza validez mientras le falte una de las dos rúbricas. Subrayo una decisión de diseño: el sistema nunca almacena el certificado digital de las autoridades. La firma ocurre en el equipo del firmante, con FirmaEC; UniBridge solo entrega el lote y lo recibe firmado. Cualquier otra opción habría convertido la base de datos en un depósito de identidades digitales ajenas.»</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 15 -->
+    <article class="slide">
+      <div class="rail"><span class="no">15</span><span class="time">0:35</span><span class="acc">7:45</span></div>
+      <div class="body">
+        <h3>Evaluación — matriz de casos de prueba</h3>
+        <p class="src">Tesis 5.2 · Tabla 15 · CP-01 a CP-15</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Tabla de cuatro columnas ocupando dos tercios del ancho: ID, requisito, resultado esperado y estado. Cabecera en lienzo con versalitas grises; filas separadas por filete <code>#E4E4E7</code>; la columna de estado en verde <code>#157E3C</code>. En la columna derecha, la cifra <b>15 / 15</b> en azul de 54 pt y, debajo, las tres notas de alcance de las pruebas.</p>
+          <p>Por legibilidad se imprimen ocho casos representativos y una fila de continuación; la matriz completa está en la tesis y se muestra en la demo.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Evaluación — matriz de casos de prueba</p>
+            <p class="sub">Un caso por requisito funcional, con precondición y resultado esperado definidos de antemano</p>
+            <div class="tablewrap" style="margin-bottom:12px;">
+              <table>
+                <thead><tr><th class="n">ID</th><th class="n">RF</th><th>Resultado esperado</th><th>Estado</th></tr></thead>
+                <tbody>
+                  <tr><td class="n">CP-01</td><td class="n">RF-01</td><td>Cada rol accede solo a sus módulos; credenciales inválidas son rechazadas</td><td style="color:var(--good);font-weight:600">Superado</td></tr>
+                  <tr><td class="n">CP-04</td><td class="n">RF-04</td><td>Estudiante y empresa quedan registrados y disponibles para asignación</td><td style="color:var(--good);font-weight:600">Superado</td></tr>
+                  <tr><td class="n">CP-05</td><td class="n">RF-05</td><td>Los registros válidos se importan y los erróneos se reportan con su fila</td><td style="color:var(--good);font-weight:600">Superado</td></tr>
+                  <tr><td class="n">CP-07</td><td class="n">RF-07</td><td>La plantilla se carga y el diseño del certificado conserva sus coordenadas</td><td style="color:var(--good);font-weight:600">Superado</td></tr>
+                  <tr><td class="n">CP-08</td><td class="n">RF-08</td><td>El oficio y el certificado se generan con los datos correctos del estudiante</td><td style="color:var(--good);font-weight:600">Superado</td></tr>
+                  <tr><td class="n">CP-09</td><td class="n">RF-09</td><td>Cada documento recibe un código único y correlativo, sin repeticiones</td><td style="color:var(--good);font-weight:600">Superado</td></tr>
+                  <tr><td class="n">CP-11</td><td class="n">RF-11</td><td>El enlace de invitación permite un único registro y caduca tras usarse</td><td style="color:var(--good);font-weight:600">Superado</td></tr>
+                  <tr><td class="n">CP-12</td><td class="n">RF-12</td><td>La firma respeta el orden responsable-decano y ambas quedan verificadas</td><td style="color:var(--good);font-weight:600">Superado</td></tr>
+                  <tr><td class="n" style="color:var(--ink-faint)">…</td><td class="n" style="color:var(--ink-faint)">…</td><td style="color:var(--ink-faint)">Matriz completa en la Tabla 15 de la tesis</td><td></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="fine"><b style="color:var(--accent);font-size:20px;">15 / 15</b> &nbsp; requisitos verificados · validación diferenciada por rol · generación masiva sin bloqueo de la interfaz</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say">
+            <p>«Cada requisito funcional se sometió a un caso de prueba con precondición y resultado esperado definidos de antemano: quince casos, uno por requisito. Se validó por rol, porque un administrador, un coordinador y un firmante no interactúan igual con el sistema.»</p>
+            <p>«La validación más exigente recayó sobre el flujo documental completo, desde la solicitud dirigida a la empresa hasta el certificado firmado. También se sometió el sistema a la generación masiva, para comprobar que la cola absorbiera la carga sin bloquear el resto de la aplicación. En la segunda parte de esta sustentación ejecutaré varios de estos casos en vivo.»</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 16 -->
+    <article class="slide">
+      <div class="rail"><span class="no">16</span><span class="time">0:20</span><span class="acc">8:05</span></div>
+      <div class="body">
+        <h3>Limitaciones</h3>
+        <p class="src">Tesis 5.4 · declaradas por el autor</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Tres tarjetas iguales, fondo <code>#FDF4E7</code>, filete ámbar a la izquierda, sin icono. Deliberadamente austera: la lámina gana credibilidad por ser sobria, no por decorarse.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Limitaciones</p>
+            <div class="pair">
+              <div class="card" style="border-left:3px solid var(--warn)"><span class="tag" style="color:var(--warn)">Correo institucional</span><dd style="margin:0;">No hay servicio configurado. La recuperación de contraseña la administra el administrador, y el correo opera como identificador de acceso.</dd></div>
+              <div class="card" style="border-left:3px solid var(--warn)"><span class="tag" style="color:var(--warn)">Verificación de firma</span><dd style="margin:0;">Es estructural, no criptográfica: confirma que el archivo lleve firma embebida y corresponda al lote, pero no recorre la cadena de certificación. Esa validación queda en FirmaEC.</dd></div>
+              <div class="card" style="border-left:3px solid var(--warn)"><span class="tag" style="color:var(--warn)">Publicación en línea</span><dd style="margin:0;">Validado en entorno de producción local. La puesta en línea quedó supeditada a la decisión institucional sobre el alojamiento.</dd></div>
+            </div>
+            <p class="fine">El alcance funcional se delimitó a la Carrera de TI, aunque el modelo de datos es multi-facultad y deja preparada la extensión.</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say"><p>«Declaro tres limitaciones. El sistema no cuenta con correo institucional configurado, por lo que la recuperación de contraseña la administra el administrador. La comprobación sobre los documentos devueltos es estructural: confirma que el archivo lleve firma embebida y corresponda al lote, pero no recorre la cadena de certificación; esa validación queda en manos de FirmaEC y de los lectores de PDF que implementan el estándar. Y el sistema se validó en un entorno de producción local: la puesta en línea quedó supeditada a la decisión institucional sobre el alojamiento.»</p></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 17-20 plantilla -->
+    <div class="note" style="border-left-color:var(--accent);background:var(--accent-soft);margin:26px 0 20px;">
+      <b style="color:var(--accent)">Láminas 17 a 20 — plantilla compartida.</b> Las cuatro usan exactamente la misma composición, calcada del PDF de referencia: número del objetivo en azul de 72 pt al margen izquierdo; arriba, el rótulo <i>Objetivo específico</i> en versalitas grises con el enunciado literal debajo, en gris <code>#6C6C75</code>; abajo, el rótulo <i>Conclusión</i> con el texto en tinta y filete azul a la izquierda; al pie, una línea de <i>Evidencia</i> en 10 pt que remite al capítulo. La repetición es intencional: le enseña al tribunal que existe correspondencia uno a uno. Transición <i>Transformación</i> entre las cuatro.
+    </div>
+
+    <!-- 17 -->
+    <article class="slide">
+      <div class="rail"><span class="no">17</span><span class="time">0:20</span><span class="acc">8:25</span></div>
+      <div class="body">
+        <h3>Conclusión · Objetivo 1</h3>
+        <p class="src">Tesis 6.1</p>
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="kicker">Objetivo específico 1</p>
+            <p class="sub" style="margin-bottom:12px;">Analizar el procedimiento actual de emisión de solicitudes, designaciones y certificados, con el fin de establecer los requerimientos funcionales y no funcionales de la aplicación web.</p>
+            <p class="kicker">Conclusión</p>
+            <p style="margin:0;font-size:14.5px;border-left:3px solid var(--accent);padding-left:12px;">El procedimiento vigente se documentó desde dos fuentes contrastadas entre sí —la entrevista con la funcionaria que ejecuta el trámite y el cuestionario del docente responsable—, cotejadas con los formatos institucionales y con expedientes de períodos anteriores. De cada punto crítico se derivó un requisito: ninguna función del sistema descansa sobre un supuesto.</p>
+            <p class="fine">Evidencia: Capítulo III, apartados 3.9.1 y 3.9.2 · Anexos A y J</p>
+          </div>
+        </div>
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say"><p>«Sobre el primer objetivo: el procedimiento vigente se documentó desde dos fuentes contrastadas entre sí y cotejadas con los formatos institucionales. De ahí salieron los puntos críticos —la transcripción repetida de los mismos datos, la dispersión de los archivos y la dependencia de la agenda de quien firma— y de cada uno se derivó un requisito. Ninguna función del sistema descansa sobre un supuesto.»</p></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 18 -->
+    <article class="slide">
+      <div class="rail"><span class="no">18</span><span class="time">0:20</span><span class="acc">8:45</span></div>
+      <div class="body">
+        <h3>Conclusión · Objetivo 2</h3>
+        <p class="src">Tesis 6.1</p>
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="kicker">Objetivo específico 2</p>
+            <p class="sub" style="margin-bottom:12px;">Determinar la arquitectura de software, las herramientas tecnológicas y la metodología de desarrollo más adecuadas para la construcción de la aplicación.</p>
+            <p class="kicker">Conclusión</p>
+            <p style="margin:0;font-size:14.5px;border-left:3px solid var(--accent);padding-left:12px;">La selección tecnológica se resolvió comparando alternativas para cada capa antes de comprometer una decisión, y no enumerando lo ya conocido. La arquitectura cliente-servidor se apoya en un modelo relacional que abarca facultades, carreras, períodos, estudiantes, prácticas y documentos, con la integridad garantizada por el propio motor de base de datos.</p>
+            <p class="fine">Evidencia: Capítulo II, apartado 2.6 · Tablas 2 a 5 · Capítulo IV, apartado 4.5</p>
+          </div>
+        </div>
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say"><p>«Sobre el segundo: la selección tecnológica se resolvió comparando alternativas por capa antes de comprometer una decisión. La arquitectura cliente-servidor se apoya en un modelo relacional con la integridad garantizada por el propio motor. Y en la generación documental convivieron tres herramientas con funciones distintas, porque son tres problemas y no uno.»</p></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 19 -->
+    <article class="slide">
+      <div class="rail"><span class="no">19</span><span class="time">0:20</span><span class="acc">9:05</span></div>
+      <div class="body">
+        <h3>Conclusión · Objetivo 3</h3>
+        <p class="src">Tesis 6.1</p>
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="kicker">Objetivo específico 3</p>
+            <p class="sub" style="margin-bottom:12px;">Desarrollar la aplicación web bajo un enfoque iterativo e incremental, cubriendo la generación documental y el circuito de firma electrónica.</p>
+            <p class="kicker">Conclusión</p>
+            <p style="margin:0;font-size:14.5px;border-left:3px solid var(--accent);padding-left:12px;">La construcción avanzó por iteraciones quincenales, cada una cerrada con un módulo utilizable: el acceso diferenciado por roles, la administración académica con importación masiva desde hojas de cálculo, el motor documental, el circuito de firma electrónica y el procesamiento por colas para las emisiones en lote.</p>
+            <p class="fine">Evidencia: Capítulo IV, apartado 4.5 · Iteraciones 1 a 6</p>
+          </div>
+        </div>
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say"><p>«Sobre el tercero: la construcción avanzó por iteraciones quincenales, cada una cerrada con un módulo utilizable, hasta el circuito de firma electrónica y el procesamiento por colas para las emisiones en lote.»</p></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 20 -->
+    <article class="slide">
+      <div class="rail"><span class="no">20</span><span class="time">0:20</span><span class="acc">9:25</span></div>
+      <div class="body">
+        <h3>Conclusión · Objetivo 4</h3>
+        <p class="src">Tesis 6.1 · cierra con el objetivo general</p>
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="kicker">Objetivo específico 4</p>
+            <p class="sub" style="margin-bottom:12px;">Validar el funcionamiento de la aplicación mediante pruebas de sus requerimientos funcionales, verificando que cada módulo responda a los requisitos levantados.</p>
+            <p class="kicker">Conclusión</p>
+            <p style="margin:0 0 12px;font-size:14.5px;border-left:3px solid var(--accent);padding-left:12px;">El sistema se empaquetó en contenedores y se validó en un entorno de producción local. Cada requisito funcional se sometió a un caso de prueba con precondición y resultado esperado definidos de antemano, y la matriz deja constancia módulo por módulo. Las pruebas confirmaron que el circuito de firma exige el orden establecido entre las dos autoridades y que ningún documento alcanza validez mientras le falte alguna de las dos rúbricas.</p>
+            <p class="fine" style="background:var(--accent);color:#fff;padding:10px 14px;border-radius:6px;margin:0;font-size:14px;"><b>Objetivo general: cumplido.</b> La aplicación web se construyó y quedó en manos de la Comisión de Prácticas de la Carrera de Tecnologías de la Información.</p>
+          </div>
+        </div>
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say"><p>«Y sobre el cuarto: cada requisito se verificó con su caso de prueba, y las pruebas confirmaron que el circuito exige el orden establecido entre las dos autoridades y que ningún documento alcanza validez mientras le falte alguna de las dos rúbricas. Con ello, el objetivo general se cumplió: la aplicación se construyó y quedó en manos de la Comisión de Prácticas de la carrera.»</p></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 21 -->
+    <article class="slide">
+      <div class="rail"><span class="no">21</span><span class="time">0:25</span><span class="acc">9:50</span></div>
+      <div class="body">
+        <h3>Recomendaciones</h3>
+        <p class="src">Tesis 6.2 · tres destinatarios</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Tres columnas iguales, cada una encabezada por el destinatario en versalitas azules sobre un filete superior de 2 pt. Sin iconos decorativos: las viñetas son cuadrados azules de 4 pt.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas">
+            <p class="t">Recomendaciones</p>
+            <div class="pair">
+              <div class="card"><span class="tag">A la Comisión de Prácticas</span><dd style="margin:0;">Adoptar el sistema como canal único de emisión<br>Designar un responsable de la administración funcional<br>Fijar una estrategia de respaldo periódico</dd></div>
+              <div class="card"><span class="tag">A la Facultad</span><dd style="margin:0;">Decidir el alojamiento: servidores institucionales o nube de gama baja<br>Asignar dominio institucional con certificado TLS<br>Dotar al sistema de correo institucional</dd></div>
+              <div class="card"><span class="tag">A trabajos futuros</span><dd style="margin:0;">Validar la cadena de certificación al recibir los firmados<br>Automatizar el emparejamiento de archivos devueltos<br>Módulo de alertas sobre el avance del trámite</dd></div>
+            </div>
+            <p class="fine">En ambas opciones de alojamiento la configuración de Docker es la misma.</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say">
+            <p>«Recomiendo a la Comisión adoptar el sistema como canal único de emisión, para que la trazabilidad que ofrece la plataforma no se diluya en circuitos paralelos, y designar a una persona responsable de la administración funcional con respaldos periódicos.»</p>
+            <p>«A la Facultad, decidir dónde alojar el sistema: los servidores institucionales de la ULEAM, que dan control interno y no generan costos recurrentes, o un servidor en la nube de gama baja. En ambos casos la configuración de Docker es la misma, y en ambos hace falta un dominio institucional con certificado TLS que proteja los datos personales en tránsito. Y a quienes retomen el proyecto, tres frentes que la arquitectura admite sin rediseño de fondo.»</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 22 -->
+    <article class="slide">
+      <div class="rail"><span class="no">22</span><span class="time">0:10</span><span class="acc">10:00</span></div>
+      <div class="body">
+        <h3>Cierre</h3>
+        <p class="src">Espejo de la portada</p>
+
+        <div class="zone"><div class="label">Lo que se ve</div>
+          <p>Composición idéntica a la lámina 01, con «Gracias» sustituyendo al eyebrow y el título reducido a 24 pt. Sin datos de contacto, sin código QR, sin «¿preguntas?»: la lámina queda proyectada durante la ronda del tribunal, así que debe poder mirarse un buen rato sin cansar.</p>
+        </div>
+
+        <div class="zone"><div class="label">Lo que está impreso</div>
+          <div class="canvas deep">
+            <p class="t" style="font-size:1.5rem;">Gracias</p>
+            <p class="sub" style="margin-bottom:10px;">Aplicación web para la gestión automatizada de solicitudes y certificados de prácticas preprofesionales en la Carrera de Tecnologías de la Información de la ULEAM</p>
+            <p class="fine"><b>Autor:</b> Dilian Josué Bazurto García &nbsp;·&nbsp; <b>Tutor:</b> Ing. John Antonio Cevallos Macías</p>
+          </div>
+        </div>
+
+        <div class="zone"><div class="label">Lo que usted dice</div>
+          <div class="say"><p>«Con esto concluyo la primera parte. Paso ahora a la demostración del sistema en funcionamiento. Gracias.»</p></div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ══════════ 4. REGLAS DE CONSTRUCCIÓN ══════════ -->
+  <section class="section">
+    <div class="rule"><span class="num">PARTE 04</span><h2 style="font-family:var(--serif);font-size:1.6rem;font-weight:600;margin:0;">Reglas de construcción</h2></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Regla</th><th>Motivo</th></tr></thead>
+        <tbody>
+          <tr><td>Un título por lámina, en una sola línea</td><td>Si el título necesita dos líneas, la lámina lleva dos ideas y hay que partirla</td></tr>
+          <tr><td>Máximo tres cifras destacadas por lámina</td><td>Cuatro cifras grandes no destacan ninguna</td></tr>
+          <tr><td>Máximo doce palabras por viñeta</td><td>Si el tribunal lee, no escucha</td></tr>
+          <tr><td>Nada de texto que usted vaya a leer en voz alta</td><td>La lámina sostiene; el guion habla. Si coinciden, sobra uno de los dos</td></tr>
+          <tr><td>El color solo donde significa algo</td><td>Verde, ámbar y cian tienen significado fijo; usarlos de adorno los vacía</td></tr>
+          <tr><td>Toda cifra lleva su fuente al pie</td><td>Un número sin origen es lo primero que el tribunal cuestiona</td></tr>
+          <tr><td>Escudo ULEAM solo en portada y cierre</td><td>El verde institucional compite con el azul de marca</td></tr>
+          <tr><td>Sin animaciones de entrada</td><td>Se descoordinan al hablar y delatan improvisación</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note" style="margin-top:24px;border-left-color:var(--good);background:var(--good-soft);">
+      <b style="color:var(--good)">Construido.</b> El mazo está en <code>docs/Sustentacion-UniBridge.pptx</code>, con el guion de cada lámina en las notas del orador. Este documento es su especificación: si cambias algo aquí, se regenera desde aquí.
+    </div>
+  </section>
+
+</div>

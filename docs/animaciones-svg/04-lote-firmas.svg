@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>UniBridge — firma por lote en cascada</title>
+  <!-- Se dibujan del ultimo al primero para que la tarjeta de arriba quede al frente.
+       Todo el contenido vive en la franja inferior de cada tarjeta, que es la unica
+       que la tarjeta de encima no tapa. -->
+  <rect id="bg" x="0" y="0" width="1920" height="1080" fill="#FFFFFF"/>
+
+  <g id="pila">
+    <g id="doc-5">
+      <rect x="800" y="730" width="560" height="280" rx="18" fill="#FFFFFF" stroke="#0F172A" stroke-width="5"/>
+      <line x1="850" y1="895" x2="1070" y2="895" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      <line x1="850" y1="935" x2="1000" y2="935" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      <line x1="1130" y1="960" x2="1310" y2="960" stroke="#94A3B8" stroke-width="3" stroke-dasharray="10 9"/>
+    </g>
+    <g id="doc-4">
+      <rect x="720" y="580" width="560" height="280" rx="18" fill="#FFFFFF" stroke="#0F172A" stroke-width="5"/>
+      <line x1="770" y1="745" x2="990" y2="745" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      <line x1="770" y1="785" x2="920" y2="785" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      <line x1="1050" y1="810" x2="1230" y2="810" stroke="#94A3B8" stroke-width="3" stroke-dasharray="10 9"/>
+    </g>
+    <g id="doc-3">
+      <rect x="640" y="430" width="560" height="280" rx="18" fill="#FFFFFF" stroke="#0F172A" stroke-width="5"/>
+      <line x1="690" y1="595" x2="910" y2="595" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      <line x1="690" y1="635" x2="840" y2="635" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      <line x1="970" y1="660" x2="1150" y2="660" stroke="#94A3B8" stroke-width="3" stroke-dasharray="10 9"/>
+    </g>
+    <g id="doc-2">
+      <rect x="560" y="280" width="560" height="280" rx="18" fill="#FFFFFF" stroke="#0F172A" stroke-width="5"/>
+      <line x1="610" y1="445" x2="830" y2="445" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      <line x1="610" y1="485" x2="760" y2="485" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      <line x1="890" y1="510" x2="1070" y2="510" stroke="#94A3B8" stroke-width="3" stroke-dasharray="10 9"/>
+    </g>
+    <g id="doc-1">
+      <rect x="480" y="130" width="560" height="280" rx="18" fill="#FFFFFF" stroke="#0F172A" stroke-width="5"/>
+      <line x1="530" y1="295" x2="750" y2="295" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      <line x1="530" y1="335" x2="680" y2="335" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      <line x1="810" y1="360" x2="990" y2="360" stroke="#94A3B8" stroke-width="3" stroke-dasharray="10 9"/>
+    </g>
+  </g>
+
+  <g id="estado-inicial">
+    <g fill="none" stroke="#E2E8F0" stroke-width="8" stroke-linecap="round">
+      <path d="M 1140 955 C 1165 910, 1190 990, 1215 935 S 1260 900, 1300 950"/>
+      <path d="M 1060 805 C 1085 760, 1110 840, 1135 785 S 1180 750, 1220 800"/>
+      <path d="M 980 655 C 1005 610, 1030 690, 1055 635 S 1100 600, 1140 650"/>
+      <path d="M 900 505 C 925 460, 950 540, 975 485 S 1020 450, 1060 500"/>
+      <path d="M 820 355 C 845 310, 870 390, 895 335 S 940 300, 980 350"/>
+    </g>
+    <g font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+      <text x="1620" y="520" font-size="140" font-weight="700" fill="#CBD5E1">0 / 5</text>
+      <text x="1620" y="580" font-size="28" letter-spacing="10" fill="#94A3B8">FIRMADOS</text>
+    </g>
+  </g>
+
+  <g id="estado-final">
+    <g id="firmas" fill="none" stroke="#2563EB" stroke-width="8" stroke-linecap="round">
+      <path id="firma-5" d="M 1140 955 C 1165 910, 1190 990, 1215 935 S 1260 900, 1300 950"/>
+      <path id="firma-4" d="M 1060 805 C 1085 760, 1110 840, 1135 785 S 1180 750, 1220 800"/>
+      <path id="firma-3" d="M 980 655 C 1005 610, 1030 690, 1055 635 S 1100 600, 1140 650"/>
+      <path id="firma-2" d="M 900 505 C 925 460, 950 540, 975 485 S 1020 450, 1060 500"/>
+      <path id="firma-1" d="M 820 355 C 845 310, 870 390, 895 335 S 940 300, 980 350"/>
+    </g>
+    <g font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+      <text id="contador-cifra" x="1620" y="520" font-size="140" font-weight="700" fill="#2563EB">5 / 5</text>
+      <text x="1620" y="580" font-size="28" letter-spacing="10" fill="#94A3B8">FIRMADOS</text>
+    </g>
+  </g>
+</svg>

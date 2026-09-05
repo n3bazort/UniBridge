@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>UniBridge — logo constructivo</title>
+  <!-- Paleta: ink #0F172A · azul #2563EB · gris #CBD5E1 · apoyo #94A3B8
+       estado-inicial y estado-final se superponen exactamente: el exportador
+       apaga uno u otro para sacar el fotograma de entrada y el de salida. -->
+  <rect id="bg" x="0" y="0" width="1920" height="1080" fill="#FFFFFF"/>
+
+  <g id="estado-inicial">
+    <g id="marca-borrador" fill="none" stroke="#CBD5E1" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 660 690 V 170" stroke-width="26"/>
+      <path d="M 1260 690 V 170" stroke-width="26"/>
+      <path d="M 660 170 Q 960 830 1260 170" stroke-width="18"/>
+      <path d="M 660 170 Q 630 400 600 630" stroke-width="14"/>
+      <path d="M 1260 170 Q 1290 400 1320 630" stroke-width="14"/>
+      <path d="M 600 630 H 1320" stroke-width="26"/>
+      <path d="M 735 314 V 630" stroke-width="10"/>
+      <path d="M 885 479 V 630" stroke-width="10"/>
+      <path d="M 1035 479 V 630" stroke-width="10"/>
+      <path d="M 1185 314 V 630" stroke-width="10"/>
+    </g>
+  </g>
+
+  <g id="estado-final">
+    <g id="marca" fill="none" stroke="#0F172A" stroke-linecap="round" stroke-linejoin="round">
+      <path id="torre-izq" d="M 660 690 V 170" stroke-width="26"/>
+      <path id="torre-der" d="M 1260 690 V 170" stroke-width="26"/>
+      <path id="cable" d="M 660 170 Q 960 830 1260 170" stroke-width="18"/>
+      <path id="anclaje-izq" d="M 660 170 Q 630 400 600 630" stroke-width="14"/>
+      <path id="anclaje-der" d="M 1260 170 Q 1290 400 1320 630" stroke-width="14"/>
+      <path id="tablero" d="M 600 630 H 1320" stroke-width="26"/>
+      <path id="tirante-1" d="M 735 314 V 630" stroke-width="10"/>
+      <path id="tirante-2" d="M 885 479 V 630" stroke-width="10"/>
+      <path id="tirante-3" d="M 1035 479 V 630" stroke-width="10"/>
+      <path id="tirante-4" d="M 1185 314 V 630" stroke-width="10"/>
+    </g>
+    <g id="nodos" fill="#FFFFFF" stroke="#2563EB" stroke-width="14">
+      <circle id="nodo-1" cx="735" cy="630" r="26"/>
+      <circle id="nodo-2" cx="885" cy="630" r="26"/>
+      <circle id="nodo-3" cx="1035" cy="630" r="26"/>
+      <circle id="nodo-4" cx="1185" cy="630" r="26"/>
+    </g>
+    <g id="tipografia" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+      <text id="wordmark" x="960" y="840" font-size="118" font-weight="700" letter-spacing="6" fill="#0F172A">UniBridge</text>
+      <text id="tagline" x="960" y="900" font-size="28" letter-spacing="12" fill="#94A3B8">GESTION DE PRACTICAS PREPROFESIONALES</text>
+    </g>
+  </g>
+</svg>

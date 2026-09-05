@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>Conclusión del objetivo específico 3</title>
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <g id="encabezado">
+    <rect x="80" y="72" width="72" height="8" rx="4" fill="#2563EB"/>
+    <text x="168" y="86" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" letter-spacing="6" fill="#2563EB">CAPÍTULO VI · CONCLUSIONES</text>
+    <text x="80" y="162" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="800" fill="#0F172A">Conclusión del objetivo específico 3</text>
+  </g>
+
+  <text id="numero" x="80" y="560" font-family="Arial, Helvetica, sans-serif" font-size="300" font-weight="800" fill="#DBEAFE">3</text>
+
+  <g id="objetivo">
+    <text x="420" y="286" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="2.4" fill="#2563EB">OBJETIVO ESPECÍFICO</text>
+  <text x="420" y="330" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400" fill="#64748B">Desarrollar la aplicación web bajo un enfoque iterativo e incremental, cubriendo la generación</text>
+  <text x="420" y="364" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400" fill="#64748B">documental y el circuito de firma electrónica.</text>
+  </g>
+
+  <g id="conclusion">
+    <rect x="420" y="452" width="1420" height="4" rx="2" fill="#DBEAFE"/>
+    <text x="420" y="512" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="2.4" fill="#2563EB">CONCLUSIÓN</text>
+  <text x="420" y="566" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="400" fill="#0F172A">La construcción avanzó por iteraciones quincenales, y cada una cerró con un módulo utilizable, no</text>
+  <text x="420" y="609" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="400" fill="#0F172A">con un avance parcial: el acceso diferenciado por roles, la administración académica con</text>
+  <text x="420" y="652" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="400" fill="#0F172A">importación masiva desde hojas de cálculo, el motor documental, el circuito de firma electrónica</text>
+  <text x="420" y="695" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="400" fill="#0F172A">y el procesamiento por colas para las emisiones en lote. Ese orden no fue arbitrario: cada</text>
+  <text x="420" y="738" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="400" fill="#0F172A">iteración habilitaba la siguiente, y la de colas solo tenía sentido una vez que el motor</text>
+  <text x="420" y="781" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="400" fill="#0F172A">documental producía documentos válidos.</text>
+  </g>
+
+  <text id="evidencia" x="420" y="980" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#94A3B8">Evidencia: Capítulo IV, apartado 4.5 · Iteraciones 1 a 6</text>
+</svg>

@@ -1,0 +1,277 @@
+<title>Sustentación en diez minutos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+  :root {
+    --paper:#f4f5f6; --surface:#fff; --surface-2:#eceef0;
+    --ink:#171a1f; --ink-2:#565d66; --ink-3:#7d848d;
+    --rule:#dcdfe3; --rule-soft:#e8eaed;
+    --sello:#1e3a5f; --sello-soft:#e7edf5;
+    --ocre:#8a5c22; --ocre-soft:#f6efe4;
+    --ok:#2b6349; --ok-soft:#e4efe9;
+    --alto:#8d2f2f; --alto-soft:#f7e8e8;
+    --serif:"Source Serif 4",Georgia,serif;
+    --sans:"Source Sans 3",-apple-system,"Segoe UI",sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#14161a; --surface:#1b1e23; --surface-2:#23272d;
+      --ink:#e8eaed; --ink-2:#a8b0b9; --ink-3:#848c95;
+      --rule:#2f343b; --rule-soft:#262b31;
+      --sello:#8fb4e0; --sello-soft:#1c2836;
+      --ocre:#d8a86a; --ocre-soft:#2c2519;
+      --ok:#7cc0a0; --ok-soft:#1a2822;
+      --alto:#e08a8a; --alto-soft:#2c1c1c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#14161a; --surface:#1b1e23; --surface-2:#23272d;
+    --ink:#e8eaed; --ink-2:#a8b0b9; --ink-3:#848c95;
+    --rule:#2f343b; --rule-soft:#262b31;
+    --sello:#8fb4e0; --sello-soft:#1c2836;
+    --ocre:#d8a86a; --ocre-soft:#2c2519;
+    --ok:#7cc0a0; --ok-soft:#1a2822;
+    --alto:#e08a8a; --alto-soft:#2c1c1c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.6}
+  .wrap{max-width:60rem;margin:0 auto;padding:3rem 1.5rem 5rem}
+  h1,h2,h3{font-family:var(--serif);font-weight:600;margin:0;text-wrap:balance}
+  h1{font-size:clamp(1.9rem,1.3rem+2.4vw,2.7rem);line-height:1.15}
+  h2{font-size:1.5rem}
+  h3{font-size:1.06rem}
+  p{margin:0}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+  header.head{display:flex;flex-direction:column;gap:.8rem;padding-bottom:1.8rem;border-bottom:2px solid var(--ink)}
+  .lede{font-size:1.1rem;color:var(--ink-2);max-width:60ch}
+  section{margin-top:3rem;display:flex;flex-direction:column;gap:1rem}
+  .sec-head{display:flex;flex-direction:column;gap:.3rem;padding-bottom:.6rem;border-bottom:1px solid var(--rule)}
+  .tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:4px;background:var(--surface)}
+  table{width:100%;border-collapse:collapse;font-size:.93rem;min-width:32rem}
+  th,td{text-align:left;padding:.65rem .9rem;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+  thead th{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);border-bottom:1px solid var(--rule);white-space:nowrap}
+  tbody tr:last-child td{border-bottom:0}
+  .t{font-variant-numeric:tabular-nums;white-space:nowrap;font-family:var(--mono);font-size:.85rem}
+  .paso{background:var(--surface);border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+  .paso-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem .9rem;padding:.85rem 1.2rem;background:var(--surface-2);border-bottom:1px solid var(--rule)}
+  .paso-head .reloj{font-family:var(--mono);font-size:.82rem;font-weight:600;color:var(--sello);background:var(--sello-soft);padding:.1rem .5rem;border-radius:3px}
+  .paso-body{padding:1.1rem 1.2rem;display:flex;flex-direction:column;gap:.8rem}
+  .dicho{font-family:var(--serif);font-style:italic;color:var(--ink-2);border-left:3px solid var(--rule);padding-left:.9rem;max-width:64ch}
+  ol.acciones{margin:0;padding:0;list-style:none;counter-reset:a;display:flex;flex-direction:column;gap:.45rem}
+  ol.acciones>li{counter-increment:a;display:grid;grid-template-columns:1.4rem 1fr;gap:.7rem;font-size:.96rem}
+  ol.acciones>li::before{content:counter(a);font-family:var(--mono);font-size:.75rem;color:var(--sello);background:var(--sello-soft);border-radius:3px;height:1.3rem;display:flex;align-items:center;justify-content:center}
+  .nota{border-left:3px solid var(--ocre);background:var(--ocre-soft);padding:.75rem 1rem;font-size:.93rem}
+  .nota.alto{border-left-color:var(--alto);background:var(--alto-soft)}
+  .nota.ok{border-left-color:var(--ok);background:var(--ok-soft)}
+  .ui{font-family:var(--mono);font-size:.85em;background:var(--surface-2);border:1px solid var(--rule);border-radius:3px;padding:.06em .35em;white-space:nowrap}
+  .calor{display:grid;gap:.5rem}
+  .fila-calor{display:grid;grid-template-columns:minmax(9rem,1.4fr) 5.5rem 1fr;gap:.8rem;align-items:center;font-size:.92rem}
+  .barra{height:.55rem;border-radius:2px;background:var(--surface-2);overflow:hidden}
+  .barra>span{display:block;height:100%}
+  .c3{background:var(--alto)} .c2{background:var(--ocre)} .c1{background:var(--ink-3)}
+  .leyenda{display:flex;flex-wrap:wrap;gap:1rem;font-size:.85rem;color:var(--ink-2)}
+  .leyenda i{display:inline-block;width:.8rem;height:.55rem;border-radius:2px;margin-right:.3rem;vertical-align:middle;font-style:normal}
+  footer{margin-top:3.5rem;padding-top:1.2rem;border-top:1px solid var(--rule);font-size:.88rem;color:var(--ink-3)}
+  :focus-visible{outline:2px solid var(--sello);outline-offset:2px}
+</style>
+
+<div class="wrap">
+
+<header class="head">
+  <span class="eyebrow">UniBridge · Defensa de tesis</span>
+  <h1>Diez minutos, seis escenas</h1>
+  <p class="lede">Un guion cronometrado para demostrar el sistema entero recorriendo el camino que de verdad se recorre a diario: del estudiante sin práctica al certificado firmado por dos autoridades.</p>
+</header>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">Antes de entrar</span><h2>Lo que dejas preparado el domingo</h2></div>
+  <div class="nota alto">
+    <strong>Diez minutos no dan para preparar datos en vivo.</strong> Todo lo que se pueda dejar hecho, se deja hecho. Si algo falla en la demo, casi siempre es por un dato que faltaba, no por el código.
+  </div>
+  <ol class="acciones">
+    <li>Período <span class="ui">2024-1</span> activo, con Decano y Responsable declarados en Configuraciones. Sin eso no sale ningún documento.</li>
+    <li>Al menos una carrera con abreviatura declarada. Sin ella se bloquea la generación.</li>
+    <li>Una empresa con 4 o 5 estudiantes ya asignados y <strong>sin oficios emitidos</strong> — es tu conejillo de indias.</li>
+    <li>El acta en PDF de esos estudiantes, a mano en el escritorio.</li>
+    <li>Un lote ya firmado de una demo anterior, para enseñar el resultado sin esperar a FirmaEC.</li>
+    <li>Tres pestañas abiertas: coordinador, firmante y el repositorio público.</li>
+    <li>Sesión iniciada en las tres. Escribir contraseñas delante del tribunal cuesta cuarenta segundos que no tienes.</li>
+  </ol>
+</section>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">Mapa</span><h2>Dónde está el calor</h2></div>
+  <p>No todas las pantallas valen lo mismo en una defensa. Esto es cuánto se usa cada una en el día a día y cuánto conviene enseñarla.</p>
+
+  <div class="calor">
+    <div class="fila-calor"><span>Registro de prácticas</span><span class="t">crítica</span><span class="barra"><span class="c3" style="width:100%"></span></span></div>
+    <div class="fila-calor"><span>Actas de culminación</span><span class="t">crítica</span><span class="barra"><span class="c3" style="width:92%"></span></span></div>
+    <div class="fila-calor"><span>Firma de documentos</span><span class="t">crítica</span><span class="barra"><span class="c3" style="width:88%"></span></span></div>
+    <div class="fila-calor"><span>Certificados</span><span class="t">alta</span><span class="barra"><span class="c2" style="width:72%"></span></span></div>
+    <div class="fila-calor"><span>Importación</span><span class="t">alta</span><span class="barra"><span class="c2" style="width:64%"></span></span></div>
+    <div class="fila-calor"><span>Repositorio público</span><span class="t">alta</span><span class="barra"><span class="c2" style="width:58%"></span></span></div>
+    <div class="fila-calor"><span>Estudiantes / Empresas</span><span class="t">media</span><span class="barra"><span class="c1" style="width:40%"></span></span></div>
+    <div class="fila-calor"><span>Configuraciones</span><span class="t">baja</span><span class="barra"><span class="c1" style="width:22%"></span></span></div>
+    <div class="fila-calor"><span>Usuarios · Resumen</span><span class="t">baja</span><span class="barra"><span class="c1" style="width:14%"></span></span></div>
+  </div>
+
+  <div class="leyenda">
+    <span><i class="c3"></i>Enséñalas sí o sí</span>
+    <span><i class="c2"></i>Enséñalas si el reloj lo permite</span>
+    <span><i class="c1"></i>Menciónalas, no las abras</span>
+  </div>
+
+  <div class="nota">
+    <strong>La regla del reloj:</strong> las tres primeras son el 70&nbsp;% del valor de tu sistema. Si te quedas sin tiempo, sacrifica Importación y Resumen — no la firma.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">Guion</span><h2>Los diez minutos, escena por escena</h2></div>
+
+  <article class="paso">
+    <div class="paso-head"><span class="reloj">0:00 – 0:45</span><h3>El problema, en dos frases</h3></div>
+    <div class="paso-body">
+      <p class="dicho">«La coordinación de prácticas maneja cada semestre unos doscientos expedientes en papel y hojas sueltas. Cada estudiante necesita tres documentos oficiales con numeración correlativa y dos firmas de autoridad. Hoy eso se lleva a mano.»</p>
+      <div class="nota">No abras nada todavía. Que el tribunal sepa qué problema mira antes de ver una pantalla.</div>
+    </div>
+  </article>
+
+  <article class="paso">
+    <div class="paso-head"><span class="reloj">0:45 – 2:00</span><h3>Escena 1 · Los datos entran solos</h3></div>
+    <div class="paso-body">
+      <p class="dicho">«El semestre empieza con una planilla de Excel. El sistema la lee, la comprueba contra la base y no escribe nada hasta que alguien confirma.»</p>
+      <ol class="acciones">
+        <li>Abre <span class="ui">Importación de datos</span> y sube el archivo de prueba con errores.</li>
+        <li>Pulsa <span class="ui">Revisar</span>. Deja que el tribunal vea las dos secciones separarse.</li>
+        <li>Señala <strong>dos errores concretos</strong>: una cédula repetida y una fila de otro período.</li>
+        <li>Desmarca una fila para enseñar que se elige qué entra. No guardes.</li>
+      </ol>
+      <div class="nota ok"><strong>La frase que vale:</strong> «Nada se escribe hasta que se confirma. El error se ve antes, no después.»</div>
+    </div>
+  </article>
+
+  <article class="paso">
+    <div class="paso-head"><span class="reloj">2:00 – 4:00</span><h3>Escena 2 · Un oficio para varios estudiantes</h3></div>
+    <div class="paso-body">
+      <p class="dicho">«Los oficios no son de un estudiante: son de una empresa. Un solo documento nombra a todos los que van a ella.»</p>
+      <ol class="acciones">
+        <li>Abre <span class="ui">Registro de prácticas</span>, agrupado por empresa. Los grupos salen plegados: se ve el índice completo.</li>
+        <li>Despliega tu empresa preparada. Señala los sub-bloques por docente: <strong>una empresa, varios tutores</strong>.</li>
+        <li>Marca 3 de los 5 estudiantes con las casillas.</li>
+        <li>En la barra de abajo, pulsa <span class="ui">Solicitud</span>. Se genera un único oficio con esos tres.</li>
+        <li>Abre el DOCX generado y enseña los tres nombres dentro.</li>
+      </ol>
+      <div class="nota"><strong>Si preguntan por qué parcial:</strong> «Porque a veces la empresa acepta a tres de cinco. El oficio tiene que decir la verdad.»</div>
+    </div>
+  </article>
+
+  <article class="paso">
+    <div class="paso-head"><span class="reloj">4:00 – 5:30</span><h3>Escena 3 · Algo sale mal</h3></div>
+    <div class="paso-body">
+      <p class="dicho">«Un sistema de trámite se juzga por lo que hace cuando algo se tuerce, no cuando todo va bien.»</p>
+      <ol class="acciones">
+        <li>En la fila de un estudiante, pasa el ratón y pulsa el icono de las <strong>dos flechas</strong>.</li>
+        <li>Elige otra empresa y el motivo <span class="ui">La empresa rechazó al estudiante</span>. Confirma.</li>
+        <li>Enseña que ahora hay <strong>dos prácticas</strong>: la cerrada con su motivo y la nueva.</li>
+        <li>Ve a <span class="ui">Certificados</span> → filtro <span class="ui">Archivados</span>: los oficios del grupo anterior quedaron reemplazados.</li>
+      </ol>
+      <div class="nota ok"><strong>La frase que vale:</strong> «No se sobrescribe nada. El recorrido del estudiante se puede leer entero, con el motivo de cada cambio.»</div>
+    </div>
+  </article>
+
+  <article class="paso">
+    <div class="paso-head"><span class="reloj">5:30 – 7:00</span><h3>Escena 4 · El acta manda</h3></div>
+    <div class="paso-body">
+      <p class="dicho">«¿Quién decide que un estudiante culminó? No el sistema. El acta de calificaciones que firma su docente.»</p>
+      <ol class="acciones">
+        <li>Intenta emitir un certificado a alguien sin acta. Enseña el bloqueo.</li>
+        <li>Abre <span class="ui">Actas de culminación</span> y sube el PDF.</li>
+        <li>Pulsa <span class="ui">Revisar antes de confirmar</span>. Señala que <strong>el docente lo reconoce del acta</strong>, no se elige.</li>
+        <li>Enseña los grupos: quiénes aprueban, quiénes no, qué cédulas no cuadran.</li>
+        <li>Confirma.</li>
+        <li>Vuelve a Prácticas: los mismos estudiantes ya son certificables.</li>
+      </ol>
+      <div class="nota alto"><strong>Esta escena es el corazón de tu tesis.</strong> Si el tribunal solo recuerda una cosa, que sea esta: la validación oficial es el acta, y el sistema no la puede saltar.</div>
+    </div>
+  </article>
+
+  <article class="paso">
+    <div class="paso-head"><span class="reloj">7:00 – 8:45</span><h3>Escena 5 · Las dos firmas</h3></div>
+    <div class="paso-body">
+      <p class="dicho">«Cada certificado lleva la firma electrónica del Responsable de Prácticas y la del Decano, en ese orden.»</p>
+      <ol class="acciones">
+        <li>Emite los certificados de tu grupo. Señala el <strong>número correlativo</strong> que consume cada uno.</li>
+        <li>Envíalos a firma.</li>
+        <li>Cambia a la pestaña del <strong>firmante</strong>. Descarga el lote en ZIP.</li>
+        <li>Sube el lote que ya tenías firmado de antes. El sistema los empareja por código y verifica cada firma.</li>
+        <li>Enseña el lote pasando a <span class="ui">Completado</span>.</li>
+      </ol>
+      <div class="nota"><strong>Si FirmaEC no coopera en vivo</strong>, no lo intentes: sube el lote pre-firmado y di «esto ya viene firmado con FirmaEC, el sistema verifica la firma al recibirlo». Nadie te va a pedir que firmes en directo.</div>
+    </div>
+  </article>
+
+  <article class="paso">
+    <div class="paso-head"><span class="reloj">8:45 – 9:30</span><h3>Escena 6 · El estudiante, sin cuenta</h3></div>
+    <div class="paso-body">
+      <p class="dicho">«El estudiante nunca entra al sistema. No tiene usuario ni contraseña. Pero puede descargar sus documentos.»</p>
+      <ol class="acciones">
+        <li>Abre el <strong>repositorio público</strong> en una ventana sin sesión.</li>
+        <li>Escribe una cédula. Descarga el certificado firmado.</li>
+      </ol>
+      <div class="nota ok"><strong>La frase que vale:</strong> «Trescientos estudiantes al año no necesitan trescientas cuentas que administrar. Su cédula ya los identifica.»</div>
+    </div>
+  </article>
+
+  <article class="paso">
+    <div class="paso-head"><span class="reloj">9:30 – 10:00</span><h3>Cierre</h3></div>
+    <div class="paso-body">
+      <p class="dicho">«Tres roles, ningún estudiante con cuenta, tres documentos con numeración oficial y dos firmas electrónicas. Todo lo irreversible se revisa antes de confirmar, y nada se sobrescribe: se reemplaza dejando constancia.»</p>
+      <div class="nota">Cierra en la pantalla de <span class="ui">Certificados</span> con el lote completado a la vista. Es la imagen que quieres que quede.</div>
+    </div>
+  </article>
+</section>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">Preguntas</span><h2>Lo que te van a preguntar</h2></div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Pregunta</th><th>Respuesta corta</th></tr></thead>
+      <tbody>
+        <tr><td>¿Y si alguien llama a la API sin usar la interfaz?</td><td>Cada endpoint exige token firmado y rol. Los campos que el DTO no declara se rechazan. Y las reglas de negocio —período abierto, acta presente— viven en el servidor, no en los botones.</td></tr>
+        <tr><td>¿Se puede modificar un período cerrado?</td><td>No. Ni siquiera un administrador. La comprobación está en los diez sitios que escriben.</td></tr>
+        <tr><td>¿Y si un certificado sale mal?</td><td>Se invalida con un motivo tipificado y se emite uno nuevo. El anterior queda archivado: no se borra ni se sobrescribe.</td></tr>
+        <tr><td>¿Dónde se guarda la firma?</td><td>El PDF firmado se archiva por período, lote y etapa, con su checksum. Se puede volver a descargar.</td></tr>
+        <tr><td>¿Por qué el estudiante no tiene cuenta?</td><td>Porque no necesita una: solo consulta sus propios documentos, y su cédula basta para identificarlo. Menos cuentas que administrar y menos superficie que proteger.</td></tr>
+        <tr><td>¿El sistema decide quién aprueba?</td><td>No. Lo decide el acta que firma el docente. El sistema la lee y la cruza; sin ella no emite nada.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">Riesgos</span><h2>Lo que puede salir mal, y qué haces</h2></div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Si pasa esto</th><th>Haces esto</th></tr></thead>
+      <tbody>
+        <tr><td>No hay internet o la API no responde</td><td>Ten un video de 3 minutos grabado del recorrido completo. Nunca lo enseñas, salvo que haga falta.</td></tr>
+        <tr><td>La generación del PDF tarda</td><td>Habla mientras: el overlay muestra los pasos reales del servidor. Eso mismo es una respuesta.</td></tr>
+        <tr><td>Te pasas de tiempo en la escena 2</td><td>Sáltate la escena 1 entera. La importación se cuenta en diez segundos.</td></tr>
+        <tr><td>Preguntan por algo que no está hecho</td><td>Dilo. «No está implementado» con el motivo es mejor que improvisar una función que no existe.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="nota alto">
+    <strong>Ensáyalo dos veces con cronómetro.</strong> La primera te vas a pasar. La segunda ya sabes qué recortar. No hay tercera opción: diez minutos son diez minutos.
+  </div>
+</section>
+
+<footer>
+  <p>Cierra siempre en una pantalla, no en una diapositiva. El sistema funcionando es tu mejor argumento.</p>
+</footer>
+
+</div>

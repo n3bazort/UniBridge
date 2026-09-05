@@ -1,0 +1,45 @@
+22 diapositivas 16:9, Arial, sustentación de tesis de ingeniería (ULEAM, Ecuador). Sobria, académica, sin animaciones, máx. 12 palabras por viñeta.
+
+PALETA: #2563EB azul marca (títulos, cifras, filetes) · #1E3A8A fondo de portada y cierre · #FFFFFF fondo de contenido · #F7F7F8 tarjetas · #09090B texto · #6C6C75 notas · #E4E4E7 bordes · #157E3C solo pruebas superadas · #A95C04 solo limitaciones · #0B6D9D solo citas · #EF4444 solo el efecto del Ishikawa. Regla: lo que está en orden va en gris, el color solo donde significa algo. Filete azul 4pt arriba, márgenes 2cm, numeración gris abajo derecha.
+
+1 PORTADA (azul profundo, blanco). Sustentación de trabajo de titulación · Manta, Ecuador · 2026. Título: Aplicación web para la gestión automatizada de solicitudes y certificados de prácticas preprofesionales en la Carrera de Tecnologías de la Información de la ULEAM. Autor: Dilian Josué Bazurto García · Tutor: Ing. John Antonio Cevallos Macías.
+
+2 PLANTEAMIENTO DEL PROBLEMA. Procedimiento manual sobre plantillas ofimáticas y carpetas dispersas. Cifras grandes: 6 min por certificado · 124 certificados en 2025-1 · 120 en 2024-2. Franja: Transcribir en Word → Elaborar uno por uno → Firmar uno por uno → Archivar sin estructura.
+
+3 CAUSA Y EFECTO. Ishikawa, 9 causas en 4 ramas: métodos de trabajo, recursos tecnológicos, manejo documental, control del proceso. Efecto en rojo: ineficiencia en la emisión de solicitudes, designaciones y certificados. Recuadro azul: ¿De qué manera una aplicación web puede automatizar la emisión, reduciendo tiempos y asegurando la trazabilidad?
+
+4 OBJETIVOS. Banda azul, general: Desarrollar una aplicación web para la gestión automatizada de solicitudes y certificados de prácticas preprofesionales en la Carrera de TI de la ULEAM. Cuatro columnas: 1 Analizar el procedimiento y establecer requerimientos. 2 Determinar arquitectura, herramientas y metodología. 3 Desarrollar iterativamente, con generación documental y firma electrónica. 4 Validar con pruebas de los requerimientos.
+
+5 INVESTIGACIONES RELACIONADAS. Tres tarjetas con QUÉ HICIERON y QUÉ SE RECOGE. Delgado y Osorio (2024): gestión automatizada de prácticas con registro de horas → documentar desde datos preexistentes, no transcripciones. Enríquez (2021): gestión documental con motor de flujo → el documento avanza por estados, base del circuito de firma. Bornais (s.f.): certificados con campos arrastrables → quien administra plantillas no depende de un programador.
+
+6 MARCO NORMATIVO. Manual PAP-01, cuatro etapas; en azul lo que el sistema cubre. Planificación: F-001, F-006 solicitud (azul). Ejecución F-002 y Supervisión F-003 (gris). Evaluación: F-004, F-005, certificado de horas (azul). Nota: automatiza el procedimiento oficial, no una práctica local.
+
+7 METODOLOGÍA Y FUENTES. Aplicada y descriptiva, no experimental, transversal, cualitativa. Informantes clave, población de 2: entrevista de 12 preguntas a la funcionaria que ejecuta el trámite; cuestionario al docente responsable. Primarias: entrevistas, registros de emisión, formatos oficiales. Secundarias: PAP-01, trabajos de titulación. Cifra azul: 56 referencias.
+
+8 RESULTADOS DE LA ENTREVISTA. Cita en cian: «El problema no es hacer uno; el problema es el final del semestre.» Hallazgos: tiempo desproporcionado; al reutilizar un certificado queda el nombre del estudiante previo y se detecta ya firmado; sin repositorio único. Derivados: llenado automático, Word y PDF, orden de firma, accesos por rol.
+
+9 RESULTADOS DEL CUESTIONARIO. Coinciden (verde): errores por criterios de llenado, los documentos físicos se pierden, coordinar la firma es manual. Diverge (ámbar): pidió Excel como salida; el sistema emite PDF y Word y reserva Excel para importación.
+
+10 REQUISITOS. 15 funcionales: roles, estructura académica, cuentas, estudiantes y empresas, importación Excel, seguimiento de prácticas, plantillas, generación automática, codificación secuencial, lotes de firma, firmantes por invitación, flujo de firma, invalidación, auditoría, reportes. 7 no funcionales: modularidad, asincronía, bcrypt y JWT, aislamiento por facultad, contenedores, rendimiento, almacenamiento S3.
+
+11 RECURSOS. Humanos: desarrollador-investigador, tutor académico, Comisión de Prácticas. Tecnológicos: equipo propio; NestJS, Prisma, Next.js, PostgreSQL, Redis, MinIO, docxtemplater, pdf-lib, LibreOffice, Docker. Económicos: ningún componente exige licencias. Cifra grande: USD 0,00. Único desembolso previsible: la puesta en línea.
+
+12 ITERACIONES. Seis quincenales, cada una con un módulo utilizable: 1 núcleo de datos, 2 autenticación por tres roles, 3 gestión académica con importación masiva, 4 motor documental con editor visual de plantillas, 5 circuito de firma, 6 contenedores y colas.
+
+13 ARQUITECTURA. Cinco niveles con TECNOLOGÍA y POR QUÉ. 1 Next.js y React Konva → sostiene el editor de certificados. 2 NestJS, JWT, Prisma → estructura por dominios. 3 PostgreSQL → integridad transaccional y JSON para los diseños. 4 MinIO, Redis, BullMQ → el lote no bloquea la interfaz. 5 docxtemplater, LibreOffice, pdf-lib → rellenar Word, convertir a PDF y dibujar por coordenadas son tres problemas.
+
+14 CIRCUITO DOCUMENTAL Y FIRMA. Recorrido: Solicitud → Designación → Acta del docente → Certificado. El coordinador empaqueta un lote, las autoridades lo descargan, lo suscriben con FirmaEC del MINTEL y lo devuelven. Recuadro ámbar: el sistema nunca almacena el certificado digital de las autoridades. Pie: ningún documento vale sin las dos rúbricas.
+
+15 EVALUACIÓN. Tabla ID · RF · resultado esperado · estado en verde. CP-01 cada rol accede solo a sus módulos. CP-05 los válidos se importan y los erróneos se reportan con su fila. CP-09 código único y correlativo. CP-12 la firma respeta el orden responsable-decano. Cifra grande: 15/15 requisitos verificados.
+
+16 LIMITACIONES, tres tarjetas ámbar. Sin correo institucional: la contraseña la restablece el administrador. Verificación de firma estructural, no criptográfica: la cadena queda en FirmaEC. Sin publicar en línea: validado en producción local.
+
+17-20 CONCLUSIONES, misma plantilla: número azul al margen, arriba OBJETIVO ESPECÍFICO en gris, abajo CONCLUSIÓN con filete azul.
+17 Obj.1 → El procedimiento se documentó desde dos fuentes contrastadas y cotejadas con los formatos institucionales; de cada punto crítico se derivó un requisito.
+18 Obj.2 → La selección se resolvió comparando alternativas por capa, sobre un modelo relacional con integridad garantizada por el motor.
+19 Obj.3 → La construcción avanzó por iteraciones quincenales, cada una con un módulo utilizable, hasta el circuito de firma.
+20 Obj.4 → Cada requisito tuvo su caso de prueba; confirmaron que el circuito exige el orden entre las dos autoridades. Banda azul: objetivo general cumplido, la aplicación quedó en manos de la Comisión de Prácticas.
+
+21 RECOMENDACIONES. A la Comisión: canal único de emisión, responsable funcional, respaldos. A la Facultad: alojamiento institucional o en nube, dominio con TLS, correo institucional. A futuros: validar la cadena de certificación, automatizar el emparejamiento de archivos devueltos, módulo de alertas.
+
+22 CIERRE (azul profundo, blanco). Gracias. Título completo. Autor: Dilian Josué Bazurto García · Tutor: Ing. John Antonio Cevallos Macías.

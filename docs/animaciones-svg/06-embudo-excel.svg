@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>UniBridge — importacion masiva desde Excel</title>
+  <rect id="bg" x="0" y="0" width="1920" height="1080" fill="#FFFFFF"/>
+
+  <text id="rotulo-origen" x="960" y="108" font-family="Arial, Helvetica, sans-serif"
+        font-size="30" letter-spacing="12" fill="#94A3B8" text-anchor="middle">ARCHIVO XLSX</text>
+
+  <g id="hoja-calculo">
+    <rect id="marco" x="616" y="134" width="688" height="228" rx="12" fill="none" stroke="#94A3B8" stroke-width="4"/>
+    <g id="celdas-cabecera" fill="#DBEAFE" stroke="#2563EB" stroke-width="3">
+      <rect x="632" y="150" width="120" height="56" rx="5"/>
+      <rect x="766" y="150" width="120" height="56" rx="5"/>
+      <rect x="900" y="150" width="120" height="56" rx="5"/>
+      <rect x="1034" y="150" width="120" height="56" rx="5"/>
+      <rect x="1168" y="150" width="120" height="56" rx="5"/>
+    </g>
+    <g id="celdas-datos" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="3">
+      <rect id="celda-2-1" x="632" y="220" width="120" height="56" rx="5"/>
+      <rect id="celda-2-2" x="766" y="220" width="120" height="56" rx="5"/>
+      <rect id="celda-2-3" x="900" y="220" width="120" height="56" rx="5"/>
+      <rect id="celda-2-4" x="1034" y="220" width="120" height="56" rx="5"/>
+      <rect id="celda-2-5" x="1168" y="220" width="120" height="56" rx="5"/>
+      <rect id="celda-3-1" x="632" y="290" width="120" height="56" rx="5"/>
+      <rect id="celda-3-2" x="766" y="290" width="120" height="56" rx="5"/>
+      <rect id="celda-3-3" x="900" y="290" width="120" height="56" rx="5"/>
+      <rect id="celda-3-4" x="1034" y="290" width="120" height="56" rx="5"/>
+      <rect id="celda-3-5" x="1168" y="290" width="120" height="56" rx="5"/>
+    </g>
+  </g>
+
+  <!-- El embudo abre a la anchura de las torres del logo: 660 y 1260 -->
+  <path id="embudo" d="M 660 410 L 905 660 L 905 730 M 1260 410 L 1015 660 L 1015 730"
+        fill="none" stroke="#0F172A" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g id="estado-inicial">
+    <circle cx="960" cy="470" r="14" fill="#2563EB"/>
+    <g fill="#FFFFFF" stroke="#CBD5E1" stroke-width="5">
+      <rect x="350" y="820" width="380" height="170" rx="14"/>
+      <rect x="770" y="820" width="380" height="170" rx="14"/>
+      <rect x="1190" y="820" width="380" height="170" rx="14"/>
+      <circle cx="422" cy="905" r="40" stroke-width="7"/>
+      <circle cx="842" cy="905" r="40" stroke-width="7"/>
+      <circle cx="1262" cy="905" r="40" stroke-width="7"/>
+    </g>
+  </g>
+
+  <g id="estado-final">
+    <circle id="gota" cx="960" cy="775" r="14" fill="#2563EB"/>
+    <g id="tarjetas">
+      <g id="tarjeta-1">
+        <rect x="350" y="820" width="380" height="170" rx="14" fill="#FFFFFF" stroke="#2563EB" stroke-width="5"/>
+        <circle cx="422" cy="905" r="40" fill="#FFFFFF" stroke="#2563EB" stroke-width="7"/>
+        <line x1="486" y1="882" x2="686" y2="882" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+        <line x1="486" y1="928" x2="626" y2="928" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      </g>
+      <g id="tarjeta-2">
+        <rect x="770" y="820" width="380" height="170" rx="14" fill="#FFFFFF" stroke="#2563EB" stroke-width="5"/>
+        <circle cx="842" cy="905" r="40" fill="#FFFFFF" stroke="#2563EB" stroke-width="7"/>
+        <line x1="906" y1="882" x2="1106" y2="882" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+        <line x1="906" y1="928" x2="1046" y2="928" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      </g>
+      <g id="tarjeta-3">
+        <rect x="1190" y="820" width="380" height="170" rx="14" fill="#FFFFFF" stroke="#2563EB" stroke-width="5"/>
+        <circle cx="1262" cy="905" r="40" fill="#FFFFFF" stroke="#2563EB" stroke-width="7"/>
+        <line x1="1326" y1="882" x2="1526" y2="882" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+        <line x1="1326" y1="928" x2="1466" y2="928" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>Marco normativo institucional — Manual PAP-01</title>
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <!-- ── Encabezado ─────────────────────────────────────────── -->
+  <rect x="80" y="86" width="72" height="8" rx="4" fill="#2563EB"/>
+  <text x="168" y="100" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700"
+        letter-spacing="6" fill="#2563EB">CAPÍTULO II · MARCO NORMATIVO INSTITUCIONAL</text>
+  <text x="80" y="176" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="800"
+        fill="#0F172A">Manual PAP-01: cuatro etapas y sus formatos</text>
+  <text x="80" y="228" font-family="Arial, Helvetica, sans-serif" font-size="29" fill="#64748B">El alcance se decide formato por formato, no por etapa: el sistema emite tres documentos de todo el procedimiento</text>
+
+  <!-- Leyenda -->
+  <rect x="80" y="258" width="18" height="18" rx="5" fill="#2563EB"/>
+  <text x="108" y="273" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#1E3A8A">El sistema lo emite</text>
+  <rect x="360" y="258" width="18" height="18" rx="5" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="2"/>
+  <text x="388" y="273" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#64748B">Conserva su tramitación actual</text>
+
+  <!-- ── Conectores entre etapas ────────────────────────────── -->
+  <g stroke="#CBD5E1" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M 498,355 L 510,367 L 498,379"/>
+    <path d="M 950,355 L 962,367 L 950,379"/>
+    <path d="M 1402,355 L 1414,367 L 1402,379"/>
+  </g>
+
+  <!-- ══ ETAPA 1 · PLANIFICACIÓN ════════════════════════════ -->
+  <rect x="80" y="330" width="404" height="450" rx="20" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <path d="M 80,350 a20,20 0 0 1 20,-20 h364 a20,20 0 0 1 20,20 v50 h-404 Z" fill="#2563EB"/>
+  <circle cx="132" cy="367" r="22" fill="#FFFFFF" fill-opacity="0.18"/>
+  <text x="132" y="377" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26"
+        font-weight="700" fill="#FFFFFF">1</text>
+  <text x="170" y="377" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700"
+        letter-spacing="1" fill="#FFFFFF">PLANIFICACIÓN</text>
+
+  <text x="128" y="458" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#94A3B8">PAP-01-F-001</text>
+  <text x="128" y="484" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#94A3B8">Planificación semestral</text>
+
+  <rect x="96" y="506" width="372" height="70" rx="12" fill="#EFF5FF"/>
+  <rect x="96" y="506" width="5" height="70" rx="2.5" fill="#2563EB"/>
+  <text x="128" y="536" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#2563EB">PAP-01-F-006</text>
+  <text x="128" y="562" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#2563EB">Solicitud de prácticas</text>
+
+  <rect x="96" y="590" width="372" height="70" rx="12" fill="#EFF5FF"/>
+  <rect x="96" y="590" width="5" height="70" rx="2.5" fill="#2563EB"/>
+  <text x="128" y="620" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#2563EB">Designación</text>
+  <text x="128" y="646" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#2563EB">Estudiante y tutor asignados</text>
+
+  <text x="128" y="700" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#94A3B8">Sin código en el manual: formato</text>
+  <text x="128" y="723" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#94A3B8">propio de la Facultad.</text>
+
+  <!-- ══ ETAPA 2 · EJECUCIÓN ════════════════════════════════ -->
+  <rect x="532" y="330" width="404" height="450" rx="20" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <path d="M 532,350 a20,20 0 0 1 20,-20 h364 a20,20 0 0 1 20,20 v50 h-404 Z" fill="#2563EB"/>
+  <circle cx="584" cy="367" r="22" fill="#FFFFFF" fill-opacity="0.18"/>
+  <text x="584" y="377" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26"
+        font-weight="700" fill="#FFFFFF">2</text>
+  <text x="622" y="377" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700"
+        letter-spacing="1" fill="#FFFFFF">EJECUCIÓN</text>
+
+  <text x="580" y="458" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#94A3B8">PAP-01-F-002</text>
+  <text x="580" y="484" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#94A3B8">Registro de actividades diarias</text>
+
+  <text x="580" y="538" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#94A3B8">Lo llena el estudiante: registra</text>
+  <text x="580" y="561" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#94A3B8">ahí lo que hace cada día.</text>
+
+  <!-- ══ ETAPA 3 · SUPERVISIÓN ══════════════════════════════ -->
+  <rect x="984" y="330" width="404" height="450" rx="20" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <path d="M 984,350 a20,20 0 0 1 20,-20 h364 a20,20 0 0 1 20,20 v50 h-404 Z" fill="#2563EB"/>
+  <circle cx="1036" cy="367" r="22" fill="#FFFFFF" fill-opacity="0.18"/>
+  <text x="1036" y="377" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26"
+        font-weight="700" fill="#FFFFFF">3</text>
+  <text x="1074" y="377" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700"
+        letter-spacing="1" fill="#FFFFFF">SUPERVISIÓN</text>
+
+  <text x="1032" y="458" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#94A3B8">PAP-01-F-003</text>
+  <text x="1032" y="484" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#94A3B8">Ficha de supervisión</text>
+
+  <text x="1032" y="538" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#94A3B8">La llena el tutor asignado: con</text>
+  <text x="1032" y="561" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#94A3B8">ella evalúa al estudiante.</text>
+
+  <!-- ══ ETAPA 4 · EVALUACIÓN ═══════════════════════════════ -->
+  <rect x="1436" y="330" width="404" height="450" rx="20" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <path d="M 1436,350 a20,20 0 0 1 20,-20 h364 a20,20 0 0 1 20,20 v50 h-404 Z" fill="#2563EB"/>
+  <circle cx="1488" cy="367" r="22" fill="#FFFFFF" fill-opacity="0.18"/>
+  <text x="1488" y="377" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26"
+        font-weight="700" fill="#FFFFFF">4</text>
+  <text x="1526" y="377" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700"
+        letter-spacing="1" fill="#FFFFFF">EVALUACIÓN</text>
+
+  <text x="1484" y="450" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#94A3B8">PAP-01-F-004</text>
+  <text x="1484" y="476" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#94A3B8">Informe final</text>
+  <text x="1484" y="512" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#94A3B8">PAP-01-F-005</text>
+  <text x="1484" y="538" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#94A3B8">Evaluación general</text>
+
+  <rect x="1452" y="562" width="372" height="70" rx="12" fill="#EFF5FF"/>
+  <rect x="1452" y="562" width="5" height="70" rx="2.5" fill="#2563EB"/>
+  <text x="1484" y="592" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#2563EB">Certificado</text>
+  <text x="1484" y="618" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#2563EB">Culminación de horas</text>
+
+  <text x="1484" y="672" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#94A3B8">No es un anexo del PAP-01: es la</text>
+  <text x="1484" y="695" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#94A3B8">acreditación con que la Facultad</text>
+  <text x="1484" y="718" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#94A3B8">cierra el ciclo.</text>
+
+  <!-- ── Banda de alcance ───────────────────────────────────── -->
+  <rect x="80" y="832" width="1760" height="150" rx="20" fill="#F1F5F9"/>
+  <rect x="80" y="832" width="8" height="150" rx="4" fill="#2563EB"/>
+  <text x="120" y="876" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700"
+        letter-spacing="2.4" fill="#2563EB">ALCANCE DECLARADO</text>
+  <text x="120" y="914" font-family="Arial, Helvetica, sans-serif" font-size="23" fill="#334155">De los seis formatos normalizados del manual, el sistema emite uno: la solicitud de prácticas (F-006). A ese se suman dos documentos que la</text>
+  <text x="120" y="946" font-family="Arial, Helvetica, sans-serif" font-size="23" fill="#334155">Facultad tramita con formato propio y sin código en el manual: la designación de estudiante y tutor, y el certificado de culminación de horas. Los</text>
+  <text x="120" y="978" font-family="Arial, Helvetica, sans-serif" font-size="23" fill="#334155">cinco formatos restantes conservan íntegra su tramitación actual. El sistema no automatiza el procedimiento entero: automatiza un tramo declarado.</text>
+</svg>

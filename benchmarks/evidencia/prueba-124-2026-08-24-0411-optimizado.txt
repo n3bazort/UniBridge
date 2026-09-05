@@ -1,0 +1,147 @@
+
+  ════════════════════════════════════════════════════════════════════════
+  UniBridge · Prueba de rendimiento de emisión masiva de certificados
+  ════════════════════════════════════════════════════════════════════════
+
+  Fecha y hora                      2026-08-24 09:05:39
+  Período académico                 2024-1
+  Certificados a emitir             124
+  Equipo                            AMD Ryzen 3 3250U with Radeon Graphics · 4 núcleos
+  Memoria                           13.9 GB
+  Sistema                           win32 10.0.26200 · Node v24.14.1
+  Concurrencia de la cola           4 trabajos simultáneos
+
+  ────────────────────────────────────────────────────────────────────────
+  PREPARACIÓN
+  ────────────────────────────────────────────────────────────────────────
+  Autenticado                       Josué David Bazurto Zambrano
+  Plantilla                         Certificado de Prácticas Oficial (PDF)
+  Estudiantes del período           124 sembrados
+  Seleccionados para el lote        124
+
+  ────────────────────────────────────────────────────────────────────────
+  EJECUCIÓN
+  ────────────────────────────────────────────────────────────────────────
+  Trabajos encolados                124 en 170 ms
+  Identificador del lote            725e5a09-78ae-4954-b3c1-1bd5e4b4afdc
+
+     t (s)    generados    fallidos    progreso
+     ─────    ─────────    ────────    ────────
+      0.01            0           0         0 %
+     11.03            0           0         0 %
+     17.35            4           0         3 %
+     21.18            5           0         4 %
+     23.84            6           0         5 %
+     26.34            6           0         5 %
+     28.55            8           0         6 %
+     32.86            9           0         7 %
+     35.26           11           0         9 %
+     43.71           12           0        10 %
+     46.24           15           0        12 %
+     52.08           16           0        13 %
+     54.51           18           0        15 %
+     59.23           19           0        15 %
+     61.76           21           0        17 %
+     64.21           22           0        18 %
+     66.57           23           0        19 %
+     69.00           24           0        19 %
+     73.61           25           0        20 %
+     78.40           27           0        22 %
+     81.06           29           0        23 %
+     86.29           30           0        24 %
+     88.94           32           0        26 %
+     93.15           33           0        27 %
+     96.70           35           0        28 %
+     104.54           36           0        29 %
+     107.53           38           0        31 %
+     113.48           39           0        31 %
+     116.24           41           0        33 %
+     121.60           42           0        34 %
+     124.48           44           0        35 %
+     129.65           45           0        36 %
+     132.22           47           0        38 %
+     140.34           48           0        39 %
+     146.92           50           0        40 %
+     152.44           54           0        44 %
+     156.21           55           0        44 %
+     164.10           56           0        45 %
+     169.37           58           0        47 %
+     171.92           60           0        48 %
+     182.78           61           0        49 %
+     188.21           63           0        51 %
+     192.47           67           0        54 %
+     196.63           68           0        55 %
+     206.23           70           0        56 %
+     212.19           73           0        59 %
+     217.88           75           0        60 %
+     221.99           77           0        62 %
+     224.71           78           0        63 %
+     229.95           79           0        64 %
+     232.64           81           0        65 %
+     235.68           82           0        66 %
+     239.36           82           0        66 %
+     242.02           84           0        68 %
+     247.82           85           0        69 %
+     251.14           87           0        70 %
+     254.13           88           0        71 %
+     258.26           89           0        72 %
+     264.36           90           0        73 %
+     267.25           92           0        74 %
+     269.82           94           0        76 %
+     275.07           94           0        76 %
+     277.64           96           0        77 %
+     283.78           97           0        78 %
+     286.94           99           0        80 %
+     296.01          100           0        81 %
+     300.00          102           0        82 %
+     303.91          104           0        84 %
+     308.68          104           0        84 %
+     311.23          105           0        85 %
+     313.57          107           0        86 %
+     318.83          109           0        88 %
+     321.73          110           0        89 %
+     324.40          111           0        90 %
+     326.96          112           0        90 %
+     329.64          112           0        90 %
+     332.36          114           0        92 %
+     338.19          115           0        93 %
+     340.71          117           0        94 %
+     345.42          118           0        95 %
+     348.05          120           0        97 %
+     353.33          121           0        98 %
+     354.85          124           0       100 %
+
+  ────────────────────────────────────────────────────────────────────────
+  RESULTADO
+  ────────────────────────────────────────────────────────────────────────
+  Certificados solicitados          124
+  Generados correctamente           124
+  Fallidos                          0
+  Tiempo total del lote             354.85 s
+  Tiempo medio por certificado      2862 ms
+  Rendimiento                       0.35 certificados/s
+
+  ────────────────────────────────────────────────────────────────────────
+  CONTRASTE CON EL PROCEDIMIENTO MANUAL
+  ────────────────────────────────────────────────────────────────────────
+  Procedimiento manual              6 min × 124 = 12 h 24 min
+  UniBridge                         354.85 s para los 124
+  Jornadas de 8 h equivalentes      1.55
+
+  ────────────────────────────────────────────────────────────────────────
+  ALCANCE DE LA MEDICIÓN
+  ────────────────────────────────────────────────────────────────────────
+  Se mide la emisión: desde que el lote se encola hasta que el último
+  certificado queda generado y almacenado. No incluye el tiempo humano
+  de seleccionar los estudiantes ni de revisar el resultado.
+
+  Los 6 min del procedimiento manual son el dato declarado por la
+  responsable en la entrevista (Anexo A, pregunta 2) para el mejor caso,
+  «cuando todo está en orden». El contraste es, por tanto, conservador.
+
+  ────────────────────────────────────────────────────────────────────────
+  EVIDENCIA GUARDADA
+  ────────────────────────────────────────────────────────────────────────
+  Datos                             benchmarks\evidencia\prueba-124-2026-08-24.json
+  Transcripción                     benchmarks\evidencia\prueba-124-2026-08-24.txt
+

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>UniBridge — el documento se firma</title>
+  <rect id="bg" x="0" y="0" width="1920" height="1080" fill="#FFFFFF"/>
+
+  <g id="documento">
+    <rect id="hoja" x="660" y="140" width="600" height="800" rx="24" fill="#FFFFFF" stroke="#0F172A" stroke-width="10"/>
+    <g id="lineas-texto" stroke="#CBD5E1" stroke-width="16" stroke-linecap="round">
+      <line x1="730" y1="270" x2="1190" y2="270"/>
+      <line x1="730" y1="330" x2="1190" y2="330"/>
+      <line x1="730" y1="390" x2="1190" y2="390"/>
+      <line x1="730" y1="450" x2="1120" y2="450"/>
+      <line x1="730" y1="510" x2="1190" y2="510"/>
+      <line x1="730" y1="570" x2="1000" y2="570"/>
+    </g>
+    <line id="renglon-firma" x1="730" y1="820" x2="1080" y2="820"
+          stroke="#94A3B8" stroke-width="4" stroke-dasharray="14 12"/>
+    <text id="pie-firma" x="730" y="866" font-family="Arial, Helvetica, sans-serif"
+          font-size="24" letter-spacing="6" fill="#94A3B8">FIRMA ELECTRONICA</text>
+  </g>
+
+  <g id="estado-inicial">
+    <!-- El sello espera en alto, todavia sin tocar el papel -->
+    <g id="sello-suspendido" fill="none" stroke="#CBD5E1" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="1440" cy="330" r="110" stroke-width="12"/>
+      <circle cx="1440" cy="330" r="88" stroke-width="4" stroke-dasharray="10 10"/>
+      <path d="M 1388 332 L 1423 372 L 1495 290" stroke-width="14"/>
+    </g>
+  </g>
+
+  <g id="estado-final">
+    <path id="rubrica" d="M 745 815 C 785 730, 825 875, 868 790 S 938 705, 985 800"
+          fill="none" stroke="#2563EB" stroke-width="9" stroke-linecap="round"/>
+    <g id="sello" fill="none" stroke="#2563EB" stroke-linecap="round" stroke-linejoin="round">
+      <circle id="sello-aro" cx="1180" cy="740" r="110" stroke-width="12" fill="#FFFFFF" fill-opacity="0.9"/>
+      <circle id="sello-aro-interior" cx="1180" cy="740" r="88" stroke-width="4" stroke-dasharray="10 10"/>
+      <path id="sello-check" d="M 1128 742 L 1163 782 L 1235 700" stroke-width="14"/>
+    </g>
+  </g>
+</svg>

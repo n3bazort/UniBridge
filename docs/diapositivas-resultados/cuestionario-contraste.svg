@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>El cuestionario, contrastado con la entrevista</title>
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <!-- ══ ENCABEZADO ═════════════════════════════════════════ -->
+  <g id="encabezado">
+    <rect x="80" y="72" width="72" height="8" rx="4" fill="#2563EB"/>
+    <text x="168" y="86" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700"
+          letter-spacing="6" fill="#2563EB">CAPÍTULO III · RESULTADOS</text>
+    <text x="80" y="158" font-family="Arial, Helvetica, sans-serif" font-size="66" font-weight="800"
+          fill="#0F172A">El cuestionario, contrastado con la entrevista</text>
+    <text x="80" y="208" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#64748B">Dos roles distintos y dos instrumentos distintos: quien ejecuta el trámite y quien responde por él</text>
+  </g>
+
+  <!-- ══ CONVERGENCIA ═══════════════════════════════════════ -->
+  <text id="rotulo-coinciden" x="80" y="278" font-family="Arial, Helvetica, sans-serif" font-size="17"
+        font-weight="700" letter-spacing="2.4" fill="#2563EB">EN QUÉ COINCIDEN LAS DOS FUENTES</text>
+
+  <g id="coincidencia-1">
+    <rect x="80" y="296" width="565" height="196" rx="18" fill="#EFF5FF"/>
+    <circle cx="132" cy="348" r="24" fill="#2563EB"/>
+    <path d="M 122,348 L 129,355 L 142,341" stroke="#FFFFFF" stroke-width="3.4" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="112" y="410" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#1E3A8A">Los errores nacen en los criterios</text>
+    <text x="112" y="442" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#1E3A8A">con que se llenan los formularios</text>
+  </g>
+
+  <g id="coincidencia-2">
+    <rect x="677" y="296" width="565" height="196" rx="18" fill="#EFF5FF"/>
+    <circle cx="729" cy="348" r="24" fill="#2563EB"/>
+    <path d="M 719,348 L 726,355 L 739,341" stroke="#FFFFFF" stroke-width="3.4" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="709" y="410" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#1E3A8A">Los documentos físicos</text>
+    <text x="709" y="442" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#1E3A8A">pueden perderse</text>
+  </g>
+
+  <g id="coincidencia-3">
+    <rect x="1274" y="296" width="565" height="196" rx="18" fill="#EFF5FF"/>
+    <circle cx="1326" cy="348" r="24" fill="#2563EB"/>
+    <path d="M 1316,348 L 1323,355 L 1336,341" stroke="#FFFFFF" stroke-width="3.4" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="1306" y="410" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#1E3A8A">Coordinar la firma de las</text>
+    <text x="1306" y="442" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#1E3A8A">autoridades es trámite manual</text>
+  </g>
+
+  <!-- ══ FORMATOS DE SALIDA ═════════════════════════════════ -->
+  <g id="formatos">
+    <rect x="80" y="552" width="864" height="330" rx="18" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+    <text x="112" y="612" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700"
+          letter-spacing="2.4" fill="#2563EB">SOBRE LOS FORMATOS DE SALIDA</text>
+
+    <text x="112" y="664" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#334155">El docente mencionó PDF y Excel. El sistema produce los tres,</text>
+    <text x="112" y="694" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#334155">cada uno con un propósito distinto:</text>
+
+    <line x1="112" y1="722" x2="912" y2="722" stroke="#E2E8F0" stroke-width="2"/>
+
+    <rect x="112" y="744" width="168" height="40" rx="12" fill="#EFF5FF"/>
+    <text x="196" y="771" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18"
+          font-weight="700" letter-spacing="1.2" fill="#2563EB">PDF · WORD</text>
+    <text x="300" y="771" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#334155">Los documentos oficiales: oficios y certificados.</text>
+
+    <rect x="112" y="808" width="168" height="40" rx="12" fill="#ECFDF5"/>
+    <text x="196" y="835" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18"
+          font-weight="700" letter-spacing="1.2" fill="#047857">EXCEL</text>
+    <text x="300" y="828" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#334155">Los datos: importar el padrón de prácticas</text>
+    <text x="300" y="854" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#334155">y exportar el reporte del período.</text>
+  </g>
+
+  <!-- ══ APORTE EXCLUSIVO ═══════════════════════════════════ -->
+  <g id="aporte">
+    <rect x="976" y="552" width="864" height="330" rx="18" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="2"/>
+    <circle cx="1028" cy="604" r="24" fill="#D1FAE5"/>
+    <path d="M 1028,592 L 1028,616 M 1016,604 L 1040,604" stroke="#059669" stroke-width="3.2"
+          fill="none" stroke-linecap="round"/>
+    <text x="1072" y="612" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700"
+          letter-spacing="2.4" fill="#047857">LO QUE SOLO APORTÓ EL CUESTIONARIO</text>
+
+    <text x="1008" y="676" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#064E3B">Ante un documento emitido por error, el sistema debe permitir</text>
+    <text x="1008" y="706" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#064E3B">su corrección y mantener el documento editable.</text>
+
+    <line x1="1008" y1="742" x2="1808" y2="742" stroke="#6EE7B7" stroke-width="2"/>
+    <text x="1008" y="778" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700"
+          letter-spacing="2.2" fill="#047857">SUSTENTA DOS DECISIONES DEL SISTEMA</text>
+    <text x="1008" y="812" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#065F46">La anulación con motivo registrado, y que los oficios se emitan</text>
+    <text x="1008" y="838" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#065F46">también en Word.</text>
+  </g>
+
+  <!-- ══ REMATE ═════════════════════════════════════════════ -->
+  <g id="remate">
+    <text x="960" y="960" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26"
+          font-weight="700" fill="#0F172A">Quien ejecuta el trámite y quien responde por él describieron el mismo problema.</text>
+    <text x="960" y="998" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26"
+          font-weight="700" font-style="italic" fill="#2563EB">Eso es lo que convierte un hallazgo en evidencia.</text>
+  </g>
+</svg>

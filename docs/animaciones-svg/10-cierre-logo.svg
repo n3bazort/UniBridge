@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>UniBridge — cierre, los iconos se convierten en el logo</title>
+  <rect id="bg" x="0" y="0" width="1920" height="1080" fill="#FFFFFF"/>
+
+  <g id="estado-inicial">
+    <g id="satelites" fill="none" stroke="#94A3B8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+      <g id="sat-documento">
+        <rect x="248" y="200" width="64" height="84" rx="8"/>
+        <path d="M 264 232 H 296"/><path d="M 264 254 H 288"/>
+      </g>
+      <g id="sat-reloj">
+        <circle cx="700" cy="150" r="40"/>
+        <path d="M 700 150 V 124"/><path d="M 700 150 L 722 162"/>
+      </g>
+      <g id="sat-practica">
+        <rect x="1178" y="134" width="84" height="58" rx="8"/>
+        <path d="M 1200 134 V 118 H 1240 V 134"/>
+      </g>
+      <g id="sat-persona">
+        <circle cx="1640" cy="222" r="18"/>
+        <path d="M 1608 274 C 1608 242, 1672 242, 1672 274"/>
+      </g>
+      <g id="sat-check">
+        <path d="M 1686 702 L 1710 726 L 1754 682"/>
+      </g>
+      <g id="sat-reportes">
+        <path d="M 1272 958 V 924"/><path d="M 1300 958 V 902"/><path d="M 1328 958 V 938"/>
+      </g>
+      <g id="sat-hoja">
+        <rect x="592" y="902" width="28" height="28" rx="4"/>
+        <rect x="626" y="902" width="28" height="28" rx="4"/>
+        <rect x="592" y="936" width="28" height="28" rx="4"/>
+        <rect x="626" y="936" width="28" height="28" rx="4"/>
+      </g>
+      <g id="sat-sello">
+        <circle cx="200" cy="700" r="40"/>
+        <circle cx="200" cy="700" r="26" stroke-dasharray="8 8" stroke-width="4"/>
+      </g>
+    </g>
+  </g>
+
+  <g id="estado-final">
+    <g id="logo-final" transform="translate(960 470) scale(0.62) translate(-960 -430)"
+       fill="none" stroke="#0F172A" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 660 690 V 170" stroke-width="26"/>
+      <path d="M 1260 690 V 170" stroke-width="26"/>
+      <path d="M 660 170 Q 960 830 1260 170" stroke-width="18"/>
+      <path d="M 660 170 Q 630 400 600 630" stroke-width="14"/>
+      <path d="M 1260 170 Q 1290 400 1320 630" stroke-width="14"/>
+      <path d="M 600 630 H 1320" stroke-width="26"/>
+      <path d="M 735 314 V 630" stroke-width="10"/>
+      <path d="M 885 479 V 630" stroke-width="10"/>
+      <path d="M 1035 479 V 630" stroke-width="10"/>
+      <path d="M 1185 314 V 630" stroke-width="10"/>
+      <g stroke="#2563EB" stroke-width="14" fill="#FFFFFF">
+        <circle cx="735" cy="630" r="26"/>
+        <circle cx="885" cy="630" r="26"/>
+        <circle cx="1035" cy="630" r="26"/>
+        <circle cx="1185" cy="630" r="26"/>
+      </g>
+    </g>
+    <g id="tipografia" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+      <text id="wordmark" x="960" y="790" font-size="96" font-weight="700" letter-spacing="6" fill="#0F172A">UniBridge</text>
+      <text id="tagline" x="960" y="848" font-size="26" letter-spacing="12" fill="#94A3B8">GESTION DE PRACTICAS PREPROFESIONALES</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>Conclusión del objetivo específico 4</title>
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <g id="encabezado">
+    <rect x="80" y="72" width="72" height="8" rx="4" fill="#2563EB"/>
+    <text x="168" y="86" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" letter-spacing="6" fill="#2563EB">CAPÍTULO VI · CONCLUSIONES</text>
+    <text x="80" y="162" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="800" fill="#0F172A">Conclusión del objetivo específico 4</text>
+  </g>
+
+  <text id="numero" x="80" y="560" font-family="Arial, Helvetica, sans-serif" font-size="300" font-weight="800" fill="#DBEAFE">4</text>
+
+  <g id="objetivo">
+    <text x="420" y="286" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="2.4" fill="#2563EB">OBJETIVO ESPECÍFICO</text>
+  <text x="420" y="330" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400" fill="#64748B">Validar el funcionamiento de la aplicación mediante pruebas de sus requerimientos funcionales,</text>
+  <text x="420" y="364" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400" fill="#64748B">verificando que cada módulo responda a los requisitos levantados.</text>
+  </g>
+
+  <g id="conclusion">
+    <rect x="420" y="452" width="1420" height="4" rx="2" fill="#DBEAFE"/>
+    <text x="420" y="512" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="2.4" fill="#2563EB">CONCLUSIÓN</text>
+  <text x="420" y="566" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400" fill="#0F172A">El sistema se empaquetó en contenedores y se validó en un entorno de producción local. Cada requisito funcional se</text>
+  <text x="420" y="602" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400" fill="#0F172A">sometió a un caso de prueba con precondición y resultado esperado definidos de antemano, y la matriz deja constancia</text>
+  <text x="420" y="638" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400" fill="#0F172A">módulo por módulo. Las pruebas confirmaron que el circuito de firma exige el orden establecido entre las dos</text>
+  <text x="420" y="674" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400" fill="#0F172A">autoridades y que ningún documento alcanza validez mientras le falte alguna de las dos rúbricas. A la validación</text>
+  <text x="420" y="710" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400" fill="#0F172A">funcional se sumó una medición: emitir los ciento veinticuatro certificados de un cierre real tomó cinco minutos con</text>
+  <text x="420" y="746" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400" fill="#0F172A">cincuenta y cinco segundos, frente a las doce horas y veinticuatro minutos del procedimiento manual.</text>
+  </g>
+
+  <text id="evidencia" x="420" y="980" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#94A3B8">Evidencia: Capítulo V, apartado 5.2 · Tabla 15 · Anexo K</text>
+</svg>

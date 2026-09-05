@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>Conclusión del objetivo específico 2</title>
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <g id="encabezado">
+    <rect x="80" y="72" width="72" height="8" rx="4" fill="#2563EB"/>
+    <text x="168" y="86" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" letter-spacing="6" fill="#2563EB">CAPÍTULO VI · CONCLUSIONES</text>
+    <text x="80" y="162" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="800" fill="#0F172A">Conclusión del objetivo específico 2</text>
+  </g>
+
+  <text id="numero" x="80" y="560" font-family="Arial, Helvetica, sans-serif" font-size="300" font-weight="800" fill="#DBEAFE">2</text>
+
+  <g id="objetivo">
+    <text x="420" y="286" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="2.4" fill="#2563EB">OBJETIVO ESPECÍFICO</text>
+  <text x="420" y="330" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400" fill="#64748B">Determinar la arquitectura de software, las herramientas tecnológicas y la metodología de</text>
+  <text x="420" y="364" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400" fill="#64748B">desarrollo más adecuadas para la construcción de la aplicación.</text>
+  </g>
+
+  <g id="conclusion">
+    <rect x="420" y="452" width="1420" height="4" rx="2" fill="#DBEAFE"/>
+    <text x="420" y="512" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="2.4" fill="#2563EB">CONCLUSIÓN</text>
+  <text x="420" y="566" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="400" fill="#0F172A">La selección tecnológica se resolvió comparando alternativas para cada capa antes de comprometer</text>
+  <text x="420" y="609" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="400" fill="#0F172A">una decisión, y no enumerando lo ya conocido. La arquitectura cliente-servidor se apoya en un</text>
+  <text x="420" y="652" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="400" fill="#0F172A">modelo relacional que abarca facultades, carreras, períodos, estudiantes, prácticas y documentos,</text>
+  <text x="420" y="695" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="400" fill="#0F172A">con la integridad garantizada por el propio motor de base de datos. La elección operó además bajo</text>
+  <text x="420" y="738" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="400" fill="#0F172A">una restricción declarada desde el inicio: software libre y equipo propio, sin costo de</text>
+  <text x="420" y="781" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="400" fill="#0F172A">licenciamiento ni de infraestructura.</text>
+  </g>
+
+  <text id="evidencia" x="420" y="980" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#94A3B8">Evidencia: Capítulo II, apartado 2.6 · Tablas 2 a 5 · Capítulo IV, apartado 4.5</text>
+</svg>

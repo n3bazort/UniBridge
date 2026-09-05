@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>UniBridge — modulos del sistema</title>
+  <rect id="bg" x="0" y="0" width="1920" height="1080" fill="#FFFFFF"/>
+
+  <g id="estado-final">
+    <g id="ramas" fill="none" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round">
+      <path id="rama-1" d="M 960 422 V 240"/>
+      <path id="rama-2" d="M 1062.2 481 L 1219.8 390"/>
+      <path id="rama-3" d="M 1062.2 599 L 1219.8 690"/>
+      <path id="rama-4" d="M 960 658 V 840"/>
+      <path id="rama-5" d="M 857.8 599 L 700.2 690"/>
+      <path id="rama-6" d="M 857.8 481 L 700.2 390"/>
+    </g>
+
+    <g id="nodos" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <g id="nodo-practicas">
+        <circle cx="960" cy="180" r="54" fill="#FFFFFF" stroke="#2563EB" stroke-width="8"/>
+        <g stroke="#2563EB" stroke-width="6">
+          <rect x="934" y="164" width="52" height="36" rx="5"/>
+          <path d="M 948 164 V 154 H 972 V 164"/>
+        </g>
+      </g>
+      <g id="nodo-periodos">
+        <circle cx="1272" cy="360" r="54" fill="#FFFFFF" stroke="#2563EB" stroke-width="8"/>
+        <g stroke="#2563EB" stroke-width="6">
+          <circle cx="1272" cy="360" r="26"/>
+          <path d="M 1272 360 V 344"/>
+          <path d="M 1272 360 L 1286 368"/>
+        </g>
+      </g>
+      <g id="nodo-firmas">
+        <circle cx="1272" cy="720" r="54" fill="#FFFFFF" stroke="#2563EB" stroke-width="8"/>
+        <path d="M 1250 722 L 1266 738 L 1294 704" stroke="#2563EB" stroke-width="8"/>
+      </g>
+      <g id="nodo-reportes">
+        <circle cx="960" cy="900" r="54" fill="#FFFFFF" stroke="#2563EB" stroke-width="8"/>
+        <g stroke="#2563EB" stroke-width="7">
+          <path d="M 944 918 V 896"/><path d="M 960 918 V 882"/><path d="M 976 918 V 902"/>
+        </g>
+      </g>
+      <g id="nodo-documentos">
+        <circle cx="648" cy="720" r="54" fill="#FFFFFF" stroke="#2563EB" stroke-width="8"/>
+        <g stroke="#2563EB" stroke-width="6">
+          <rect x="628" y="694" width="40" height="52" rx="5"/>
+          <path d="M 638 712 H 658"/><path d="M 638 726 H 652"/>
+        </g>
+      </g>
+      <g id="nodo-usuarios">
+        <circle cx="648" cy="360" r="54" fill="#FFFFFF" stroke="#2563EB" stroke-width="8"/>
+        <g stroke="#2563EB" stroke-width="6">
+          <circle cx="648" cy="350" r="11"/>
+          <path d="M 628 382 C 628 362, 668 362, 668 382"/>
+        </g>
+      </g>
+    </g>
+
+    <g id="rotulos" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="3" fill="#0F172A" text-anchor="middle">
+      <text x="960" y="100">PRACTICAS</text>
+      <text x="1272" y="280">PERIODOS</text>
+      <text x="1272" y="814">FIRMAS</text>
+      <text x="960" y="994">REPORTES</text>
+      <text x="648" y="814">DOCUMENTOS</text>
+      <text x="648" y="280">USUARIOS</text>
+    </g>
+  </g>
+
+  <g id="hub">
+    <circle cx="960" cy="540" r="110" fill="#FFFFFF" stroke="#0F172A" stroke-width="10"/>
+    <g id="hub-marca" transform="translate(960 540) scale(0.235) translate(-960 -430)"
+       fill="none" stroke="#2563EB" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 660 690 V 170" stroke-width="30"/>
+      <path d="M 1260 690 V 170" stroke-width="30"/>
+      <path d="M 660 170 Q 960 830 1260 170" stroke-width="22"/>
+      <path d="M 660 170 Q 630 400 600 630" stroke-width="18"/>
+      <path d="M 1260 170 Q 1290 400 1320 630" stroke-width="18"/>
+      <path d="M 600 630 H 1320" stroke-width="30"/>
+      <path d="M 735 314 V 630" stroke-width="14"/>
+      <path d="M 885 479 V 630" stroke-width="14"/>
+      <path d="M 1035 479 V 630" stroke-width="14"/>
+      <path d="M 1185 314 V 630" stroke-width="14"/>
+    </g>
+  </g>
+</svg>

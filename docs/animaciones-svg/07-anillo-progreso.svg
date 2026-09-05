@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>UniBridge — anillo de progreso por etapas</title>
+  <rect id="bg" x="0" y="0" width="1920" height="1080" fill="#FFFFFF"/>
+
+  <g id="etiquetas" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" letter-spacing="4" fill="#0F172A">
+    <text x="1290" y="378" text-anchor="start">REGISTRO</text>
+    <text x="1290" y="682" text-anchor="start">ASIGNACION</text>
+    <text x="630" y="682" text-anchor="end">FIRMA</text>
+    <text x="630" y="378" text-anchor="end">ENTREGA</text>
+  </g>
+  <text id="rotulo-centro" x="960" y="625" font-family="Arial, Helvetica, sans-serif"
+        font-size="26" letter-spacing="10" fill="#94A3B8" text-anchor="middle">COMPLETADO</text>
+
+  <g id="estado-inicial">
+    <g fill="none" stroke="#CBD5E1" stroke-width="34">
+      <path d="M 978.14 260.63 A 260 260 0 0 1 1219.37 501.86"/>
+      <path d="M 1219.37 538.14 A 260 260 0 0 1 978.14 779.37"/>
+      <path d="M 941.86 779.37 A 260 260 0 0 1 700.63 538.14"/>
+      <path d="M 700.63 501.86 A 260 260 0 0 1 941.86 260.63"/>
+    </g>
+    <text x="960" y="560" font-family="Arial, Helvetica, sans-serif" font-size="150"
+          font-weight="700" fill="#CBD5E1" text-anchor="middle">0%</text>
+  </g>
+
+  <g id="estado-final">
+    <!-- Copias exactas de los arcos: son las que se pintan de azul, una por una -->
+    <g id="anillo-avance" fill="none" stroke="#2563EB" stroke-width="34">
+      <path id="arco-1" d="M 978.14 260.63 A 260 260 0 0 1 1219.37 501.86"/>
+      <path id="arco-2" d="M 1219.37 538.14 A 260 260 0 0 1 978.14 779.37"/>
+      <path id="arco-3" d="M 941.86 779.37 A 260 260 0 0 1 700.63 538.14"/>
+      <path id="arco-4" d="M 700.63 501.86 A 260 260 0 0 1 941.86 260.63"/>
+    </g>
+    <text id="porcentaje" x="960" y="560" font-family="Arial, Helvetica, sans-serif" font-size="150"
+          font-weight="700" fill="#0F172A" text-anchor="middle">100%</text>
+  </g>
+</svg>

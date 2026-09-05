@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>Software libre y equipo propio</title>
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <g id="encabezado">
+    <rect x="80" y="72" width="72" height="8" rx="4" fill="#2563EB"/>
+    <text x="168" y="86" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700"
+          letter-spacing="6" fill="#2563EB">CAPÍTULO IV · DETERMINACIÓN DE RECURSOS</text>
+    <text x="80" y="162" font-family="Arial, Helvetica, sans-serif" font-size="66" font-weight="800"
+          fill="#0F172A">Software libre y equipo propio, por sostenibilidad</text>
+    <text x="80" y="212" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#64748B">La restricción no fue una carencia: condicionó cada elección técnica desde el primer día</text>
+  </g>
+
+  <!-- ══ HUMANOS ════════════════════════════════════════════ -->
+  <g id="humanos">
+    <rect x="80" y="272" width="565" height="672" rx="18" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+    <path d="M 80,292 a20,20 0 0 1 20,-20 h525 a20,20 0 0 1 20,20 v44 h-565 Z" fill="#2563EB"/>
+    <text x="112" y="322" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700"
+          letter-spacing="2" fill="#FFFFFF">HUMANOS</text>
+
+    <text x="112" y="392" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#2563EB">Desarrollador · Investigador</text>
+    <text x="112" y="424" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">Estudiante de la Carrera de Tecnologías</text>
+    <text x="112" y="450" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">de la Información. Levantamiento, análisis,</text>
+    <text x="112" y="476" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">construcción y validación.</text>
+
+    <line x1="112" y1="512" x2="613" y2="512" stroke="#E2E8F0" stroke-width="2"/>
+
+    <text x="112" y="556" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#2563EB">Tutor académico</text>
+    <text x="112" y="588" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">Ing. John Antonio Cevallos Macías.</text>
+    <text x="112" y="614" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">Supervisión metodológica y revisión.</text>
+
+    <line x1="112" y1="650" x2="613" y2="650" stroke="#E2E8F0" stroke-width="2"/>
+
+    <text x="112" y="694" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#2563EB">Expertos y stakeholders</text>
+    <text x="112" y="726" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">Comisión de Prácticas y autoridades de la</text>
+    <text x="112" y="752" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">Facultad. Validación de los formatos y del</text>
+    <text x="112" y="778" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">procedimiento reproducido por el sistema.</text>
+
+    <line x1="112" y1="814" x2="613" y2="814" stroke="#E2E8F0" stroke-width="2"/>
+
+    <text x="112" y="858" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#2563EB">Informantes</text>
+    <text x="112" y="890" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">Los dos roles a cargo de la emisión</text>
+    <text x="112" y="916" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">documental (Anexos A y J).</text>
+  </g>
+
+  <!-- ══ TECNOLÓGICOS ═══════════════════════════════════════ -->
+  <g id="tecnologicos">
+    <rect x="677" y="272" width="565" height="672" rx="18" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+    <path d="M 677,292 a20,20 0 0 1 20,-20 h525 a20,20 0 0 1 20,20 v44 h-565 Z" fill="#2563EB"/>
+    <text x="709" y="322" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700"
+          letter-spacing="2" fill="#FFFFFF">TECNOLÓGICOS</text>
+
+    <text x="709" y="386" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700"
+          letter-spacing="2" fill="#94A3B8">EQUIPO DE TRABAJO</text>
+    <text x="709" y="416" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#334155">Portátil AMD Ryzen 3 3250U · 14 GB RAM</text>
+
+    <text x="709" y="474" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700"
+          letter-spacing="2" fill="#94A3B8">BACKEND</text>
+    <text x="709" y="504" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#334155">Node.js 24 · NestJS 10 · Prisma ORM</text>
+    <text x="709" y="530" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#334155">BullMQ 5 · ExcelJS</text>
+
+    <text x="709" y="588" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700"
+          letter-spacing="2" fill="#94A3B8">FRONTEND</text>
+    <text x="709" y="618" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#334155">Next.js 16 · React 19 · Tailwind CSS 4</text>
+
+    <text x="709" y="676" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700"
+          letter-spacing="2" fill="#94A3B8">DATOS Y ALMACENAMIENTO</text>
+    <text x="709" y="706" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#334155">PostgreSQL 15 · Redis 7 · MinIO (S3)</text>
+
+    <text x="709" y="764" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700"
+          letter-spacing="2" fill="#94A3B8">MOTOR DOCUMENTAL</text>
+    <text x="709" y="794" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#334155">docxtemplater · pdf-lib · LibreOffice</text>
+    <text x="709" y="820" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#334155">headless</text>
+
+    <text x="709" y="878" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700"
+          letter-spacing="2" fill="#94A3B8">ENTORNO Y VERSIONES</text>
+    <text x="709" y="908" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#334155">Docker Compose · Git y GitHub</text>
+  </g>
+
+  <!-- ══ ECONÓMICOS ═════════════════════════════════════════ -->
+  <g id="economicos">
+    <rect x="1274" y="272" width="565" height="672" rx="18" fill="#EFF5FF"/>
+    <path d="M 1274,292 a20,20 0 0 1 20,-20 h525 a20,20 0 0 1 20,20 v44 h-565 Z" fill="#2563EB"/>
+    <text x="1306" y="322" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700"
+          letter-spacing="2" fill="#FFFFFF">ECONÓMICOS</text>
+
+    <text x="1556" y="452" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="86"
+          font-weight="800" fill="#2563EB">USD 0,00</text>
+    <text x="1556" y="492" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19"
+          letter-spacing="2.4" font-weight="700" fill="#7CA0E8">COSTO DE DESARROLLO</text>
+
+    <line x1="1306" y1="540" x2="1807" y2="540" stroke="#C7DAF9" stroke-width="2"/>
+
+    <circle cx="1318" cy="590" r="5" fill="#2563EB"/>
+    <text x="1340" y="597" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1E3A8A">Equipo propio, ya disponible.</text>
+
+    <circle cx="1318" cy="650" r="5" fill="#2563EB"/>
+    <text x="1340" y="657" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1E3A8A">Software libre o gratuito para</text>
+    <text x="1340" y="683" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1E3A8A">uso académico.</text>
+
+    <circle cx="1318" cy="736" r="5" fill="#2563EB"/>
+    <text x="1340" y="743" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1E3A8A">Sin licencias ni infraestructura</text>
+    <text x="1340" y="769" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1E3A8A">contratada durante el desarrollo.</text>
+
+    <rect x="1306" y="812" width="501" height="100" rx="14" fill="#FFFFFF"/>
+    <text x="1330" y="852" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700"
+          letter-spacing="2" fill="#2563EB">EL COSTO REAL ESTÁ DECLARADO</text>
+    <text x="1330" y="884" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#475569">El alojamiento institucional se plantea</text>
+    <text x="1330" y="906" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#475569">como recomendación, no como gasto asumido.</text>
+  </g>
+</svg>

@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>UniBridge — arquitectura en capas</title>
+  <rect id="bg" x="0" y="0" width="1920" height="1080" fill="#FFFFFF"/>
+
+  <g id="capa-web">
+    <rect x="620" y="180" width="680" height="180" rx="20" fill="#FFFFFF" stroke="#0F172A" stroke-width="8"/>
+    <g fill="none" stroke="#2563EB" stroke-width="6" stroke-linecap="round">
+      <rect x="680" y="236" width="68" height="68" rx="8"/>
+      <line x1="680" y1="258" x2="748" y2="258"/>
+    </g>
+    <text x="790" y="285" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" letter-spacing="3" fill="#0F172A">PRESENTACION</text>
+    <text x="1240" y="285" font-family="Arial, Helvetica, sans-serif" font-size="26" letter-spacing="3" fill="#94A3B8" text-anchor="end">Next.js</text>
+  </g>
+
+  <g id="capa-api">
+    <rect x="620" y="450" width="680" height="180" rx="20" fill="#FFFFFF" stroke="#0F172A" stroke-width="8"/>
+    <g fill="none" stroke="#2563EB" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 700 522 L 684 540 L 700 558"/>
+      <path d="M 728 522 L 744 540 L 728 558"/>
+    </g>
+    <text x="790" y="555" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" letter-spacing="3" fill="#0F172A">APLICACION</text>
+    <text x="1240" y="555" font-family="Arial, Helvetica, sans-serif" font-size="26" letter-spacing="3" fill="#94A3B8" text-anchor="end">NestJS</text>
+  </g>
+
+  <g id="capa-datos">
+    <rect x="620" y="720" width="680" height="180" rx="20" fill="#FFFFFF" stroke="#0F172A" stroke-width="8"/>
+    <g fill="none" stroke="#2563EB" stroke-width="6" stroke-linecap="round">
+      <ellipse cx="714" cy="792" rx="34" ry="13"/>
+      <path d="M 680 792 V 828 C 680 838, 748 838, 748 828 V 792"/>
+    </g>
+    <text x="790" y="825" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" letter-spacing="3" fill="#0F172A">PERSISTENCIA</text>
+    <text x="1240" y="825" font-family="Arial, Helvetica, sans-serif" font-size="26" letter-spacing="3" fill="#94A3B8" text-anchor="end">PostgreSQL</text>
+  </g>
+
+  <g id="estado-inicial">
+    <g fill="none" stroke="#CBD5E1" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 930 366 V 438"/><path d="M 918 428 L 930 444 L 942 428"/>
+      <path d="M 990 444 V 372"/><path d="M 978 382 L 990 366 L 1002 382"/>
+      <path d="M 930 636 V 708"/><path d="M 918 698 L 930 714 L 942 698"/>
+      <path d="M 990 714 V 642"/><path d="M 978 652 L 990 636 L 1002 652"/>
+    </g>
+    <circle cx="930" cy="372" r="13" fill="#2563EB"/>
+  </g>
+
+  <g id="estado-final">
+    <g id="conectores" fill="none" stroke="#2563EB" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <g id="conector-1">
+        <path d="M 930 366 V 438"/><path d="M 918 428 L 930 444 L 942 428"/>
+        <path d="M 990 444 V 372"/><path d="M 978 382 L 990 366 L 1002 382"/>
+      </g>
+      <g id="conector-2">
+        <path d="M 930 636 V 708"/><path d="M 918 698 L 930 714 L 942 698"/>
+        <path d="M 990 714 V 642"/><path d="M 978 652 L 990 636 L 1002 652"/>
+      </g>
+    </g>
+    <circle id="pulso" cx="990" cy="372" r="13" fill="#2563EB"/>
+  </g>
+</svg>

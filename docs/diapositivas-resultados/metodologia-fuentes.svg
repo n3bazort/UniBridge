@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>Metodología y fuentes</title>
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <!-- ── Encabezado ─────────────────────────────────────────── -->
+  <rect x="80" y="80" width="72" height="8" rx="4" fill="#2563EB"/>
+  <text x="168" y="94" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700"
+        letter-spacing="6" fill="#2563EB">CAPÍTULO III · MARCO METODOLÓGICO</text>
+  <text x="80" y="168" font-family="Arial, Helvetica, sans-serif" font-size="70" font-weight="800"
+        fill="#0F172A">Metodología y fuentes</text>
+  <text x="80" y="218" font-family="Arial, Helvetica, sans-serif" font-size="29" fill="#64748B">Dos informantes que no son una muestra: son la totalidad del personal a cargo del proceso</text>
+
+  <!-- ══ DISEÑO DE LA INVESTIGACIÓN ═════════════════════════ -->
+  <text x="80" y="286" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700"
+        letter-spacing="2.4" fill="#2563EB">DISEÑO DE LA INVESTIGACIÓN</text>
+
+  <rect x="80" y="304" width="422" height="112" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2"/>
+  <text x="108" y="344" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700"
+        letter-spacing="2.2" fill="#94A3B8">TIPO</text>
+  <text x="108" y="384" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F172A">Aplicada y descriptiva</text>
+
+  <rect x="526" y="304" width="422" height="112" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2"/>
+  <text x="554" y="344" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700"
+        letter-spacing="2.2" fill="#94A3B8">DISEÑO</text>
+  <text x="554" y="384" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F172A">No experimental, transversal</text>
+
+  <rect x="972" y="304" width="422" height="112" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2"/>
+  <text x="1000" y="344" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700"
+        letter-spacing="2.2" fill="#94A3B8">ENFOQUE</text>
+  <text x="1000" y="384" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F172A">Predominantemente cualitativo</text>
+
+  <rect x="1418" y="304" width="422" height="112" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2"/>
+  <text x="1446" y="344" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700"
+        letter-spacing="2.2" fill="#94A3B8">MÉTODOS</text>
+  <text x="1446" y="384" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F172A">Inductivo y deductivo</text>
+
+  <!-- ══ INFORMANTES ════════════════════════════════════════ -->
+  <text x="80" y="474" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700"
+        letter-spacing="2.4" fill="#2563EB">LOS DOS INFORMANTES CLAVE</text>
+
+  <rect x="80" y="492" width="864" height="162" rx="16" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+  <rect x="80" y="492" width="6" height="162" rx="3" fill="#2563EB"/>
+  <circle cx="140" cy="542" r="24" fill="#EFF5FF"/>
+  <text x="140" y="552" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24"
+        font-weight="700" fill="#2563EB">1</text>
+  <text x="184" y="538" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" fill="#0F172A">Funcionaria que ejecuta el trámite</text>
+  <text x="184" y="570" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#64748B">Quien produce materialmente cada documento, día a día.</text>
+  <rect x="120" y="596" width="428" height="36" rx="18" fill="#EFF5FF"/>
+  <text x="142" y="620" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#2563EB">Entrevista semiestructurada · 12 preguntas</text>
+  <text x="568" y="620" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#94A3B8">Anexo A</text>
+
+  <rect x="976" y="492" width="864" height="162" rx="16" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+  <rect x="976" y="492" width="6" height="162" rx="3" fill="#2563EB"/>
+  <circle cx="1036" cy="542" r="24" fill="#EFF5FF"/>
+  <text x="1036" y="552" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24"
+        font-weight="700" fill="#2563EB">2</text>
+  <text x="1080" y="538" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" fill="#0F172A">Docente responsable del proceso</text>
+  <text x="1080" y="570" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#64748B">Quien responde por las prácticas ante la Facultad.</text>
+  <rect x="1016" y="596" width="318" height="36" rx="18" fill="#EFF5FF"/>
+  <text x="1038" y="620" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#2563EB">Cuestionario autoadministrado</text>
+  <text x="1354" y="620" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#94A3B8">Anexo J</text>
+
+  <!-- ══ POR QUÉ DOS ════════════════════════════════════════ -->
+  <rect x="80" y="676" width="1760" height="162" rx="16" fill="#EFF5FF"/>
+  <rect x="80" y="676" width="8" height="162" rx="4" fill="#2563EB"/>
+  <text x="120" y="718" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700"
+        letter-spacing="2.4" fill="#2563EB">POR QUÉ DOS, Y POR QUÉ NO SE MUESTREÓ</text>
+  <text x="120" y="756" font-family="Arial, Helvetica, sans-serif" font-size="23" fill="#1E3A8A">Solo dos personas intervienen en la emisión documental: no son una muestra de un universo mayor, son la totalidad del personal a cargo.</text>
+  <text x="120" y="788" font-family="Arial, Helvetica, sans-serif" font-size="23" fill="#1E3A8A">Ante una población de dos, un muestreo probabilístico carece de sentido. Se recurre a la figura del informante clave, procedente cuando</text>
+  <text x="120" y="820" font-family="Arial, Helvetica, sans-serif" font-size="23" fill="#1E3A8A">unas pocas personas concentran el conocimiento del fenómeno.</text>
+
+  <!-- ══ FUENTES ════════════════════════════════════════════ -->
+  <text x="80" y="884" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700"
+        letter-spacing="2.4" fill="#2563EB">FUENTES DE INFORMACIÓN</text>
+
+  <rect x="80" y="902" width="864" height="126" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2"/>
+  <text x="112" y="940" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F172A">Primarias</text>
+  <text x="112" y="972" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">Entrevista y cuestionario a los informantes · Registros</text>
+  <text x="112" y="1000" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">institucionales de emisión · Formatos oficiales vigentes</text>
+
+  <rect x="976" y="902" width="864" height="126" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2"/>
+  <text x="1008" y="940" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F172A">Secundarias</text>
+  <text x="1008" y="972" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">Manual PAP-01 · Trabajos de titulación y artículos</text>
+  <text x="1008" y="1000" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#475569">científicos · Gestión documental y experiencia de usuario</text>
+  <rect x="1646" y="918" width="168" height="50" rx="14" fill="#2563EB"/>
+  <text x="1730" y="951" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24"
+        font-weight="800" fill="#FFFFFF">56 refs.</text>
+</svg>

@@ -1,0 +1,812 @@
+<title>Manual operativo UniBridge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+  :root {
+    --paper:      #f4f5f6;
+    --surface:    #ffffff;
+    --surface-2:  #eceef0;
+    --ink:        #171a1f;
+    --ink-2:      #565d66;
+    --ink-3:      #7d848d;
+    --rule:       #dcdfe3;
+    --rule-soft:  #e8eaed;
+    --sello:      #1e3a5f;
+    --sello-soft: #e7edf5;
+    --ocre:       #8a5c22;
+    --ocre-soft:  #f6efe4;
+    --ok:         #2b6349;
+    --ok-soft:    #e4efe9;
+    --alto:       #8d2f2f;
+    --alto-soft:  #f7e8e8;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans:  "Source Sans 3", -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono:  "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #14161a;
+      --surface:    #1b1e23;
+      --surface-2:  #23272d;
+      --ink:        #e8eaed;
+      --ink-2:      #a8b0b9;
+      --ink-3:      #848c95;
+      --rule:       #2f343b;
+      --rule-soft:  #262b31;
+      --sello:      #8fb4e0;
+      --sello-soft: #1c2836;
+      --ocre:       #d8a86a;
+      --ocre-soft:  #2c2519;
+      --ok:         #7cc0a0;
+      --ok-soft:    #1a2822;
+      --alto:       #e08a8a;
+      --alto-soft:  #2c1c1c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:      #14161a;
+    --surface:    #1b1e23;
+    --surface-2:  #23272d;
+    --ink:        #e8eaed;
+    --ink-2:      #a8b0b9;
+    --ink-3:      #848c95;
+    --rule:       #2f343b;
+    --rule-soft:  #262b31;
+    --sello:      #8fb4e0;
+    --sello-soft: #1c2836;
+    --ocre:       #d8a86a;
+    --ocre-soft:  #2c2519;
+    --ok:         #7cc0a0;
+    --ok-soft:    #1a2822;
+    --alto:       #e08a8a;
+    --alto-soft:  #2c1c1c;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 61rem; margin: 0 auto; padding: 3.5rem 1.5rem 6rem; }
+
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2rem, 1.4rem + 2.4vw, 2.9rem); line-height: 1.15; letter-spacing: -0.01em; }
+  h2 { font-size: 1.6rem; line-height: 1.25; }
+  h3 { font-size: 1.12rem; line-height: 1.35; }
+  p { margin: 0; }
+  a { color: var(--sello); }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+
+  header.head { display: flex; flex-direction: column; gap: 0.9rem; padding-bottom: 2rem; border-bottom: 2px solid var(--ink); }
+  header.head .lede { font-size: 1.12rem; color: var(--ink-2); max-width: 62ch; }
+  .meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.6rem; font-family: var(--mono); font-size: 0.76rem; color: var(--ink-3); }
+
+  nav.toc { margin: 2.5rem 0 0; padding: 1.25rem 1.4rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; }
+  nav.toc ol { margin: 0.7rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.35rem 2rem; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  nav.toc a { display: flex; gap: 0.6rem; text-decoration: none; color: var(--ink); font-size: 0.95rem; padding: 0.15rem 0; }
+  nav.toc a:hover { color: var(--sello); text-decoration: underline; }
+  nav.toc .id { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); padding-top: 0.12rem; }
+
+  section { margin-top: 3.5rem; display: flex; flex-direction: column; gap: 1.1rem; }
+  section > .sec-head { display: flex; flex-direction: column; gap: 0.35rem; padding-bottom: 0.7rem; border-bottom: 1px solid var(--rule); }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.94rem; min-width: 34rem; }
+  th, td { text-align: left; padding: 0.7rem 0.95rem; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  thead th { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); background: var(--surface-2); border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.num { font-variant-numeric: tabular-nums; }
+
+  .chip { display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.03em; padding: 0.15rem 0.5rem; border-radius: 3px; white-space: nowrap; border: 1px solid transparent; }
+  .chip.admin  { background: var(--sello-soft); color: var(--sello); border-color: var(--sello); }
+  .chip.coord  { background: var(--ocre-soft); color: var(--ocre); border-color: var(--ocre); }
+  .chip.signer { background: var(--ok-soft); color: var(--ok); border-color: var(--ok); }
+  .chip.none   { background: var(--surface-2); color: var(--ink-3); border-color: var(--rule); }
+
+  .caso { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+  .caso > .caso-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 0.9rem; padding: 1rem 1.3rem; background: var(--surface-2); border-bottom: 1px solid var(--rule); }
+  .caso > .caso-head .id { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-3); }
+  .caso > .caso-body { padding: 1.3rem; display: flex; flex-direction: column; gap: 1.1rem; }
+  .caso .situacion { font-family: var(--serif); font-size: 1.03rem; font-style: italic; color: var(--ink-2); max-width: 66ch; }
+
+  .campo { display: grid; grid-template-columns: 8.5rem 1fr; gap: 0.5rem 1rem; align-items: start; }
+  @media (max-width: 640px) { .campo { grid-template-columns: 1fr; gap: 0.2rem; } }
+  .campo > dt { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); padding-top: 0.25rem; }
+  .campo > dd { margin: 0; font-size: 0.97rem; }
+
+  ol.pasos { margin: 0; padding: 0; list-style: none; counter-reset: paso; display: flex; flex-direction: column; gap: 0.55rem; }
+  ol.pasos > li { counter-increment: paso; display: grid; grid-template-columns: 1.5rem 1fr; gap: 0.75rem; font-size: 0.97rem; }
+  ol.pasos > li::before { content: counter(paso); font-family: var(--mono); font-size: 0.78rem; color: var(--sello); background: var(--sello-soft); border-radius: 3px; height: 1.4rem; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+
+  code, .ui { font-family: var(--mono); font-size: 0.86em; }
+  .ui { background: var(--surface-2); border: 1px solid var(--rule); border-radius: 3px; padding: 0.08em 0.36em; white-space: nowrap; }
+
+  .nota { border-left: 3px solid var(--ocre); background: var(--ocre-soft); padding: 0.85rem 1.1rem; font-size: 0.95rem; border-radius: 0; }
+  .nota.alto { border-left-color: var(--alto); background: var(--alto-soft); }
+  .nota.ok { border-left-color: var(--ok); background: var(--ok-soft); }
+  .nota strong { font-weight: 600; }
+
+  .comprobar { border-top: 1px dashed var(--rule); padding-top: 0.9rem; }
+  .comprobar .eyebrow { display: block; margin-bottom: 0.4rem; }
+  .comprobar ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.95rem; }
+
+  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); font-size: 0.88rem; color: var(--ink-3); }
+  :focus-visible { outline: 2px solid var(--sello); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+
+<header class="head">
+  <span class="eyebrow">UniBridge · Prácticas preprofesionales</span>
+  <h1>Manual operativo y guía de pruebas</h1>
+  <p class="lede">Qué puede hacer cada rol, y el camino exacto — pantalla, icono y clic — para resolver cada situación que se sale de lo normal. Escrito para recorrerlo probando.</p>
+  <div class="meta">
+    <span>Facultad de Ciencias Informáticas · ULEAM</span>
+    <span>14 casos</span>
+    <span>3 roles</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Índice">
+  <span class="eyebrow">Contenido</span>
+  <ol>
+    <li><a href="#roles"><span class="id">A</span> Los tres roles</a></li>
+    <li><a href="#estados"><span class="id">B</span> Estado de una práctica</a></li>
+    <li><a href="#requisitos"><span class="id">C</span> Requisitos del certificado</a></li>
+    <li><a href="#casos"><span class="id">D</span> Los 14 casos</a></li>
+    <li><a href="#limites"><span class="id">E</span> Lo que hoy no se puede</a></li>
+  </ol>
+</nav>
+
+<section id="roles">
+  <div class="sec-head">
+    <span class="eyebrow">A</span>
+    <h2>Los tres roles</h2>
+  </div>
+  <p>El estudiante <strong>no tiene cuenta</strong> y nunca entra al sistema: es un registro de datos. Todo lo hace alguien de la facultad.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>Rol</th><th>Quién es</th><th>Pantallas a las que entra</th><th>Lo que solo él puede hacer</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="chip admin">ADMIN</span></td>
+          <td>Administrador del sistema</td>
+          <td>Todas</td>
+          <td>Crear cuentas e invitaciones · crear y activar períodos · eliminar prácticas · borrar empresas · purgar actas</td>
+        </tr>
+        <tr>
+          <td><span class="chip coord">COORDINATOR</span></td>
+          <td>Responsable de prácticas de la carrera y su equipo de apoyo</td>
+          <td>Todas menos <span class="ui">Usuarios</span></td>
+          <td>El trabajo diario: registrar, importar, generar documentos, dar de baja, reasignar, cargar actas, emitir certificados</td>
+        </tr>
+        <tr>
+          <td><span class="chip signer">SIGNER</span></td>
+          <td>Decano y Responsable de Prácticas, como autoridades que firman</td>
+          <td>Solo <span class="ui">Firma de documentos</span></td>
+          <td>Descargar el lote, subirlo firmado con FirmaEC</td>
+        </tr>
+        <tr>
+          <td><span class="chip none">Estudiante</span></td>
+          <td>No es un usuario</td>
+          <td>Ninguna</td>
+          <td>Nada. No tiene contraseña ni puede iniciar sesión</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="nota">
+    <strong>Al probar:</strong> entra con las tres cuentas. Un <span class="chip coord">COORDINATOR</span> que abra <span class="ui">/users</span> debe rebotar; un <span class="chip signer">SIGNER</span> que abra <span class="ui">/practices</span> también. Si alguna pantalla se deja ver por quien no debe, es un fallo de <code>RoleGate</code>.
+  </div>
+</section>
+
+<section id="estados">
+  <div class="sec-head">
+    <span class="eyebrow">B</span>
+    <h2>El estado de una práctica no se elige: se deduce</h2>
+  </div>
+  <p>Nadie escribe «En proceso» a mano. El sistema lo calcula a partir de los documentos emitidos y sus firmas. Por eso, cuando algo cambia — se invalida un oficio, se firma un certificado — el estado se mueve solo.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Estado</th><th>Qué significa</th><th>Cómo se llega</th></tr></thead>
+      <tbody>
+        <tr><td><code>PENDING</code></td><td>No iniciado</td><td>La práctica existe pero no tiene ningún documento vigente</td></tr>
+        <tr><td><code>IN_PROGRESS</code></td><td>En proceso</td><td>Tiene solicitud o designación vigente</td></tr>
+        <tr><td><code>COMPLETED</code></td><td>Finalizado</td><td>Tiene certificado vigente y firmado</td></tr>
+        <tr><td><code>CANCELED</code></td><td>Dada de baja</td><td>Alguien la cerró con un motivo, o se reasignó al estudiante</td></tr>
+        <tr><td><code>REJECTED</code></td><td>Rechazada</td><td>Una autoridad devolvió el documento en el circuito de firma</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="requisitos">
+  <div class="sec-head">
+    <span class="eyebrow">C</span>
+    <h2>Los cinco requisitos del certificado</h2>
+  </div>
+  <p>El certificado es el acto irreversible del sistema: consume un número correlativo oficial. Antes de emitirlo, el servidor comprueba cinco cosas y, si falta alguna, lo bloquea y dice cuál.</p>
+
+  <ol class="pasos">
+    <li>Horas totales mayores que cero</li>
+    <li>Docente tutor asignado</li>
+    <li>Nivel de práctica (por ejemplo, «Prácticas Laborales II»)</li>
+    <li>Nivel académico (por ejemplo, «Octavo Nivel»)</li>
+    <li><strong>La aprobación del docente</strong>, que solo llega cargando el acta de calificaciones</li>
+  </ol>
+
+  <div class="nota ok">
+    <strong>El quinto es el importante.</strong> Sin acta cargada no hay certificado, por mucho que todo lo demás esté en orden. Es lo que impide que el sistema acredite por su cuenta algo que nadie evaluó. Hay además un bloqueo implícito: si ya existe un certificado vigente, no se emite otro — primero hay que invalidar el anterior.
+  </div>
+
+  <div class="nota">
+    <strong>Lo que ya NO se exige:</strong> la solicitud y la designación vigentes. Se pedían antes, entendiendo que el certificado cerraba un expediente que abrían los otros dos oficios. Pero esos oficios son trámite administrativo —una empresa puede haber acordado el cupo de palabra y no haber recibido nunca una solicitud— y bloquear por ellos dejaba fuera a estudiantes que sí habían culminado. Quien acredita la culminación es el acta.
+  </div>
+</section>
+
+<section id="casos">
+  <div class="sec-head">
+    <span class="eyebrow">D</span>
+    <h2>Los 14 casos</h2>
+  </div>
+  <p>Cada ficha lleva el mismo orden: quién puede hacerlo, dónde está el control, los pasos, qué escribe el sistema y cómo comprobar que funcionó.</p>
+
+  <!-- C-01 -->
+  <article class="caso" id="c01">
+    <div class="caso-head">
+      <span class="id">C-01</span>
+      <h3>El estudiante se retira a mitad de camino</h3>
+      <span class="chip admin">ADMIN</span><span class="chip coord">COORDINATOR</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">Empezó la práctica, ya tiene solicitud emitida, y a las tres semanas avisa que la deja.</p>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd><span class="ui">Prácticas</span> → pasa el ratón por la fila del estudiante → icono <strong>persona con signo menos</strong> <span class="ui">UserMinus</span>, a la derecha de la fila</dd>
+        <dt>Motivo</dt>
+        <dd><span class="ui">El estudiante se retiró</span></dd>
+      </dl>
+      <ol class="pasos">
+        <li>Busca al estudiante y sitúa el ratón sobre su fila.</li>
+        <li>Pulsa el icono de persona con signo menos.</li>
+        <li>Elige el motivo en la lista y, si hace falta, escribe una nota.</li>
+        <li>Confirma.</li>
+      </ol>
+      <div class="nota">
+        <strong>Qué hace el sistema:</strong> marca la práctica como <code>CANCELED</code>, le pone fecha de cierre, guarda el motivo y la nota. <strong>No borra ni invalida los documentos ya emitidos</strong>: la solicitud que salió a firma conserva su validez en papel, porque existió. Lo que se cierra es el expediente, no la historia.
+      </div>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>La fila pasa a <span class="ui">Cancelado</span> y deja de aparecer entre las certificables.</li>
+          <li>Al intentar emitirle un certificado, el sistema lo omite.</li>
+          <li>Vuelve a pulsar «dar de baja» sobre la misma fila: debe negarse con «esta práctica ya estaba dada de baja».</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-02 -->
+  <article class="caso" id="c02">
+    <div class="caso-head">
+      <span class="id">C-02</span>
+      <h3>La empresa rechaza al estudiante y hay que reubicarlo</h3>
+      <span class="chip admin">ADMIN</span><span class="chip coord">COORDINATOR</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">La empresa contesta que no lo recibe. Hay que mandarlo a otra sin perder el rastro de que estuvo asignado aquí.</p>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd><span class="ui">Prácticas</span> → ratón sobre la fila → icono de <strong>dos flechas opuestas</strong> <span class="ui">ArrowLeftRight</span></dd>
+        <dt>Motivo</dt>
+        <dd><span class="ui">La empresa rechazó al estudiante</span> · o <span class="ui">La empresa no tenía cupo disponible</span></dd>
+      </dl>
+      <ol class="pasos">
+        <li>Pulsa el icono de las dos flechas en la fila del estudiante.</li>
+        <li>Busca la empresa de destino escribiendo su nombre. También puedes cambiar el docente tutor aquí mismo.</li>
+        <li>Elige el motivo del cambio.</li>
+        <li>Confirma.</li>
+      </ol>
+      <div class="nota ok">
+        <strong>Qué hace el sistema:</strong> en una sola transacción cierra la práctica vieja como <code>CANCELED</code> con su motivo y <strong>crea una práctica nueva</strong> que apunta a la anterior. Así el recorrido del estudiante se puede leer entero. Hereda nivel, horas y fechas.
+      </div>
+      <div class="nota">
+        <strong>Y arrastra los oficios del grupo anterior.</strong> Cuando cambia la empresa, la solicitud <em>y</em> la designación del grupo se marcan como reemplazadas: nombraban a una empresa que ya no recibe a ese estudiante. Hay que volver a generarlas para la empresa nueva. Si alguno de los dos está dentro del circuito de firma, la reasignación entera se rechaza antes de tocar nada.
+      </div>
+      <div class="nota alto">
+        <strong>Lo que NO se hereda es la aprobación del docente.</strong> La práctica nueva vuelve a necesitar su acta, porque el acta anterior acreditaba una práctica que ya no es esta. Si esperas que el certificado salga solo tras reasignar, no saldrá — y es correcto que no salga.
+      </div>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>Aparecen <strong>dos</strong> prácticas del mismo estudiante: la vieja cancelada y la nueva en <span class="ui">No iniciado</span>.</li>
+          <li>La nueva está en la empresa de destino.</li>
+          <li>Si el docente de destino ya llegó a su tope, el sistema lo rechaza <em>antes</em> de tocar nada — el estudiante nunca se queda sin ninguna práctica abierta.</li>
+          <li>Prueba a reasignar una práctica ya cerrada: debe negarse.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-03 -->
+  <article class="caso" id="c03">
+    <div class="caso-head">
+      <span class="id">C-03</span>
+      <h3>Dar de baja a dos o más estudiantes del mismo proyecto</h3>
+      <span class="chip admin">ADMIN</span><span class="chip coord">COORDINATOR</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">La empresa devuelve a tres estudiantes de golpe. Hay que sacarlos a todos y reubicarlos.</p>
+      <div class="nota alto">
+        <strong>Hoy esto no existe en lote.</strong> La casilla de selección de <span class="ui">Prácticas</span> sirve para <em>emitir documentos</em> a un grupo, no para darlo de baja. Tanto «dar de baja» como «reasignar» trabajan sobre <strong>una fila cada vez</strong>. Con tres estudiantes son tres pasadas de <a href="#c01">C-01</a> o <a href="#c02">C-02</a>.
+      </div>
+      <ol class="pasos">
+        <li>Agrupa por <span class="ui">Empresa</span> para tener juntos a los del mismo sitio.</li>
+        <li>Repite <a href="#c02">C-02</a> en cada estudiante, con el motivo «La empresa rechazó al estudiante».</li>
+        <li>Comprueba que cada uno quedó con su práctica nueva en la empresa de destino.</li>
+      </ol>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>El grupo de la empresa de origen se queda sin esos estudiantes.</li>
+          <li>El grupo de la empresa de destino los recibe, cada uno con su docente.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-04 -->
+  <article class="caso" id="c04">
+    <div class="caso-head">
+      <span class="id">C-04</span>
+      <h3>Cambiar el docente tutor sin cambiar de empresa</h3>
+      <span class="chip admin">ADMIN</span><span class="chip coord">COORDINATOR</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">El docente asignado se va de licencia y otro asume a sus estudiantes.</p>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd>Mismo icono que la reasignación: <span class="ui">ArrowLeftRight</span> en la fila</dd>
+        <dt>Motivo</dt>
+        <dd><span class="ui">Cambio de tutor</span></dd>
+      </dl>
+      <ol class="pasos">
+        <li>Abre la reasignación y deja la empresa como está.</li>
+        <li>Cambia solo el docente.</li>
+        <li>Elige «Cambio de tutor» y confirma.</li>
+      </ol>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>Agrupa por <span class="ui">Empresa</span>: dentro del grupo, el estudiante aparece bajo el bloque del docente nuevo.</li>
+          <li>Si el docente de destino está lleno, el mensaje debe decir cuántos lleva de cuántos.</li>
+          <li>La designación ya emitida sigue nombrando al docente viejo: hay que regenerarla (<a href="#c05">C-05</a>).</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-05 -->
+  <article class="caso" id="c05">
+    <div class="caso-head">
+      <span class="id">C-05</span>
+      <h3>Un documento ya generado quedó mal</h3>
+      <span class="chip admin">ADMIN</span><span class="chip coord">COORDINATOR</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">El oficio salió con la carrera equivocada, o con el docente que ya no es. Hay que rehacerlo.</p>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd><span class="ui">Certificados</span> → busca el documento → invalidarlo con su motivo</dd>
+        <dt>Motivos</dt>
+        <dd><span class="ui">Error en los datos del documento</span> · <span class="ui">Período académico equivocado</span> · <span class="ui">Reemplazado por una versión corregida</span></dd>
+      </dl>
+      <ol class="pasos">
+        <li>Corrige primero el dato de origen (la carrera, el docente, las horas).</li>
+        <li>Invalida el documento viejo indicando el motivo.</li>
+        <li>Vuelve a generarlo desde <span class="ui">Prácticas</span>, en el icono del tipo de documento que toque.</li>
+      </ol>
+      <div class="nota">
+        <strong>Por qué en ese orden:</strong> el documento se genera con los datos del momento. Si regeneras antes
+        de corregir, el nuevo sale con el mismo error.
+      </div>
+      <div class="nota ok">
+        <strong>El archivo equivocado no se guarda; el registro sí.</strong> Al anular un documento, su fichero se
+        retira del almacén en ese momento. Lo que queda es la ficha —código, tipo, estudiantes que nombraba, motivo
+        tipificado, quién lo anuló y cuándo—, que es el historial del expediente. Así nadie puede reenviar por
+        descuido la versión errada creyendo que es la buena, y al mismo tiempo consta que existió y por qué se
+        reemplazó.
+      </div>
+      <div class="nota">
+        <strong>La excepción son los firmados.</strong> Un documento que ya suscribieron el Responsable y el Decano
+        conserva su archivo. La firma es un hecho ocurrido: el documento salió y probablemente ya está en manos de la
+        empresa. Borrar nuestra copia no lo deshace, solo nos deja sin poder demostrar qué se firmó.
+      </div>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>El documento viejo aparece bajo el filtro <span class="ui">Archivados</span>, no en la lista normal.</li>
+          <li>El nuevo tiene un código correlativo distinto.</li>
+          <li>En la fila de la práctica, la marca «!» de documento invalidado desaparece.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-06 -->
+  <article class="caso" id="c06">
+    <div class="caso-head">
+      <span class="id">C-06</span>
+      <h3>Cargar el acta: así se confirma que culminó</h3>
+      <span class="chip admin">ADMIN</span><span class="chip coord">COORDINATOR</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">El docente entrega el acta de calificaciones del semestre. Es el paso que habilita los certificados.</p>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd><span class="ui">Actas de culminación</span> en el menú lateral</dd>
+        <dt>Qué se sube</dt>
+        <dd>El <strong>PDF oficial que emite Secretaría General</strong>. No una foto, no un escaneo: el lector necesita el texto del documento</dd>
+      </dl>
+      <ol class="pasos">
+        <li>Arrastra el PDF a la zona de carga, o pulsa <span class="ui">Seleccionar archivo</span>.</li>
+        <li>Pulsa <span class="ui">Revisar antes de confirmar</span>. No se escribe nada todavía.</li>
+        <li>Lee el reparto en cinco grupos: listos, los que el acta no aprueba, cédulas desconocidas, sin práctica abierta, y ya aprobados.</li>
+        <li>Desmarca a quien no deba entrar, o usa <span class="ui">Marcar todos</span> / <span class="ui">Desmarcar todos</span>.</li>
+        <li>Confirma.</li>
+      </ol>
+      <div class="nota ok">
+        <strong>El docente no se elige.</strong> El sistema lo reconoce leyendo la cabecera del acta, y la aprobación queda a su nombre. Si el nombre que firma el acta no corresponde a ningún docente registrado, el botón de confirmar se bloquea: hay que registrarlo primero.
+      </div>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>Antes de cargar el acta, intenta emitir un certificado: debe faltar «la aprobación del tutor».</li>
+          <li>Después de cargarla, el mismo estudiante ya es certificable.</li>
+          <li>Sube el acta dos veces: la segunda debe mandar a todos al grupo «ya aprobados» y no duplicar nada.</li>
+          <li>Sube un PDF que no sea un acta: debe explicar que no pudo leerlo, sin romperse.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-07 -->
+  <article class="caso" id="c07">
+    <div class="caso-head">
+      <span class="id">C-07</span>
+      <h3>Emitir certificados de un grupo</h3>
+      <span class="chip admin">ADMIN</span><span class="chip coord">COORDINATOR</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">Cerrado el período y cargadas las actas, toca emitir. Consume numeración oficial: no tiene vuelta atrás.</p>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd><span class="ui">Prácticas</span> → marca las casillas de los estudiantes (o la de la cabecera para todo el grupo) → barra flotante abajo</dd>
+      </dl>
+      <ol class="pasos">
+        <li>Agrupa por <span class="ui">Empresa</span> y despliega la que toque: los grupos nacen plegados.</li><li>Marca los estudiantes que entran. Puedes marcarlos uno a uno o el grupo entero.</li>
+        <li>La barra flotante dice cuántos son certificables y cuántos quedan fuera.</li>
+        <li>Revisa el motivo de los que quedan fuera antes de seguir.</li>
+        <li>Confirma la emisión.</li>
+      </ol>
+      <div class="nota alto">
+        <strong>Cuidado con la casilla de envío automático:</strong> viene marcada por defecto y, además de emitir, manda el lote al circuito de firma del Decano. Son dos actos irreversibles en un clic. Si solo quieres emitir, desmárcala.
+      </div>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>Los estudiantes sin acta se omiten, se marcan en ámbar en su fila y el sistema dice «falta cargar el acta del docente».</li>
+          <li>Un estudiante con acta pero sin solicitud ni designación <strong>sí</strong> se certifica: esos oficios ya no bloquean.</li>
+          <li>Los certificados aparecen en <span class="ui">Certificados</span> con códigos correlativos consecutivos.</li>
+          <li>Intenta emitir dos veces al mismo: la segunda debe negarse por «ya tiene un certificado vigente».</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-08 -->
+  <article class="caso" id="c08">
+    <div class="caso-head">
+      <span class="id">C-08</span>
+      <h3>Firmar un lote</h3>
+      <span class="chip signer">SIGNER</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">El Responsable firma primero, el Decano cierra. Treinta documentos de una sentada.</p>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd><span class="ui">Firma de documentos</span>, única pantalla del rol firmante</dd>
+      </dl>
+      <ol class="pasos">
+        <li>Marca los lotes que vas a firmar y descárgalos en un solo ZIP.</li>
+        <li>Fírmalos con FirmaEC, fuera del sistema.</li>
+        <li>Arrastra todos los firmados de vuelta, sin separarlos por lote: el sistema los encamina por el código del nombre.</li>
+      </ol>
+      <div class="nota alto">
+        <strong>No cambies el nombre de los archivos.</strong> El código (por ejemplo <code>CERT-2026-1-00001</code>) es lo que empareja cada PDF con su documento. FirmaEC añade el sufijo <code>-signed</code> y eso el sistema ya lo espera.
+      </div>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>Al completar la primera firma, el lote pasa a «Esperando al Decano».</li>
+          <li>Al completar la segunda, pasa a «Completado».</li>
+          <li>Sube un PDF sin firma: debe rechazarlo y decir cuál falló, sin tumbar el resto del lote.</li>
+          <li>Renombra un archivo a propósito: debe avisar que no lo pudo emparejar.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-09 -->
+  <article class="caso" id="c09">
+    <div class="caso-head">
+      <span class="id">C-09</span>
+      <h3>Una autoridad rechaza un documento</h3>
+      <span class="chip admin">ADMIN</span><span class="chip coord">COORDINATOR</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">El Decano devuelve un certificado. Es el trabajo urgente: hay algo que rehacer.</p>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd><span class="ui">Certificados</span> → tarjeta <span class="ui">Rechazados</span>, arriba</dd>
+      </dl>
+      <ol class="pasos">
+        <li>Pulsa la tarjeta «Rechazados» para filtrar solo esos.</li>
+        <li>Lee el motivo del rechazo en el documento.</li>
+        <li>Corrige el dato, invalida el documento (<a href="#c05">C-05</a>) y vuelve a emitirlo.</li>
+      </ol>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>La tarjeta «Rechazados» muestra <strong>solo</strong> los rechazados. Si te devuelve la lista completa, es el bug que estaba antes.</li>
+          <li>«Esperando Decano» y «Esperando Responsable» deben encenderse por separado y dar listas distintas.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-10 -->
+  <article class="caso" id="c10">
+    <div class="caso-head">
+      <span class="id">C-10</span>
+      <h3>Importar un Excel con filas malas</h3>
+      <span class="chip admin">ADMIN</span><span class="chip coord">COORDINATOR</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">Llega la planilla del semestre con cédulas repetidas, nombres a medias y filas de otro período.</p>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd><span class="ui">Importación de datos</span></dd>
+        <dt>Archivo de prueba</dt>
+        <dd><code>docs/Datos de Prueba - Importacion con Errores y Avisos.xlsx</code>, 38 filas construidas para disparar cada regla</dd>
+      </dl>
+      <ol class="pasos">
+        <li>Sube el Excel. El sistema lo lee en el navegador y muestra la vista previa.</li>
+        <li>Pulsa <span class="ui">Revisar N filas</span>. Nada se escribe todavía.</li>
+        <li>La previsualización se parte en dos: <strong>Disponibles para cargar</strong> y <strong>No se cargarán</strong>.</li>
+        <li>Desmarca lo que no quieras, o usa <span class="ui">Marcar todas</span>.</li>
+        <li>Pulsa <span class="ui">Guardar N de M</span>.</li>
+      </ol>
+      <div class="nota">
+        <strong>Los seis errores que bloquean una fila:</strong> sin cédula · cédula que no tiene diez dígitos · cédula repetida dentro del archivo · faltan nombres o apellidos · sin empresa · la fila es de otro período. <br>
+        <strong>Los avisos que dejan pasar:</strong> el estudiante ya está registrado · ya tiene práctica abierta y se sobrescribirá · la empresa se creará · la carrera se creará sin abreviatura · el docente se creará · sin docente tutor · el docente llegó a su tope.
+      </div>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>Cada uno de los seis errores debe aparecer, en rojo, bajo el nombre del estudiante afectado.</li>
+          <li>Las filas con período <code>2024-I</code>, <code>2024 / 1</code> y <code>2024-1</code> deben pasar las tres: son el mismo semestre.</li>
+          <li>La sección «No se cargarán» no debe tener casillas: no hay nada que elegir ahí.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-11 -->
+  <article class="caso" id="c11">
+    <div class="caso-head">
+      <span class="id">C-11</span>
+      <h3>Estás mirando un período cerrado</h3>
+      <span class="chip admin">ADMIN</span><span class="chip coord">COORDINATOR</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">Alguien consulta el historial de 2023-2 y, sin darse cuenta, intenta cargar datos ahí.</p>
+      <dl class="campo">
+        <dt>Dónde se ve</dt>
+        <dd>El selector de período del <strong>topbar</strong>. Punto relleno con halo = abierto. Anillo hueco = cerrado</dd>
+      </dl>
+      <div class="nota ok">
+        <strong>La regla:</strong> el selector gobierna lo que se <em>ve</em>; el período activo gobierna lo que se <em>escribe</em>. Nunca se escribe en un semestre cerrado, ni por descuido ni a propósito.
+      </div>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>Cambia a un período cerrado: <span class="ui">Actas de culminación</span> debe avisar arriba que solo se consulta.</li>
+          <li><span class="ui">Importación</span> debe avisar que los datos no entran donde estás mirando.</li>
+          <li>El punto del selector debe pasar de relleno a hueco.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-12 -->
+  <article class="caso" id="c12">
+    <div class="caso-head">
+      <span class="id">C-12</span>
+      <h3>Falta la abreviatura de una carrera</h3>
+      <span class="chip admin">ADMIN</span><span class="chip coord">COORDINATOR</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">La generación de documentos se bloquea y no está claro por qué.</p>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd><span class="ui">Configuraciones</span> → carreras. Es lo que cuenta el <strong>número rojo</strong> del menú lateral</dd>
+      </dl>
+      <div class="nota">
+        Sin abreviatura no se puede componer el código del documento. Al importar, una carrera nueva se crea sin ella y el aviso lo dice: «habrá que declararla para poder emitir documentos».
+      </div>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>Importa una carrera nueva: el número rojo del menú lateral debe subir.</li>
+          <li>Declara la abreviatura: debe bajar, y la generación se desbloquea.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-13 -->
+  <article class="caso" id="c13">
+    <div class="caso-head">
+      <span class="id">C-13</span>
+      <h3>Faltan las autoridades del período</h3>
+      <span class="chip admin">ADMIN</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">Ningún documento sale porque el período no tiene Decano ni Responsable declarados.</p>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd><span class="ui">Configuraciones</span> → el período → nombres del Decano y del Responsable de Prácticas</dd>
+      </dl>
+      <div class="nota alto">
+        <strong>Ojo al probar:</strong> ese campo <strong>se guarda solo al salir del foco</strong>, sin confirmación y sin deshacer. Ese nombre se imprime en todos los certificados del período. Si entras «solo a mirar» y tocas el campo, el sistema escribe.
+      </div>
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>Borra el nombre del Decano e intenta emitir: debe bloquearse indicando qué falta.</li>
+          <li>Vuelve a ponerlo y comprueba que el certificado lo imprime.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- C-14 -->
+  <article class="caso" id="c14">
+    <div class="caso-head">
+      <span class="id">C-14</span>
+      <h3>La empresa acepta a unos sí y a otros no</h3>
+      <span class="chip admin">ADMIN</span><span class="chip coord">COORDINATOR</span>
+    </div>
+    <div class="caso-body">
+      <p class="situacion">Se envió la solicitud pidiendo que recibieran a seis estudiantes. La empresa contesta que solo tiene cupo para cuatro.</p>
+
+      <div class="nota alto">
+        <strong>El oficio de seis ya no sirve.</strong> Si la empresa solo recibe a cuatro, el oficio que nombra a seis
+        es incorrecto y nadie lo va a firmar: las autoridades esperan el corregido. Lo primero, siempre, es
+        <strong>rehacer el oficio con los cuatro que sí van</strong>. Lo que cambia entre los dos caminos de abajo es
+        qué pasa con los otros dos, no si hay que rehacerlo.
+      </div>
+
+      <h4 style="font-family:var(--serif);font-size:1rem;margin:0">Paso 0 · Retirar el oficio equivocado</h4>
+      <ol class="pasos">
+        <li>Si el oficio <strong>aún no salió a firma</strong>: invalídalo desde <span class="ui">Certificados</span> con el motivo <span class="ui">Error en los datos del documento</span>.</li>
+        <li>Si <strong>ya está en el circuito de firma</strong>: primero <span class="ui">Anular lote</span>, que devuelve los documentos a pendientes de envío. Después invalídalo.</li>
+        <li>Si una autoridad <strong>ya lo rechazó</strong>, aparece en la tarjeta <span class="ui">Rechazados</span>: ese es tu punto de partida.</li>
+      </ol>
+
+      <h4 style="font-family:var(--serif);font-size:1rem;margin:0.4rem 0 0">Camino A · Los dos se quedan sin empresa por ahora</h4>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd><span class="ui">Prácticas</span> → ratón sobre la fila → icono de <strong>persona con signo menos</strong></dd>
+        <dt>Motivo</dt>
+        <dd><span class="ui">La empresa rechazó al estudiante</span> · o <span class="ui">La empresa no tenía cupo disponible</span></dd>
+      </dl>
+      <ol class="pasos">
+        <li>Da de baja a los dos, uno por uno, con su motivo.</li>
+        <li>El sistema no toca los documentos por su cuenta, pero te dice qué conviene: como el oficio aún no está firmado, el aviso será <em>«conviene regenerarlo sin él antes de enviarlo»</em>. Ese consejo de «conserva su validez en papel» solo aparece cuando el documento YA se firmó y entregó, que no es este caso.</li>
+        <li>Marca con las casillas a los cuatro que sí van.</li>
+        <li>En la barra de abajo pulsa <span class="ui">Designación</span>. El sistema avisa de que ya existe una vigente y ofrece <strong>Regenerar</strong> con los cuatro.</li>
+      </ol>
+
+      <h4 style="font-family:var(--serif);font-size:1rem;margin:0.4rem 0 0">Camino B · Los dos se van a otra empresa</h4>
+      <dl class="campo">
+        <dt>Dónde</dt>
+        <dd><span class="ui">Prácticas</span> → ratón sobre la fila → icono de <strong>dos flechas opuestas</strong></dd>
+      </dl>
+      <ol class="pasos">
+        <li>Reasigna a cada uno a la empresa de destino, con su motivo.</li>
+        <li>Se cierra su práctica y nace una nueva enlazada, en la empresa nueva.</li>
+        <li><strong>Aquí sí se invalidan la solicitud y la designación</strong> del grupo anterior: nombraban a seis y ya solo van cuatro.</li>
+        <li>Regenera ambos oficios para los cuatro que quedan.</li>
+      </ol>
+
+      <div class="nota">
+        <strong>Dar de baja no invalida documentos por sí solo</strong>, y por eso el paso 0 es un paso aparte: el oficio equivocado se retira a mano. Reasignar (camino B) sí los invalida en cascada, así que ahí el paso 0 se hace solo. En ambos casos el resultado es el mismo: se emite un oficio nuevo, con su propio número correlativo, nombrando solo a los cuatro. Ese es el que se manda a firmar.
+      </div>
+
+      <div class="comprobar">
+        <span class="eyebrow">Cómo compruebas que funcionó</span>
+        <ul>
+          <li>Camino A: los dos aparecen como <span class="ui">Cancelado</span> y no se pueden marcar para oficios; los otros cuatro siguen normales.</li>
+          <li>Camino A: la nueva designación nombra a cuatro; la anterior queda en <span class="ui">Archivados</span>.</li>
+          <li>Camino B: cada uno de los dos tiene ahora <strong>dos prácticas</strong> — la cerrada y la nueva.</li>
+          <li>Si alguno de los oficios está dentro del circuito de firma, el camino B se rechaza antes de tocar nada y te dice cuál.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section id="limites">
+  <div class="sec-head">
+    <span class="eyebrow">E</span>
+    <h2>Lo que hoy no se puede</h2>
+  </div>
+  <p>Anotado para que no lo busques en la interfaz. No son fallos: son funciones que no se construyeron.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Situación</th><th>Estado actual</th><th>Salida</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Dar de baja a varios estudiantes a la vez</td>
+          <td>No existe. La selección múltiple solo sirve para emitir documentos</td>
+          <td>Uno por uno, con <a href="#c01">C-01</a></td>
+        </tr>
+        <tr>
+          <td>Reasignar a varios estudiantes a la vez</td>
+          <td>No existe</td>
+          <td>Uno por uno, con <a href="#c02">C-02</a></td>
+        </tr>
+        <tr>
+          <td>Vincular estudiantes sin asignar a una empresa</td>
+          <td>El botón existe pero responde que la función llegará «en la próxima actualización»</td>
+          <td>Registrar la práctica desde <span class="ui">Nueva práctica</span></td>
+        </tr>
+        <tr>
+          <td>Deshacer una emisión de certificados</td>
+          <td>No existe. La numeración correlativa se consume</td>
+          <td>Invalidar el documento (<a href="#c05">C-05</a>). El número no se recupera</td>
+        </tr>
+        <tr>
+          <td>Registrar un estudiante desde la pantalla de Estudiantes</td>
+          <td>No hay botón de alta ahí</td>
+          <td><span class="ui">Prácticas</span> → <span class="ui">Nueva práctica</span> → crear estudiante dentro del modal</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p>Los motivos de baja y de invalidación salen de un catálogo administrable, no están escritos en el código. Si necesitas uno que no está, se añade — no se fuerza «Otro motivo».</p>
+</footer>
+
+</div>

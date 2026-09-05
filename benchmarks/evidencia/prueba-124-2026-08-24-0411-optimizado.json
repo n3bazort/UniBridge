@@ -1,0 +1,521 @@
+{
+  "fecha": "2026-08-24T09:05:39.228Z",
+  "periodo": "2024-1",
+  "documentos": 124,
+  "completados": 124,
+  "fallidos": 0,
+  "encolado_ms": 170,
+  "total_s": 354.85,
+  "ms_por_documento": 2862,
+  "docs_por_segundo": 0.35,
+  "concurrencia": 4,
+  "minutos_manual_por_certificado": 6,
+  "equivalente_manual_min": 744,
+  "entorno": {
+    "cpu": "AMD Ryzen 3 3250U with Radeon Graphics",
+    "nucleos": 4,
+    "ram_gb": 13.9,
+    "plataforma": "win32 10.0.26200",
+    "node": "v24.14.1"
+  },
+  "serie": [
+    {
+      "t": 0.01,
+      "completados": 0,
+      "fallidos": 0,
+      "progreso": 0
+    },
+    {
+      "t": 11.03,
+      "completados": 0,
+      "fallidos": 0,
+      "progreso": 0
+    },
+    {
+      "t": 17.35,
+      "completados": 4,
+      "fallidos": 0,
+      "progreso": 3
+    },
+    {
+      "t": 21.18,
+      "completados": 5,
+      "fallidos": 0,
+      "progreso": 4
+    },
+    {
+      "t": 23.84,
+      "completados": 6,
+      "fallidos": 0,
+      "progreso": 5
+    },
+    {
+      "t": 26.34,
+      "completados": 6,
+      "fallidos": 0,
+      "progreso": 5
+    },
+    {
+      "t": 28.55,
+      "completados": 8,
+      "fallidos": 0,
+      "progreso": 6
+    },
+    {
+      "t": 32.86,
+      "completados": 9,
+      "fallidos": 0,
+      "progreso": 7
+    },
+    {
+      "t": 35.26,
+      "completados": 11,
+      "fallidos": 0,
+      "progreso": 9
+    },
+    {
+      "t": 43.71,
+      "completados": 12,
+      "fallidos": 0,
+      "progreso": 10
+    },
+    {
+      "t": 46.24,
+      "completados": 15,
+      "fallidos": 0,
+      "progreso": 12
+    },
+    {
+      "t": 52.08,
+      "completados": 16,
+      "fallidos": 0,
+      "progreso": 13
+    },
+    {
+      "t": 54.51,
+      "completados": 18,
+      "fallidos": 0,
+      "progreso": 15
+    },
+    {
+      "t": 59.23,
+      "completados": 19,
+      "fallidos": 0,
+      "progreso": 15
+    },
+    {
+      "t": 61.76,
+      "completados": 21,
+      "fallidos": 0,
+      "progreso": 17
+    },
+    {
+      "t": 64.21,
+      "completados": 22,
+      "fallidos": 0,
+      "progreso": 18
+    },
+    {
+      "t": 66.57,
+      "completados": 23,
+      "fallidos": 0,
+      "progreso": 19
+    },
+    {
+      "t": 69,
+      "completados": 24,
+      "fallidos": 0,
+      "progreso": 19
+    },
+    {
+      "t": 73.61,
+      "completados": 25,
+      "fallidos": 0,
+      "progreso": 20
+    },
+    {
+      "t": 78.4,
+      "completados": 27,
+      "fallidos": 0,
+      "progreso": 22
+    },
+    {
+      "t": 81.06,
+      "completados": 29,
+      "fallidos": 0,
+      "progreso": 23
+    },
+    {
+      "t": 86.29,
+      "completados": 30,
+      "fallidos": 0,
+      "progreso": 24
+    },
+    {
+      "t": 88.94,
+      "completados": 32,
+      "fallidos": 0,
+      "progreso": 26
+    },
+    {
+      "t": 93.15,
+      "completados": 33,
+      "fallidos": 0,
+      "progreso": 27
+    },
+    {
+      "t": 96.7,
+      "completados": 35,
+      "fallidos": 0,
+      "progreso": 28
+    },
+    {
+      "t": 104.54,
+      "completados": 36,
+      "fallidos": 0,
+      "progreso": 29
+    },
+    {
+      "t": 107.53,
+      "completados": 38,
+      "fallidos": 0,
+      "progreso": 31
+    },
+    {
+      "t": 113.48,
+      "completados": 39,
+      "fallidos": 0,
+      "progreso": 31
+    },
+    {
+      "t": 116.24,
+      "completados": 41,
+      "fallidos": 0,
+      "progreso": 33
+    },
+    {
+      "t": 121.6,
+      "completados": 42,
+      "fallidos": 0,
+      "progreso": 34
+    },
+    {
+      "t": 124.48,
+      "completados": 44,
+      "fallidos": 0,
+      "progreso": 35
+    },
+    {
+      "t": 129.65,
+      "completados": 45,
+      "fallidos": 0,
+      "progreso": 36
+    },
+    {
+      "t": 132.22,
+      "completados": 47,
+      "fallidos": 0,
+      "progreso": 38
+    },
+    {
+      "t": 140.34,
+      "completados": 48,
+      "fallidos": 0,
+      "progreso": 39
+    },
+    {
+      "t": 146.92,
+      "completados": 50,
+      "fallidos": 0,
+      "progreso": 40
+    },
+    {
+      "t": 152.44,
+      "completados": 54,
+      "fallidos": 0,
+      "progreso": 44
+    },
+    {
+      "t": 156.21,
+      "completados": 55,
+      "fallidos": 0,
+      "progreso": 44
+    },
+    {
+      "t": 164.1,
+      "completados": 56,
+      "fallidos": 0,
+      "progreso": 45
+    },
+    {
+      "t": 169.37,
+      "completados": 58,
+      "fallidos": 0,
+      "progreso": 47
+    },
+    {
+      "t": 171.92,
+      "completados": 60,
+      "fallidos": 0,
+      "progreso": 48
+    },
+    {
+      "t": 182.78,
+      "completados": 61,
+      "fallidos": 0,
+      "progreso": 49
+    },
+    {
+      "t": 188.21,
+      "completados": 63,
+      "fallidos": 0,
+      "progreso": 51
+    },
+    {
+      "t": 192.47,
+      "completados": 67,
+      "fallidos": 0,
+      "progreso": 54
+    },
+    {
+      "t": 196.63,
+      "completados": 68,
+      "fallidos": 0,
+      "progreso": 55
+    },
+    {
+      "t": 206.23,
+      "completados": 70,
+      "fallidos": 0,
+      "progreso": 56
+    },
+    {
+      "t": 212.19,
+      "completados": 73,
+      "fallidos": 0,
+      "progreso": 59
+    },
+    {
+      "t": 217.88,
+      "completados": 75,
+      "fallidos": 0,
+      "progreso": 60
+    },
+    {
+      "t": 221.99,
+      "completados": 77,
+      "fallidos": 0,
+      "progreso": 62
+    },
+    {
+      "t": 224.71,
+      "completados": 78,
+      "fallidos": 0,
+      "progreso": 63
+    },
+    {
+      "t": 229.95,
+      "completados": 79,
+      "fallidos": 0,
+      "progreso": 64
+    },
+    {
+      "t": 232.64,
+      "completados": 81,
+      "fallidos": 0,
+      "progreso": 65
+    },
+    {
+      "t": 235.68,
+      "completados": 82,
+      "fallidos": 0,
+      "progreso": 66
+    },
+    {
+      "t": 239.36,
+      "completados": 82,
+      "fallidos": 0,
+      "progreso": 66
+    },
+    {
+      "t": 242.02,
+      "completados": 84,
+      "fallidos": 0,
+      "progreso": 68
+    },
+    {
+      "t": 247.82,
+      "completados": 85,
+      "fallidos": 0,
+      "progreso": 69
+    },
+    {
+      "t": 251.14,
+      "completados": 87,
+      "fallidos": 0,
+      "progreso": 70
+    },
+    {
+      "t": 254.13,
+      "completados": 88,
+      "fallidos": 0,
+      "progreso": 71
+    },
+    {
+      "t": 258.26,
+      "completados": 89,
+      "fallidos": 0,
+      "progreso": 72
+    },
+    {
+      "t": 264.36,
+      "completados": 90,
+      "fallidos": 0,
+      "progreso": 73
+    },
+    {
+      "t": 267.25,
+      "completados": 92,
+      "fallidos": 0,
+      "progreso": 74
+    },
+    {
+      "t": 269.82,
+      "completados": 94,
+      "fallidos": 0,
+      "progreso": 76
+    },
+    {
+      "t": 275.07,
+      "completados": 94,
+      "fallidos": 0,
+      "progreso": 76
+    },
+    {
+      "t": 277.64,
+      "completados": 96,
+      "fallidos": 0,
+      "progreso": 77
+    },
+    {
+      "t": 283.78,
+      "completados": 97,
+      "fallidos": 0,
+      "progreso": 78
+    },
+    {
+      "t": 286.94,
+      "completados": 99,
+      "fallidos": 0,
+      "progreso": 80
+    },
+    {
+      "t": 296.01,
+      "completados": 100,
+      "fallidos": 0,
+      "progreso": 81
+    },
+    {
+      "t": 300,
+      "completados": 102,
+      "fallidos": 0,
+      "progreso": 82
+    },
+    {
+      "t": 303.91,
+      "completados": 104,
+      "fallidos": 0,
+      "progreso": 84
+    },
+    {
+      "t": 308.68,
+      "completados": 104,
+      "fallidos": 0,
+      "progreso": 84
+    },
+    {
+      "t": 311.23,
+      "completados": 105,
+      "fallidos": 0,
+      "progreso": 85
+    },
+    {
+      "t": 313.57,
+      "completados": 107,
+      "fallidos": 0,
+      "progreso": 86
+    },
+    {
+      "t": 318.83,
+      "completados": 109,
+      "fallidos": 0,
+      "progreso": 88
+    },
+    {
+      "t": 321.73,
+      "completados": 110,
+      "fallidos": 0,
+      "progreso": 89
+    },
+    {
+      "t": 324.4,
+      "completados": 111,
+      "fallidos": 0,
+      "progreso": 90
+    },
+    {
+      "t": 326.96,
+      "completados": 112,
+      "fallidos": 0,
+      "progreso": 90
+    },
+    {
+      "t": 329.64,
+      "completados": 112,
+      "fallidos": 0,
+      "progreso": 90
+    },
+    {
+      "t": 332.36,
+      "completados": 114,
+      "fallidos": 0,
+      "progreso": 92
+    },
+    {
+      "t": 338.19,
+      "completados": 115,
+      "fallidos": 0,
+      "progreso": 93
+    },
+    {
+      "t": 340.71,
+      "completados": 117,
+      "fallidos": 0,
+      "progreso": 94
+    },
+    {
+      "t": 345.42,
+      "completados": 118,
+      "fallidos": 0,
+      "progreso": 95
+    },
+    {
+      "t": 348.05,
+      "completados": 120,
+      "fallidos": 0,
+      "progreso": 97
+    },
+    {
+      "t": 353.33,
+      "completados": 121,
+      "fallidos": 0,
+      "progreso": 98
+    },
+    {
+      "t": 354.85,
+      "completados": 124,
+      "fallidos": 0,
+      "progreso": 100
+    }
+  ]
+}

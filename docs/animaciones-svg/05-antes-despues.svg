@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>UniBridge — antes y despues</title>
+  <rect id="bg" x="0" y="0" width="1920" height="1080" fill="#FFFFFF"/>
+
+  <line id="divisoria" x1="960" y1="120" x2="960" y2="960" stroke="#CBD5E1" stroke-width="4" stroke-dasharray="16 14"/>
+  <text id="titulo-antes" x="480" y="200" font-family="Arial, Helvetica, sans-serif" font-size="48"
+        font-weight="700" letter-spacing="12" fill="#94A3B8" text-anchor="middle">ANTES</text>
+
+  <g id="caos" fill="none" stroke="#94A3B8" stroke-linecap="round">
+    <g transform="rotate(-14 265 405)">
+      <rect x="200" y="320" width="130" height="170" rx="10" fill="#FFFFFF" stroke-width="5"/>
+      <line x1="228" y1="370" x2="302" y2="370" stroke="#CBD5E1" stroke-width="9"/>
+      <line x1="228" y1="400" x2="282" y2="400" stroke="#CBD5E1" stroke-width="9"/>
+    </g>
+    <g transform="rotate(11 455 375)">
+      <rect x="390" y="290" width="130" height="170" rx="10" fill="#FFFFFF" stroke-width="5"/>
+      <line x1="418" y1="340" x2="492" y2="340" stroke="#CBD5E1" stroke-width="9"/>
+      <line x1="418" y1="370" x2="472" y2="370" stroke="#CBD5E1" stroke-width="9"/>
+    </g>
+    <g transform="rotate(-7 665 425)">
+      <rect x="600" y="340" width="130" height="170" rx="10" fill="#FFFFFF" stroke-width="5"/>
+      <line x1="628" y1="390" x2="702" y2="390" stroke="#CBD5E1" stroke-width="9"/>
+      <line x1="628" y1="420" x2="682" y2="420" stroke="#CBD5E1" stroke-width="9"/>
+    </g>
+    <g transform="rotate(8 315 645)">
+      <rect x="250" y="560" width="130" height="170" rx="10" fill="#FFFFFF" stroke-width="5"/>
+      <line x1="278" y1="610" x2="352" y2="610" stroke="#CBD5E1" stroke-width="9"/>
+      <line x1="278" y1="640" x2="332" y2="640" stroke="#CBD5E1" stroke-width="9"/>
+    </g>
+    <g transform="rotate(-16 535 675)">
+      <rect x="470" y="590" width="130" height="170" rx="10" fill="#FFFFFF" stroke-width="5"/>
+      <line x1="498" y1="640" x2="572" y2="640" stroke="#CBD5E1" stroke-width="9"/>
+      <line x1="498" y1="670" x2="552" y2="670" stroke="#CBD5E1" stroke-width="9"/>
+    </g>
+    <g transform="rotate(13 745 655)">
+      <rect x="680" y="570" width="130" height="170" rx="10" fill="#FFFFFF" stroke-width="5"/>
+      <line x1="708" y1="620" x2="782" y2="620" stroke="#CBD5E1" stroke-width="9"/>
+      <line x1="708" y1="650" x2="762" y2="650" stroke="#CBD5E1" stroke-width="9"/>
+    </g>
+    <g id="hilos-cruzados" stroke="#CBD5E1" stroke-width="4" stroke-dasharray="12 12">
+      <path d="M 230 500 C 400 580, 300 660, 520 720"/>
+      <path d="M 640 470 C 460 540, 660 640, 390 790"/>
+      <path d="M 180 730 C 430 690, 570 800, 780 720"/>
+    </g>
+    <g id="reloj" stroke="#94A3B8" stroke-width="6">
+      <circle cx="480" cy="880" r="62" fill="#FFFFFF"/>
+      <path d="M 480 880 V 836" stroke-linecap="round"/>
+      <path d="M 480 880 L 515 900" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <g id="tirantes-orden" stroke="#CBD5E1" stroke-width="4" stroke-dasharray="10 10">
+    <line x1="1120" y1="510" x2="1120" y2="594"/>
+    <line x1="1333" y1="510" x2="1333" y2="594"/>
+    <line x1="1546" y1="510" x2="1546" y2="594"/>
+    <line x1="1759" y1="510" x2="1759" y2="594"/>
+  </g>
+  <g id="rotulos-orden" font-family="Arial, Helvetica, sans-serif" font-size="24" letter-spacing="3" fill="#94A3B8" text-anchor="middle">
+    <text x="1120" y="700">CARGA</text>
+    <text x="1333" y="700">VALIDA</text>
+    <text x="1546" y="700">FIRMA</text>
+    <text x="1759" y="700">ENTREGA</text>
+  </g>
+
+  <g id="estado-inicial">
+    <text x="1440" y="200" font-family="Arial, Helvetica, sans-serif" font-size="48"
+          font-weight="700" letter-spacing="12" fill="#CBD5E1" text-anchor="middle">DESPUES</text>
+    <line x1="1120" y1="620" x2="1759" y2="620" stroke="#CBD5E1" stroke-width="14" stroke-linecap="round"/>
+    <g fill="#FFFFFF" stroke="#CBD5E1" stroke-width="5">
+      <rect x="1080" y="400" width="80" height="110" rx="8"/>
+      <rect x="1293" y="400" width="80" height="110" rx="8"/>
+      <rect x="1506" y="400" width="80" height="110" rx="8"/>
+      <rect x="1719" y="400" width="80" height="110" rx="8"/>
+      <circle cx="1120" cy="620" r="26" stroke-width="10"/>
+      <circle cx="1333" cy="620" r="26" stroke-width="10"/>
+      <circle cx="1546" cy="620" r="26" stroke-width="10"/>
+      <circle cx="1759" cy="620" r="26" stroke-width="10"/>
+    </g>
+  </g>
+
+  <g id="estado-final">
+    <text x="1440" y="200" font-family="Arial, Helvetica, sans-serif" font-size="48"
+          font-weight="700" letter-spacing="12" fill="#2563EB" text-anchor="middle">DESPUES</text>
+    <line id="riel-avance" x1="1120" y1="620" x2="1759" y2="620" stroke="#2563EB" stroke-width="14" stroke-linecap="round"/>
+    <g id="fichas" fill="#FFFFFF" stroke="#0F172A" stroke-width="5">
+      <g id="ficha-1"><rect x="1080" y="400" width="80" height="110" rx="8"/><line x1="1098" y1="435" x2="1142" y2="435" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round"/><line x1="1098" y1="462" x2="1128" y2="462" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round"/></g>
+      <g id="ficha-2"><rect x="1293" y="400" width="80" height="110" rx="8"/><line x1="1311" y1="435" x2="1355" y2="435" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round"/><line x1="1311" y1="462" x2="1341" y2="462" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round"/></g>
+      <g id="ficha-3"><rect x="1506" y="400" width="80" height="110" rx="8"/><line x1="1524" y1="435" x2="1568" y2="435" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round"/><line x1="1524" y1="462" x2="1554" y2="462" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round"/></g>
+      <g id="ficha-4"><rect x="1719" y="400" width="80" height="110" rx="8"/><line x1="1737" y1="435" x2="1781" y2="435" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round"/><line x1="1737" y1="462" x2="1767" y2="462" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round"/></g>
+    </g>
+    <g id="nodos-orden" fill="#2563EB" stroke="#2563EB" stroke-width="10">
+      <circle cx="1120" cy="620" r="26"/>
+      <circle cx="1333" cy="620" r="26"/>
+      <circle cx="1546" cy="620" r="26"/>
+      <circle cx="1759" cy="620" r="26"/>
+    </g>
+    <g id="cierre-derecha">
+      <path d="M 1180 852 L 1202 876 L 1246 826" fill="none" stroke="#2563EB" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="1280" y="872" font-family="Arial, Helvetica, sans-serif" font-size="26" letter-spacing="4" fill="#0F172A">TRAZABLE Y VERIFICABLE</text>
+    </g>
+  </g>
+</svg>
