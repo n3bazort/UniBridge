@@ -21,7 +21,7 @@ export function CompanyList({ companies, selectedId, onSelect }: CompanyListProp
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-[#eef2f7] rounded-[24px] bg-white/50">
         <div className="w-16 h-16 bg-[#f8fafc] rounded-full flex items-center justify-center mb-4">
-          <Building2 size={32} className="text-[#94a3b8]" />
+          <Building2 size={32} className="text-muted-foreground" />
         </div>
         <h3 className="text-[16px] font-semibold text-[#1e293b] mb-1">No se encontraron empresas</h3>
         <p className="text-[14px] text-[#64748b] max-w-[250px]">

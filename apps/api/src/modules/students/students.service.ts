@@ -4,7 +4,6 @@ import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { Prisma } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class StudentsService {
@@ -45,39 +44,18 @@ export class StudentsService {
       facultyId = prog.facultyId;
     }
 
-    // 2. Resolver o crear el registro de usuario (User) para el estudiante
-    let userId = dtoData.userId;
-    if (!userId) {
-      const studentEmail = email || `${dtoData.dni}@estudiantes.unibridge.edu.ec`;
-      const existingUser = await this.prisma.user.findUnique({
-        where: { email: studentEmail }
-      });
-
-      if (existingUser) {
-        userId = existingUser.id;
-      } else {
-        const hashedPassword = await bcrypt.hash(dtoData.dni, 10);
-        const newUser = await this.prisma.user.create({
-          data: {
-            email: studentEmail,
-            password: hashedPassword,
-            role: 'STUDENT',
-          }
-        });
-        userId = newUser.id;
-      }
-    }
-
+    // El estudiante NO recibe cuenta de acceso. Antes se le creaba un `User`
+    // con la cédula por contraseña, pero el estudiante nunca entra al sistema:
+    // es el sujeto del trámite, no quien lo opera. Crear credenciales que nadie
+    // usa solo añadía superficie de ataque y datos que custodiar.
     return this.prisma.student.create({
       data: {
         ...dtoData,
         facultyId,
-        userId,
       },
       include: {
         program: true,
         faculty: true,
-        user: true,
       }
     });
   }
@@ -114,8 +92,7 @@ export class StudentsService {
         take: limit,
         orderBy: { [sortBy]: sortOrder },
         include: {
-          program: { select: { name: true } },
-          user: { select: { email: true } }
+          program: { select: { name: true } }
         }
       }),
       this.prisma.student.count({ where }),
@@ -153,35 +130,4 @@ export class StudentsService {
     return this.prisma.student.delete({ where: { id } });
   }
 
-  async getProfileByUserId(userId: string) {
-    const student = await this.prisma.student.findUnique({
-      where: { userId },
-      include: {
-        program: true,
-        faculty: true,
-        practices: {
-          include: {
-            company: true
-          },
-          orderBy: {
-            createdAt: 'desc'
-          }
-        },
-        generatedDocs: {
-          include: {
-            template: true
-          },
-          orderBy: {
-            createdAt: 'desc'
-          }
-        }
-      }
-    });
-
-    if (!student) {
-      throw new Error('Estudiante no encontrado');
-    }
-
-    return student;
-  }
 }

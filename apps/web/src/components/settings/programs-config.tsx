@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import { RoleGate } from '@/components/shared/role-gate'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { Search, BookOpen, XCircle, AlertCircle, Check, X, Edit2, Trash2 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -141,12 +142,13 @@ export function ProgramsConfig() {
 
           <div className="flex items-center gap-3">
             <div className="relative max-w-md w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af]" />
-              <Input 
-                placeholder="Buscar carrera o abreviatura..." 
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar"
+                aria-label="Buscar carrera o abreviatura"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 h-[48px] bg-slate-50 border-[#eef2f7] focus:ring-[#3b82f6]/20 focus:border-[#3b82f6] rounded-[12px] shadow-sm"
+                className="pl-9"
               />
             </div>
           </div>
@@ -273,19 +275,21 @@ export function ProgramsConfig() {
                 ¿Estás seguro de que deseas eliminar esta carrera? Esta acción no se puede deshacer.
               </p>
               <div className="flex items-center justify-end gap-3">
-                <button 
+                <Button
+                  variant="outline"
                   onClick={() => setDeleteModal({ show: false, programId: null })}
-                  className="px-4 py-2 text-[14px] font-medium text-[#374151] bg-white hover:bg-[#f8fafc] border border-[#eef2f7] rounded-[10px] transition-colors"
+                  className="text-[14px] rounded-[10px]"
                 >
                   Cancelar
-                </button>
-                <button 
+                </Button>
+                <Button
+                  variant="destructive"
                   onClick={() => deleteModal.programId && deleteMutation.mutate(deleteModal.programId)}
                   disabled={deleteMutation.isPending}
-                  className="px-4 py-2 text-[14px] font-medium text-white bg-red-600 hover:bg-red-700 rounded-[10px] transition-colors shadow-soft disabled:opacity-50"
+                  className="text-[14px] rounded-[10px] shadow-soft"
                 >
                   {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

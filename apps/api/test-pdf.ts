@@ -1,4 +1,5 @@
 import { PdfDriver } from './src/modules/document-engine/pdf.driver';
+import * as fs from 'fs';
 import * as path from 'path';
 
 async function main() {
@@ -50,7 +51,7 @@ async function main() {
   const outputPath = path.join(process.cwd(), 'certificado-prueba-fuego.pdf');
   
   console.log('🔥 Iniciando prueba de fuego del Motor Documental...');
-  await driver.generatePdf(template as any, data, outputPath);
+  fs.writeFileSync(outputPath, await driver.generatePdf(template as any, data));
   console.log(`✅ ¡Prueba exitosa! PDF generado y guardado en: ${outputPath}`);
 }
 

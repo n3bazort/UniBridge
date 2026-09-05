@@ -18,10 +18,16 @@ export class BulkImportStudentRowDto {
   @IsNotEmpty()
   lastName: string;
 
-  @ApiProperty({ example: 'juan.perez@uleam.edu.ec' })
+  /**
+   * Correo del estudiante. Ya no se usa para nada: servía para abrirle una
+   * cuenta de acceso, y el estudiante no tiene cuenta. Se sigue aceptando
+   * —opcional— porque la plantilla de Excel lleva la columna y la interfaz la
+   * envía; rechazarla rompería las importaciones que ya funcionan.
+   */
+  @ApiPropertyOptional({ example: 'juan.perez@uleam.edu.ec' })
   @IsString()
-  @IsNotEmpty()
-  email: string;
+  @IsOptional()
+  email?: string;
 
   @ApiPropertyOptional({ example: 'Ingeniería en Sistemas' })
   @IsString()

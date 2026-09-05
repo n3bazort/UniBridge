@@ -7,11 +7,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { MinioService } from '../minio/minio.service';
-import { SignerRole, SignatureBatchStatus, SignatureItemStatus } from '@prisma/client';
+import { SignerRole, SignatureBatchStatus } from '@prisma/client';
 import * as crypto from 'crypto';
 import * as archiver from 'archiver';
 import type { Response } from 'express';
-import { extractDocumentCode, assertPdfHasDigitalSignature } from './signature-verification.util';
+import { matchDocumentCode, assertPdfHasDigitalSignature } from './signature-verification.util';
 import { PracticesService } from '../practices/practices.service';
 
 /**
@@ -26,8 +26,10 @@ import { PracticesService } from '../practices/practices.service';
  *  4. El DECANO repite el proceso sobre los PDFs ya firmados por el responsable.
  *  5. Al completarse, cada documento queda SIGNED y visible para su estudiante.
  *
- * El emparejamiento archivo→documento se hace por el documentCode presente
- * en el nombre del archivo (FirmaEC conserva el nombre y añade sufijos).
+ * El emparejamiento archivo→documento se hace comparando el nombre del archivo
+ * subido con los códigos que ese lote contiene: FirmaEC conserva el nombre que
+ * traía el ZIP y solo le añade sufijos. Se compara contra los códigos reales y
+ * no contra un patrón fijo porque la numeración se configura por plantilla.
  */
 @Injectable()
 export class SignaturesService {
@@ -117,7 +119,9 @@ export class SignaturesService {
   async findBatches() {
     return this.prisma.signatureBatch.findMany({
       include: {
-        createdBy: { select: { email: true } },
+        // El nombre de quien envió el lote: el correo solo no le dice nada
+        // al firmante que abre la lista y quiere saber a quién preguntarle.
+        createdBy: { select: { email: true, firstName: true, lastName: true } },
         items: {
           include: {
             document: {
@@ -149,11 +153,81 @@ export class SignaturesService {
     });
   }
 
+  /**
+   * Historial de lo que este firmante ya suscribió, agrupado por lote.
+   *
+   * Sirve por igual al Responsable y al Decano: cada ítem guarda qué usuario
+   * firmó en cada etapa, así que basta preguntar por las tres y quedarse con
+   * las que llevan su nombre. Un mismo lote puede aparecer con documentos
+   * firmados en etapas distintas si la persona intervino dos veces.
+   */
+  async findSignedByMe(userId: string) {
+    const items = await this.prisma.signatureBatchItem.findMany({
+      where: {
+        OR: [
+          { directorSignedById: userId },
+          { deanSignedById: userId },
+          { finalSignedById: userId },
+        ],
+      },
+      include: {
+        batch: { select: { id: true, code: true, name: true, status: true, createdAt: true } },
+        document: {
+          select: {
+            id: true, documentCode: true, documentType: true,
+            student: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const porLote = new Map<string, any>();
+    for (const item of items) {
+      // La etapa en que intervino esta persona; si firmó en varias, se informa
+      // la más avanzada, que es la que refleja el estado real del documento.
+      const etapa =
+        item.finalSignedById === userId ? 'FINAL'
+        : item.deanSignedById === userId ? 'DEAN'
+        : 'DIRECTOR';
+
+      if (!porLote.has(item.batchId)) {
+        porLote.set(item.batchId, {
+          batchId: item.batchId,
+          code: item.batch.code,
+          name: item.batch.name,
+          status: item.batch.status,
+          createdAt: item.batch.createdAt,
+          firmadoEl: item.updatedAt,
+          documentos: [],
+        });
+      }
+      const lote = porLote.get(item.batchId);
+      if (item.updatedAt > lote.firmadoEl) lote.firmadoEl = item.updatedAt;
+      lote.documentos.push({
+        itemId: item.id,
+        documentId: item.documentId,
+        documentCode: item.document.documentCode,
+        documentType: item.document.documentType,
+        student: item.document.student,
+        estadoItem: item.status,
+        etapa,
+        firmadoEl: item.updatedAt,
+      });
+    }
+
+    return [...porLote.values()].sort(
+      (a, b) => new Date(b.firmadoEl).getTime() - new Date(a.firmadoEl).getTime(),
+    );
+  }
+
   async findBatch(id: string) {
     const batch = await this.prisma.signatureBatch.findUnique({
       where: { id },
       include: {
-        createdBy: { select: { email: true } },
+        // El nombre de quien envió el lote: el correo solo no le dice nada
+        // al firmante que abre la lista y quiere saber a quién preguntarle.
+        createdBy: { select: { email: true, firstName: true, lastName: true } },
         items: {
           include: {
             document: {
@@ -174,6 +248,77 @@ export class SignaturesService {
    * originales si espera al responsable de prácticas, firmados-por-responsable si espera al decano.
    * Los nombres de entrada son `<documentCode>.pdf` para el re-emparejamiento.
    */
+  /**
+   * Un único ZIP con todos los lotes que este firmante tiene pendientes, o solo
+   * los indicados en `batchIds`.
+   *
+   * Quien firma suele tener varios lotes esperando a la vez y bajarlos de uno
+   * en uno es puro trámite.
+   *
+   * El ZIP va plano, sin una carpeta por lote: así se apunta la herramienta de
+   * firma a un único directorio y se firma todo de una pasada, y al devolverlos
+   * se suben igual de juntos. No hay riesgo de que dos archivos choquen porque
+   * el código del documento es único en todo el sistema, y es también ese
+   * código —nunca la carpeta— el que decide a qué lote regresa cada archivo.
+   */
+  async streamPendingZip(userId: string, res: Response, batchIds?: string[]) {
+    const profile = await this.getSignerProfile(userId);
+    const stage: SignatureBatchStatus =
+      profile.signerRole === 'DIRECTOR' ? 'PENDING_DIRECTOR' : 'PENDING_DEAN';
+
+    const batches = await this.prisma.signatureBatch.findMany({
+      where: { status: stage, ...(batchIds?.length ? { id: { in: batchIds } } : {}) },
+      include: { items: { include: { document: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (batches.length === 0) {
+      throw new NotFoundException('No tienes lotes pendientes de firma');
+    }
+
+    // Se resuelven todas las entradas antes de abrir el ZIP: así, si algo falta,
+    // el error sale como respuesta HTTP y no a mitad de una descarga ya iniciada.
+    const entries: { key: string; name: string }[] = [];
+    for (const batch of batches) {
+      const vistos = new Set<string>();
+      for (const item of batch.items) {
+        if (item.status === 'REJECTED') continue;
+        const code = item.document.documentCode || item.document.id;
+        if (vistos.has(code)) continue; // un oficio grupal comparte archivo
+        vistos.add(code);
+        const key =
+          batch.status === 'PENDING_DEAN'
+            ? (item.directorFileKey || item.deanFileKey)
+            : item.document.fileUrl;
+        if (!key) continue;
+        const ext = key.endsWith('.docx') ? '.docx' : '.pdf';
+        entries.push({ key, name: `${code}${ext}` });
+      }
+    }
+
+    if (entries.length === 0) {
+      throw new NotFoundException('Los lotes seleccionados no tienen archivos descargables');
+    }
+
+    const nombreZip =
+      batches.length === 1 ? `${batches[0].code}.zip` : `lotes-pendientes-${batches.length}.zip`;
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${nombreZip}"`);
+
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.on('error', (err) => {
+      this.logger.error('Error creando el ZIP de lotes pendientes', err);
+      res.destroy(err);
+    });
+    archive.pipe(res);
+
+    for (const entry of entries) {
+      const stream = await this.minio.getObjectStream(entry.key);
+      archive.append(stream, { name: entry.name });
+    }
+    await archive.finalize();
+  }
+
   async streamBatchZip(batchId: string, userId: string, role: string, res: Response) {
     const batch = await this.findBatch(batchId);
 
@@ -329,11 +474,25 @@ export class SignaturesService {
 
     const results: Array<{ file: string; ok: boolean; documentCode?: string; error?: string }> = [];
 
+    // Los códigos que este lote espera. El archivo subido se compara contra
+    // ellos en vez de intentar deducir su código a ciegas.
+    const codigosDelLote = [
+      ...new Set(
+        batch.items
+          .filter((i) => i.status !== 'REJECTED')
+          .map((i) => i.document.documentCode)
+          .filter((c): c is string => !!c),
+      ),
+    ];
+
     for (const file of files) {
       try {
-        const documentCode = extractDocumentCode(file.originalname);
+        const documentCode = matchDocumentCode(file.originalname, codigosDelLote);
         if (!documentCode) {
-          throw new Error('No se pudo identificar el código de documento en el nombre del archivo');
+          throw new Error(
+            `El archivo no corresponde a ningún documento de este lote. ` +
+            `Súbelo con el nombre que traía el ZIP (${codigosDelLote.slice(0, 3).join(', ')}${codigosDelLote.length > 3 ? '…' : ''}).`,
+          );
         }
 
         const items = batch.items.filter((i) => i.document.documentCode === documentCode && i.status !== 'REJECTED');
@@ -360,6 +519,101 @@ export class SignaturesService {
       uploaded: results.filter((r) => r.ok).length,
       failed: results.filter((r) => !r.ok).length,
       batchStatus,
+    };
+  }
+
+  /**
+   * Sube los PDF firmados sin decir a qué lote pertenece cada uno: el sistema
+   * lo deduce del código que lleva el nombre del archivo y lo encamina solo.
+   *
+   * Es la contraparte de `streamPendingZip`. Quien firma descarga varios lotes
+   * de una vez, los firma todos y los devuelve juntos; obligarle a separarlos
+   * por lote antes de subirlos sería pedirle que rehaga a mano una
+   * clasificación que el código del documento ya resuelve. Un archivo que no
+   * corresponda a ningún lote pendiente se reporta como error y no detiene a
+   * los demás.
+   */
+  async uploadSignedFilesMulti(
+    userId: string,
+    files: Array<{ originalname: string; buffer: Buffer; mimetype: string }>,
+  ) {
+    if (!files?.length) throw new BadRequestException('No se recibieron archivos');
+
+    const profile = await this.getSignerProfile(userId);
+    const stage: SignatureBatchStatus =
+      profile.signerRole === 'DIRECTOR' ? 'PENDING_DIRECTOR' : 'PENDING_DEAN';
+
+    const batches = await this.prisma.signatureBatch.findMany({
+      where: { status: stage },
+      include: { items: { include: { document: true } } },
+    });
+    if (batches.length === 0) {
+      throw new ForbiddenException('No tienes lotes pendientes de firma');
+    }
+
+    // Índice código -> lote, con los códigos de todos los lotes pendientes.
+    // Los códigos son únicos en el sistema, así que no hay ambigüedad posible.
+    const loteDeCodigo = new Map<string, (typeof batches)[number]>();
+    for (const batch of batches) {
+      for (const item of batch.items) {
+        if (item.status === 'REJECTED') continue;
+        if (item.document.documentCode) loteDeCodigo.set(item.document.documentCode, batch);
+      }
+    }
+    const todosLosCodigos = [...loteDeCodigo.keys()];
+
+    const activePeriod = await this.prisma.academicPeriod.findFirst({ where: { isActive: true } });
+    const periodo = activePeriod?.code || new Date().getFullYear().toString();
+
+    const results: Array<{
+      file: string; ok: boolean; documentCode?: string; batchCode?: string; error?: string;
+    }> = [];
+    const lotesTocados = new Set<string>();
+
+    for (const file of files) {
+      try {
+        const documentCode = matchDocumentCode(file.originalname, todosLosCodigos);
+        const batch = documentCode ? loteDeCodigo.get(documentCode) : undefined;
+        if (!documentCode || !batch) {
+          throw new Error(
+            'El archivo no corresponde a ningún documento de tus lotes pendientes. ' +
+            'Súbelo con el nombre que traía el ZIP.',
+          );
+        }
+
+        const items = batch.items.filter(
+          (i) => i.document.documentCode === documentCode && i.status !== 'REJECTED',
+        );
+        if (items.length === 0) {
+          throw new Error(`Ningún documento pendiente coincide con el código ${documentCode}`);
+        }
+
+        assertPdfHasDigitalSignature(file.buffer, file.originalname);
+        await this.persistSignedItem(
+          documentCode, file.buffer, items, profile, userId, periodo, batch.code,
+        );
+
+        lotesTocados.add(batch.id);
+        results.push({ file: file.originalname, ok: true, documentCode, batchCode: batch.code });
+      } catch (err: any) {
+        results.push({ file: file.originalname, ok: false, error: err.message });
+      }
+    }
+
+    // Cada lote alcanzado se cierra por separado: unos pueden quedar completos
+    // y avanzar de etapa mientras a otros todavía les falten documentos.
+    const batchStatuses: Array<{ batchId: string; batchCode: string; status: SignatureBatchStatus }> = [];
+    for (const batchId of lotesTocados) {
+      const status = await this.finalizeBatchStage(batchId, profile);
+      const batch = batches.find((b) => b.id === batchId);
+      batchStatuses.push({ batchId, batchCode: batch?.code || '', status });
+    }
+
+    return {
+      results,
+      uploaded: results.filter((r) => r.ok).length,
+      failed: results.filter((r) => !r.ok).length,
+      batches: batchStatuses,
     };
   }
 

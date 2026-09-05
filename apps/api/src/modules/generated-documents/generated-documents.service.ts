@@ -6,12 +6,15 @@ import { DocumentEngineService } from '../document-engine/document-engine.servic
 import { MinioService } from '../minio/minio.service';
 import { PracticesService } from '../practices/practices.service';
 import { canIssueCertificate } from '../practices/practice-status.util';
+import { assertPeriodoAbierto, getPeriodoActivo, normalizePeriodCode } from '../academic-periods/period.util';
 import {
   OficioKind, OficioScope, esOficioGrupal, nombreDelOficio, formatearCodigo, PATRON_POR_DEFECTO,
   NOMBRE_BASE_POR_DEFECTO, nombreDeArchivo, fechaDelOficio, cantidadEnLetras, unirDistintos,
-  nivelAbreviado,
+  nivelAbreviado, requisitosDe, dependientesDe, nombreDelDocumento, nombreContable,
 } from './oficio.util';
 import { PDFDocument } from 'pdf-lib';
+import * as archiver from 'archiver';
+import type { Response } from 'express';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
@@ -44,61 +47,54 @@ export class GeneratedDocumentsService implements OnModuleInit {
   }
 
   /**
-   * Elimina DEFINITIVAMENTE (BD + archivo en MinIO) las versiones anuladas
-   * con más de 30 días. Funciona como papelera: durante ese mes el historial
-   * las muestra con su motivo; después desaparecen.
+   * Barrido de archivos huérfanos: retira del almacén los ficheros de versiones
+   * anuladas a las que se les escapó el borrado inmediato (un fallo de red al
+   * anular, una fila anulada antes de que existiera esta regla).
    *
-   * Se conservan siempre las que participaron en un circuito de firma:
-   * borrar esas filas rompería la trazabilidad de las firmas.
+   * NO borra filas. Antes sí: a los treinta días eliminaba el registro entero,
+   * con lo que se perdía el rastro de que el documento existió y por qué se
+   * anuló — justo lo contrario de lo que un expediente necesita. Ahora el
+   * historial es permanente y lo que desaparece es el archivo equivocado.
+   *
+   * Los documentos FIRMADOS conservan su archivo: la firma es un hecho
+   * ocurrido y hay que poder demostrar qué se suscribió.
    */
   async purgeTrash(): Promise<{ purged: number; filesRemoved: number }> {
-    const candidates = await this.prisma.$queryRaw<
-      { id: string; fileUrl: string; signedFileKey: string | null }[]
-    >`
-      SELECT d.id, d."fileUrl", d."signedFileKey"
-      FROM generated_documents d
-      WHERE d.status != 'VALID'
-        AND COALESCE(d."invalidatedAt", d."createdAt") < now() - interval '30 days'
-        AND NOT EXISTS (SELECT 1 FROM signature_batch_items i WHERE i."documentId" = d.id)
-    `;
+    const candidates = await this.prisma.generatedDocument.findMany({
+      where: {
+        status: { not: 'VALID' },
+        fileRemovedAt: null,
+        signedFileKey: null,
+        signatureStatus: 'NONE',
+      },
+      select: { id: true, fileUrl: true },
+    });
 
     if (candidates.length === 0) return { purged: 0, filesRemoved: 0 };
 
-    const ids = candidates.map((c) => c.id);
-
-    // Romper las referencias de reemplazo que apunten a filas por purgar
-    await this.prisma.$executeRaw`
-      UPDATE generated_documents SET "replacedById" = NULL
-      WHERE "replacedById" = ANY(${ids}::uuid[])
-    `;
-    await this.prisma.$executeRaw`
-      DELETE FROM generated_documents WHERE id = ANY(${ids}::uuid[])
-    `;
-
     // Un oficio grupal comparte archivo entre varias filas: el objeto solo se
-    // borra de MinIO cuando ya NINGUNA fila viva lo referencia.
-    const keys = new Set<string>();
-    for (const c of candidates) {
-      if (c.fileUrl) keys.add(c.fileUrl);
-      if (c.signedFileKey) keys.add(c.signedFileKey);
-    }
+    // retira cuando ya NINGUNA fila vigente lo referencia.
     let filesRemoved = 0;
-    for (const key of keys) {
+    for (const key of new Set(candidates.map((c) => c.fileUrl).filter(Boolean))) {
       const stillUsed = await this.prisma.generatedDocument.count({
-        where: { OR: [{ fileUrl: key }, { signedFileKey: key }] },
+        where: { fileUrl: key, status: 'VALID' },
       });
-      if (stillUsed === 0) {
-        try {
-          await this.minio.removeObject(key);
-          filesRemoved++;
-        } catch (e: any) {
-          this.logger.warn(`No se pudo borrar de MinIO: ${key} (${e?.message})`);
-        }
+      if (stillUsed > 0) continue;
+      try {
+        await this.minio.removeObject(key);
+        filesRemoved++;
+      } catch (e: any) {
+        this.logger.warn(`No se pudo borrar de MinIO: ${key} (${e?.message})`);
       }
     }
 
-    this.logger.log(`Papelera: ${ids.length} versión(es) purgadas, ${filesRemoved} archivo(s) eliminados de MinIO`);
-    return { purged: ids.length, filesRemoved };
+    await this.prisma.generatedDocument.updateMany({
+      where: { id: { in: candidates.map((c) => c.id) } },
+      data: { fileRemovedAt: new Date() },
+    });
+
+    this.logger.log(`Barrido: ${filesRemoved} archivo(s) retirados. Los ${candidates.length} registros se conservan como historial.`);
+    return { purged: candidates.length, filesRemoved };
   }
 
   /**
@@ -107,22 +103,39 @@ export class GeneratedDocumentsService implements OnModuleInit {
    * numeran por separado, como hace la Facultad a mano.
    */
   private async nextSequence(type: string, periodCode: string): Promise<number> {
-    let period = await this.prisma.academicPeriod.findUnique({ where: { code: periodCode } });
+    // Antes, un periodo desconocido se creaba aqui al vuelo con la fecha del
+    // servidor. Eso llenaba el selector del topbar de periodos que nadie creo
+    // y sin autoridades configuradas. Ahora se detiene: quien llame ya debio
+    // validar el periodo con `assertPeriodoAbierto`.
+    const period = await this.prisma.academicPeriod.findUnique({ where: { code: periodCode } });
     if (!period) {
-      period = await this.prisma.academicPeriod.create({
-        data: { code: periodCode, name: periodCode, startDate: new Date(), endDate: new Date() },
-      });
+      throw new BadRequestException(
+        `El periodo "${periodCode}" no existe en el sistema, asi que no se puede numerar el documento. ` +
+        'Crealo en Configuracion (panel de administracion).',
+      );
     }
 
-    const sequence = await this.prisma.documentSequence.upsert({
-      where: {
-        type_periodCode: { type, periodCode },
-      },
-      update: { lastNumber: { increment: 1 } },
-      create: { type, periodCode, lastNumber: 1 },
-    });
+    // Una sola sentencia, resuelta entera dentro de PostgreSQL.
+    //
+    // Esto es lo que impide que dos coordinadores que pulsan "Generar" en el
+    // mismo instante se lleven el mismo número. El motor toma un bloqueo sobre
+    // la fila (type, periodCode) mientras la incrementa, así que la segunda
+    // transacción espera y lee el valor YA incrementado: nunca 17 y 17, sino
+    // 17 y 18. Y si la fila todavía no existe, las dos intentan insertarla, el
+    // índice único la deja pasar una sola vez y `ON CONFLICT DO UPDATE`
+    // convierte a la perdedora en un incremento en lugar de un error.
+    //
+    // Hacerlo en dos pasos (leer el último y guardar el siguiente) sí tendría
+    // carrera: las dos leerían 16 y las dos escribirían 17.
+    const [fila] = await this.prisma.$queryRaw<{ lastNumber: number }[]>`
+      INSERT INTO document_sequences (id, type, "periodCode", "lastNumber")
+      VALUES (gen_random_uuid(), ${type}, ${periodCode}, 1)
+      ON CONFLICT (type, "periodCode")
+      DO UPDATE SET "lastNumber" = document_sequences."lastNumber" + 1
+      RETURNING "lastNumber"
+    `;
 
-    return sequence.lastNumber;
+    return Number(fila.lastNumber);
   }
 
   async generateDocumentCode(
@@ -206,14 +219,34 @@ export class GeneratedDocumentsService implements OnModuleInit {
     if (!student) throw new NotFoundException('Estudiante no encontrado');
 
     // 3. Preparar diccionario de variables
-    const currentPractice = student.practices[0];
-    const academicPeriodCode = currentPractice?.academicPeriod || '2024-1';
+    //
+    // El certificado acredita la práctica del periodo que se está cursando, no
+    // "la primera que devuelva la base": un estudiante que ya hizo prácticas
+    // en semestres anteriores tiene varias filas, y sin ordenar por periodo el
+    // certificado podía salir con la empresa, las horas y el tutor de otro año.
+    const periodoActivo = await getPeriodoActivo(this.prisma);
+    if (!periodoActivo) {
+      throw new BadRequestException(
+        'No hay ningún periodo académico activo, así que no se puede emitir ningún documento. ' +
+        'Marca el periodo en curso como activo en Configuración (panel de administración).',
+      );
+    }
+    const academicPeriodCode = periodoActivo.code;
+    const currentPractice =
+      student.practices.find((p) => normalizePeriodCode(p.academicPeriod) === academicPeriodCode);
+
+    if (!currentPractice) {
+      throw new BadRequestException(
+        `${student.firstName} ${student.lastName} no tiene una práctica registrada en el periodo ${academicPeriodCode}, ` +
+        'así que no se le puede emitir un documento de este periodo.',
+      );
+    }
 
     // Requisitos para emitir el certificado: solicitud vigente (el proceso
     // arrancó formalmente) y los datos que se imprimen. NO se exige estado
     // "Finalizado": ese estado es la consecuencia de que este certificado
     // quede firmado, así que exigirlo sería un ciclo imposible.
-    if (template.type !== 'DOCX' && currentPractice) {
+    if (template.type !== 'DOCX') {
       const docs = await this.prisma.generatedDocument.findMany({
         where: { studentId },
         select: { documentType: true, status: true, signatureStatus: true },
@@ -225,6 +258,9 @@ export class GeneratedDocumentsService implements OnModuleInit {
         );
       }
     }
+
+    // Un periodo cerrado no admite documentos nuevos: se consulta, no se emite.
+    await assertPeriodoAbierto(this.prisma, academicPeriodCode, 'emitir documentos');
 
     // Validar autoridades ANTES de consumir un número de secuencia
     const { deanName, directorName } = await this.getAuthoritiesOrFail(academicPeriodCode);
@@ -285,6 +321,71 @@ export class GeneratedDocumentsService implements OnModuleInit {
   // GENERACIÓN MASIVA REAL: cola BullMQ con workers concurrentes,
   // reintentos automáticos y progreso consultable.
   // ─────────────────────────────────────────────────────────────
+  /**
+   * Qué estudiantes pueden certificarse y qué le falta a cada uno de los demás.
+   *
+   * Existe para que la pantalla deje de tener su propia copia de las reglas.
+   * Antes el frontend decidía mirando si había «algún DOCX vigente», sin
+   * distinguir la solicitud de la designación —las dos usan plantilla DOCX— y
+   * sin comprobar horas, tutor ni niveles. Resultado: habilitaba el botón sobre
+   * condiciones que el servidor iba a rechazar después, dentro de la cola.
+   *
+   * Ahora la regla vive en un solo sitio, `canIssueCertificate`, y la pantalla
+   * pregunta antes de ofrecer el botón.
+   */
+  async checkCertificateEligibility(studentIds: string[]) {
+    if (!studentIds?.length) return { elegibles: [], bloqueados: [] };
+
+    const [estudiantes, practicas, docs] = await Promise.all([
+      this.prisma.student.findMany({
+        where: { id: { in: studentIds } },
+        select: { id: true, firstName: true, lastName: true, dni: true },
+      }),
+      this.prisma.practice.findMany({
+        where: { studentId: { in: studentIds } },
+        select: {
+          studentId: true, totalHours: true, tutorName: true,
+          practiceLevel: true, academicLevel: true, status: true, createdAt: true,
+          // La aprobacion del tutor es la septima condicion (RF-18). Si no se
+          // trajera, llegaria como `undefined` y bloquearia a todo el mundo.
+          tutorApprovedAt: true, closedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.generatedDocument.findMany({
+        where: { studentId: { in: studentIds } },
+        select: { studentId: true, documentType: true, status: true, signatureStatus: true },
+      }),
+    ]);
+
+    // La práctica más reciente de cada estudiante es la que se certifica
+    const practicaDe = new Map<string, (typeof practicas)[number]>();
+    for (const p of practicas) if (!practicaDe.has(p.studentId)) practicaDe.set(p.studentId, p);
+
+    const docsDe = new Map<string, typeof docs>();
+    for (const d of docs) {
+      if (!docsDe.has(d.studentId)) docsDe.set(d.studentId, []);
+      docsDe.get(d.studentId)!.push(d);
+    }
+
+    const elegibles: Array<{ studentId: string; nombre: string }> = [];
+    const bloqueados: Array<{ studentId: string; nombre: string; falta: string[] }> = [];
+
+    for (const e of estudiantes) {
+      const nombre = `${e.firstName} ${e.lastName}`;
+      const practica = practicaDe.get(e.id);
+      if (!practica) {
+        bloqueados.push({ studentId: e.id, nombre, falta: ['una práctica registrada'] });
+        continue;
+      }
+      const { ok, missing } = canIssueCertificate(practica, docsDe.get(e.id) ?? []);
+      if (ok) elegibles.push({ studentId: e.id, nombre });
+      else bloqueados.push({ studentId: e.id, nombre, falta: missing });
+    }
+
+    return { elegibles, bloqueados };
+  }
+
   async generateBatch(templateId: string, studentIds: string[], generatedById?: string) {
     const template = await this.prisma.documentTemplate.findUnique({ where: { id: templateId } });
     if (!template) throw new NotFoundException('Template no encontrado');
@@ -299,42 +400,24 @@ export class GeneratedDocumentsService implements OnModuleInit {
       studentsForPeriods.map((s) => s.practices[0]?.academicPeriod || '2024-1'),
     );
     for (const code of periodCodes) {
+      await assertPeriodoAbierto(this.prisma, code, 'emitir documentos');
       await this.getAuthoritiesOrFail(code);
     }
 
-    // Requisitos por estudiante, validados ANTES de encolar para fallar de
-    // inmediato en vez de dejar que cada job muera dentro de la cola.
-    const relevantDocs = await this.prisma.generatedDocument.findMany({
-      where: { studentId: { in: studentIds }, status: 'VALID' },
-      select: { studentId: true, documentType: true },
-    });
-    const withSolicitud = new Set(
-      relevantDocs.filter((d) => d.documentType === 'SOLICITUD').map((d) => d.studentId),
-    );
-    const withCertificate = new Set(
-      relevantDocs.filter((d) => d.documentType === 'CERTIFICADO').map((d) => d.studentId),
-    );
-
-    const describe = async (ids: string[]) => {
-      const students = await this.prisma.student.findMany({
-        where: { id: { in: ids } },
-        select: { firstName: true, lastName: true },
-      });
-      return students.map((s) => `${s.firstName} ${s.lastName}`).join(', ');
-    };
-
-    // Ya tienen certificado vigente: no se emiten duplicados
-    const duplicateIds = studentIds.filter((id) => withCertificate.has(id));
-    if (duplicateIds.length > 0) {
+    // Requisitos por estudiante, con la MISMA regla que aplica el worker.
+    //
+    // Antes esta comprobación previa solo miraba la solicitud y el duplicado,
+    // mientras que dentro de la cola se exigían además designación, horas,
+    // tutor y los dos niveles. Lo que no cubría aquí entraba a la cola y moría
+    // allá, donde el motivo ya no alcanzaba al usuario. Ahora se rechaza antes
+    // de encolar y con el detalle de qué le falta a cada quien.
+    const { bloqueados } = await this.checkCertificateEligibility(studentIds);
+    if (bloqueados.length > 0) {
+      const detalle = bloqueados
+        .map((b) => `${b.nombre} (falta ${b.falta.join(', ')})`)
+        .join('; ');
       throw new BadRequestException(
-        `${duplicateIds.length} estudiante(s) ya tienen un certificado vigente (${await describe(duplicateIds)}). Invalida el actual si necesitas reemplazarlo.`,
-      );
-    }
-
-    const missingIds = studentIds.filter((id) => !withSolicitud.has(id));
-    if (missingIds.length > 0) {
-      throw new BadRequestException(
-        `No se pueden generar los certificados: ${missingIds.length} estudiante(s) sin solicitud de prácticas vigente (${await describe(missingIds)}). Genera primero la solicitud grupal de su empresa.`,
+        `No se pueden generar ${bloqueados.length} de ${studentIds.length} certificados. ${detalle}.`,
       );
     }
 
@@ -366,10 +449,24 @@ export class GeneratedDocumentsService implements OnModuleInit {
     };
   }
 
-  /** Progreso de un lote de generación (para barra de progreso en UI). */
+  /**
+   * Progreso de un lote de generación, con el motivo de cada fallo.
+   *
+   * Los contadores por sí solos dejaban al usuario delante de un «3 con error»
+   * sin poder saber cuáles ni por qué: el motivo quedaba en el log del servidor
+   * y en el registro del job, pero nunca llegaba a la pantalla.
+   *
+   * Los motivos se leen de la propia cola, que ya conserva los trabajos
+   * fallidos con su `failedReason`. Así no hace falta duplicar esa información
+   * en la base ni arriesgar carreras entre los cuatro workers concurrentes
+   * escribiendo sobre la misma fila.
+   */
   async getBatchProgress(batchId: string) {
     const batch = await this.prisma.generationBatch.findUnique({ where: { id: batchId } });
     if (!batch) throw new NotFoundException('Lote de generación no encontrado');
+
+    const errores = batch.failed > 0 ? await this.getBatchFailures(batchId) : [];
+
     return {
       id: batch.id,
       total: batch.total,
@@ -377,7 +474,55 @@ export class GeneratedDocumentsService implements OnModuleInit {
       failed: batch.failed,
       status: batch.status,
       progress: batch.total > 0 ? Math.round(((batch.completed + batch.failed) / batch.total) * 100) : 100,
+      errores,
     };
+  }
+
+  /** Qué estudiante falló y por qué, tomado de los trabajos fallidos de la cola. */
+  private async getBatchFailures(batchId: string) {
+    try {
+      const fallidos = await this.documentQueue.getFailed(0, 500);
+      const míos = fallidos.filter((j) => j.data?.batchId === batchId);
+      if (míos.length === 0) return [];
+
+      const ids = [...new Set(míos.map((j) => j.data.studentId).filter(Boolean))];
+      const estudiantes = await this.prisma.student.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, firstName: true, lastName: true, dni: true },
+      });
+      const porId = new Map(estudiantes.map((e) => [e.id, e]));
+
+      // Un job reintentado tres veces aparece una sola vez; se deduplica por
+      // estudiante para no repetir el mismo motivo en la lista.
+      const vistos = new Set<string>();
+      const salida: Array<{ studentId: string; nombre: string; cedula: string | null; motivo: string }> = [];
+      for (const job of míos) {
+        const sid = job.data.studentId;
+        if (!sid || vistos.has(sid)) continue;
+        vistos.add(sid);
+        const e = porId.get(sid);
+        salida.push({
+          studentId: sid,
+          nombre: e ? `${e.firstName} ${e.lastName}` : 'Estudiante desconocido',
+          cedula: e?.dni ?? null,
+          motivo: this.limpiarMotivo(job.failedReason),
+        });
+      }
+      return salida;
+    } catch (e: any) {
+      // Que la cola no responda no debe tumbar la consulta de progreso: se
+      // devuelve el progreso sin detalle en vez de un error.
+      this.logger.warn(`No se pudieron leer los fallos del lote ${batchId}: ${e.message}`);
+      return [];
+    }
+  }
+
+  /** El motivo tal como lo verá el usuario, sin el ruido del stack. */
+  private limpiarMotivo(raw?: string | null): string {
+    if (!raw) return 'Error no especificado.';
+    const primeraLinea = raw.split('\n')[0].trim();
+    return primeraLinea.replace(/^(Error|BadRequestException|ForbiddenException):\s*/i, '')
+      || 'Error no especificado.';
   }
 
   /** Llamado por el worker al terminar cada job. Actualiza contadores atómicamente. */
@@ -405,14 +550,6 @@ export class GeneratedDocumentsService implements OnModuleInit {
     });
     if (!doc) throw new NotFoundException('Documento no encontrado');
 
-    // Un estudiante solo puede descargar sus propios documentos
-    if (requester.role === 'STUDENT') {
-      const student = await this.prisma.student.findUnique({ where: { userId: requester.id } });
-      if (!student || student.id !== doc.studentId) {
-        throw new ForbiddenException('No tienes acceso a este documento');
-      }
-    }
-
     // Si ya existe versión firmada, se entrega esa (documento con valor legal)
     const objectKey = doc.signedFileKey || doc.fileUrl;
     const downloadName = objectKey.split('/').pop();
@@ -427,13 +564,6 @@ export class GeneratedDocumentsService implements OnModuleInit {
     });
     if (!doc) throw new NotFoundException('Documento no encontrado');
 
-    if (requester.role === 'STUDENT') {
-      const student = await this.prisma.student.findUnique({ where: { userId: requester.id } });
-      if (!student || student.id !== doc.studentId) {
-        throw new ForbiddenException('No tienes acceso a este documento');
-      }
-    }
-
     const objectKey = doc.signedFileKey || doc.fileUrl;
     const downloadName = objectKey.split('/').pop();
     // Pasamos true como 4to argumento para forzar inline en vez de attachment
@@ -441,8 +571,112 @@ export class GeneratedDocumentsService implements OnModuleInit {
     return { url, expiresInSeconds: 900, signed: !!doc.signedFileKey };
   }
 
-  async findAll() {
+  /**
+   * GeneratedDocument no guarda el periodo directamente (nace de una
+   * Practice, no lo copia); se filtra por "el estudiante tiene una práctica
+   * en ese periodo". Sin `academicPeriod` trae todo, igual que antes —
+   * el selector del topbar es quien manda este parámetro en la práctica.
+   */
+  /**
+   * ZIP con los certificados indicados, para entregarlos a los estudiantes.
+   *
+   * Es la salida final del circuito, no un paso intermedio: por eso los
+   * archivos van con un nombre legible —«Cert 003 - Nombre Apellido.pdf»— y no
+   * con el código institucional. El código sigue impreso dentro del documento y
+   * en el registro; aquí manda que la persona que lo recibe sepa cuál es suyo
+   * de un vistazo.
+   *
+   * Solo certificados. Los oficios pertenecen al trámite con la empresa y no se
+   * entregan al estudiante, así que se descartan aunque vengan en la selección.
+   */
+  async streamCertificadosZip(res: Response, documentIds: string[], academicPeriod?: string) {
+    if (!documentIds?.length) {
+      throw new BadRequestException('No se indicó ningún certificado');
+    }
+
+    const docs = await this.prisma.generatedDocument.findMany({
+      where: {
+        id: { in: documentIds },
+        documentType: 'CERTIFICADO',
+        status: 'VALID',
+        deletedAt: null,
+      },
+      select: {
+        id: true, documentCode: true, fileUrl: true, signedFileKey: true,
+        student: { select: { firstName: true, lastName: true } },
+      },
+    });
+
+    // Alfabético por el nombre del estudiante, de la A a la Z. No se agrupa por
+    // empresa ni por lote: el ZIP es una lista plana, que es como se reparte.
+    // localeCompare con «es» ordena bien las tildes y la ñ, que un sort crudo
+    // mandaría al final.
+    docs.sort((a, b) => {
+      const na = `${a.student?.firstName || ''} ${a.student?.lastName || ''}`.trim();
+      const nb = `${b.student?.firstName || ''} ${b.student?.lastName || ''}`.trim();
+      return na.localeCompare(nb, 'es', { sensitivity: 'base' });
+    });
+
+    if (docs.length === 0) {
+      throw new NotFoundException(
+        'Ninguno de los documentos seleccionados es un certificado vigente',
+      );
+    }
+
+    /** Quita lo que no admite un nombre de archivo, conservando tildes y ñ. */
+    const limpiar = (s: string) => s.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
+
+    const usados = new Set<string>();
+    const entries: { key: string; name: string }[] = [];
+    for (const doc of docs) {
+      const key = doc.signedFileKey || doc.fileUrl;
+      if (!key) continue;
+
+      // Del código institucional se conserva solo el correlativo, que es lo que
+      // distingue un certificado de otro dentro del período.
+      const correlativo = (doc.documentCode || '').split('-')[0] || '000';
+      const alumno = limpiar(
+        `${doc.student?.firstName || ''} ${doc.student?.lastName || ''}`,
+      ) || 'Sin nombre';
+
+      let nombre = `Cert ${correlativo} - ${alumno}.pdf`;
+      // Dos homónimos no pueden pisarse dentro del ZIP.
+      let n = 2;
+      while (usados.has(nombre.toLowerCase())) {
+        nombre = `Cert ${correlativo} - ${alumno} (${n++}).pdf`;
+      }
+      usados.add(nombre.toLowerCase());
+      entries.push({ key, name: nombre });
+    }
+
+    if (entries.length === 0) {
+      throw new NotFoundException('Los certificados seleccionados no tienen archivo asociado');
+    }
+
+    const periodo = academicPeriod || (await getPeriodoActivo(this.prisma))?.code || '';
+    const nombreZip = limpiar(`Certificados Practicas ${periodo}`.trim()) + '.zip';
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${nombreZip}"`);
+
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.on('error', (err) => {
+      this.logger.error('Error creando el ZIP de certificados', err);
+      res.destroy(err);
+    });
+    archive.pipe(res);
+    for (const entry of entries) {
+      const stream = await this.minio.getObjectStream(entry.key);
+      archive.append(stream, { name: entry.name });
+    }
+    await archive.finalize();
+  }
+
+  async findAll(academicPeriod?: string) {
     return this.prisma.generatedDocument.findMany({
+      where: academicPeriod
+        ? { student: { practices: { some: { academicPeriod } } } }
+        : undefined,
       include: {
         student: {
           include: {
@@ -455,22 +689,6 @@ export class GeneratedDocumentsService implements OnModuleInit {
         },
         template: true,
       },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  async findMyDocuments(userId: string) {
-    const student = await this.prisma.student.findUnique({
-      where: { userId },
-    });
-    if (!student) throw new NotFoundException('Estudiante no encontrado');
-
-    return this.prisma.generatedDocument.findMany({
-      where: {
-        studentId: student.id,
-        status: 'VALID', // Solo mostrar los documentos vigentes al estudiante
-      },
-      include: { template: true },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -488,15 +706,47 @@ export class GeneratedDocumentsService implements OnModuleInit {
     });
   }
 
+  /**
+   * Qué documentos vigentes de este tipo ya tienen los estudiantes elegidos.
+   *
+   * Antes devolvía solo un sí/no, y con eso la pantalla no podía distinguir
+   * los dos casos que el RF-20 separa: regenerar un oficio que aún no ha
+   * salido —que sí reemplaza al anterior— y emitir uno nuevo para un grupo
+   * distinto de la misma empresa, que convive con los que ya existen.
+   *
+   * `firmados` es el dato que decide: un oficio que ya salió a firma está
+   * entregado en papel, y ese papel no se anula desde aquí.
+   */
   async checkExistingOficio(kind: OficioKind, studentIds: string[]) {
-    const existing = await this.prisma.generatedDocument.findFirst({
-      where: {
-        studentId: { in: studentIds },
-        documentType: kind,
-        status: 'VALID'
-      }
+    const existing = await this.prisma.generatedDocument.findMany({
+      where: { studentId: { in: studentIds }, documentType: kind, status: 'VALID' },
+      select: {
+        id: true, documentCode: true, signatureStatus: true,
+        student: { select: { id: true, firstName: true, lastName: true } },
+      },
     });
-    return { exists: !!existing };
+
+    const firmados = existing.filter((d) => d.signatureStatus !== 'NONE');
+    const porCodigo = new Map<string, { documentCode: string; estudiantes: string[]; firmado: boolean }>();
+    for (const d of existing) {
+      const codigo = d.documentCode ?? 's/n';
+      if (!porCodigo.has(codigo)) {
+        porCodigo.set(codigo, { documentCode: codigo, estudiantes: [], firmado: false });
+      }
+      const g = porCodigo.get(codigo)!;
+      g.estudiantes.push(`${d.student.firstName} ${d.student.lastName}`);
+      if (d.signatureStatus !== 'NONE') g.firmado = true;
+    }
+
+    return {
+      exists: existing.length > 0,
+      total: existing.length,
+      // Cuántos de los seleccionados NO tienen todavía este documento: son los
+      // que un oficio nuevo ampararía sin pisar nada.
+      sinDocumento: studentIds.length - new Set(existing.map((d) => d.student.id)).size,
+      firmados: firmados.length,
+      oficios: [...porCodigo.values()],
+    };
   }
 
   /** Compatibilidad: la interfaz antigua solo preguntaba por la solicitud. */
@@ -512,6 +762,44 @@ export class GeneratedDocumentsService implements OnModuleInit {
    * cada formato conserva tal como la escribe la Facultad. Por eso son un solo
    * método: duplicarlo habría dejado dos copias que se desincronizan.
    */
+  /**
+   * Comprueba que cada estudiante tenga vigentes los documentos que preceden a
+   * `tipo` en el expediente. Nombra a quién le falta qué, porque un «no se
+   * puede» sin sujeto obliga a revisar la lista entera a mano.
+   */
+  private async exigirRequisitosPrevios(tipo: string, studentIds: string[]) {
+    const requisitos = requisitosDe(tipo);
+    if (requisitos.length === 0) return;
+
+    const vigentes = await this.prisma.generatedDocument.findMany({
+      where: { studentId: { in: studentIds }, documentType: { in: requisitos }, status: 'VALID' },
+      select: { studentId: true, documentType: true },
+    });
+
+    const tiene = new Set(vigentes.map((d) => `${d.studentId}|${d.documentType}`));
+    const faltantes = studentIds.flatMap((id) =>
+      requisitos.filter((r) => !tiene.has(`${id}|${r}`)).map((r) => ({ studentId: id, requisito: r })),
+    );
+    if (faltantes.length === 0) return;
+
+    const estudiantes = await this.prisma.student.findMany({
+      where: { id: { in: [...new Set(faltantes.map((f) => f.studentId))] } },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    const nombreDe = new Map(estudiantes.map((e) => [e.id, `${e.firstName} ${e.lastName}`]));
+
+    const primero = faltantes[0];
+    const cuantos = new Set(faltantes.map((f) => f.studentId)).size;
+    const detalle =
+      cuantos === 1
+        ? `A ${nombreDe.get(primero.studentId)} le falta ${nombreDelDocumento(primero.requisito)}.`
+        : `A ${cuantos} de los estudiantes seleccionados les falta algún documento previo (por ejemplo, a ${nombreDe.get(primero.studentId)} le falta ${nombreDelDocumento(primero.requisito)}).`;
+
+    throw new BadRequestException(
+      `No se puede emitir ${nombreDelDocumento(tipo)} sin ${requisitos.map(nombreDelDocumento).join(' y ')} vigente. ${detalle}`,
+    );
+  }
+
   async generateOficioGrouped(
     kind: OficioKind,
     templateId: string,
@@ -552,41 +840,70 @@ export class GeneratedDocumentsService implements OnModuleInit {
       );
     }
 
-    // Verificar si ya existen documentos válidos DE ESTE TIPO
+    // El expediente tiene un orden y no se puede saltar: la designación
+    // presupone una solicitud aceptada. Se comprueba aquí, no solo en la
+    // pantalla, porque es lo único que impide llegar por otra vía.
+    await this.exigirRequisitosPrevios(kind, studentIds);
+
+    // ── ¿Choca con un oficio que ya existe? (RF-20) ──
+    //
+    // Una empresa puede recibir varias designaciones en el mismo período: si
+    // acepta cuatro de seis se emite la corregida, y si más adelante pide tres
+    // más se emite otra. Lo que NO puede haber son dos papeles vigentes que
+    // nombren al mismo estudiante para lo mismo. Por eso el choque se mide por
+    // estudiante y no por empresa: los que no tienen este documento no chocan
+    // con nadie y su oficio convive con los que ya estaban.
     const existingDocs = await this.prisma.generatedDocument.findMany({
-      where: {
-        studentId: { in: studentIds },
-        documentType: kind,
-        status: 'VALID'
-      }
+      where: { studentId: { in: studentIds }, documentType: kind, status: 'VALID' },
+      select: { id: true, documentCode: true, signatureStatus: true, studentId: true },
     });
+
+    // Un oficio que ya salió a firma está entregado: su validez es física y no
+    // se anula desde aquí (RF-21). Regenerar reemplaza solo lo que no ha salido.
+    const yaFirmados = existingDocs.filter((d) => d.signatureStatus !== 'NONE');
+    const sinFirmar = existingDocs.filter((d) => d.signatureStatus === 'NONE');
+    const conservados: string[] = [...new Set(yaFirmados.map((d) => d.documentCode).filter(Boolean) as string[])];
+    let reemplazados: string[] = [];
 
     if (existingDocs.length > 0) {
       if (!overwrite) {
+        const codigos = [...new Set(existingDocs.map((d) => d.documentCode).filter(Boolean))];
+        const cuantos = new Set(existingDocs.map((d) => d.studentId)).size;
         throw new ConflictException(
-          `Ya existe una ${nombreDelOficio(kind)} vigente para algunos de los estudiantes seleccionados`,
+          `${cuantos} de los estudiantes seleccionados ya está${cuantos === 1 ? '' : 'n'} en una ` +
+          `${nombreDelOficio(kind)} vigente${codigos.length ? ` (${codigos.join(', ')})` : ''}. ` +
+          (yaFirmados.length > 0
+            ? 'Parte de esos documentos ya salieron a firma, así que no se reemplazan: quita a esos estudiantes de la selección.'
+            : 'Marca «regenerar» para reemplazarla, o quítalos de la selección si solo quieres emitir el oficio de los demás.'),
         );
-      } else {
-        const motivo = `Regenerado mediante nueva ${nombreDelOficio(kind)} grupal`;
-        // Invalidar todos los documentos que compartan el documentCode (todo el oficio grupal anterior)
-        const docCodesToInvalidate = [...new Set(existingDocs.map(d => d.documentCode).filter(Boolean) as string[])];
+      }
 
-        if (docCodesToInvalidate.length > 0) {
+      if (sinFirmar.length > 0) {
+        const motivo = `Regenerado mediante nueva ${nombreDelOficio(kind)} grupal`;
+        // El oficio es un papel único: se reemplaza entero, con todos los que
+        // nombra. Dejar viva la mitad de un documento dejaría constando una
+        // vacante para quien ya no va.
+        const codigos = [...new Set(sinFirmar.map((d) => d.documentCode).filter(Boolean) as string[])];
+        reemplazados = codigos;
+
+        if (codigos.length > 0) {
           await this.prisma.generatedDocument.updateMany({
-            where: {
-              documentCode: { in: docCodesToInvalidate },
-              documentType: kind,
-              status: 'VALID'
-            },
-            data: { status: 'SUPERSEDED', invalidatedAt: new Date(), invalidReason: motivo }
+            where: { documentCode: { in: codigos }, documentType: kind, status: 'VALID', signatureStatus: 'NONE' },
+            data: { status: 'SUPERSEDED', invalidatedAt: new Date(), invalidReason: motivo },
           });
         } else {
-          // Fallback por si el documentCode no existía
+          // Respaldo por si algún documento antiguo se guardó sin documentCode
           await this.prisma.generatedDocument.updateMany({
-            where: { id: { in: existingDocs.map(d => d.id) } },
-            data: { status: 'SUPERSEDED', invalidatedAt: new Date(), invalidReason: motivo }
+            where: { id: { in: sinFirmar.map((d) => d.id) } },
+            data: { status: 'SUPERSEDED', invalidatedAt: new Date(), invalidReason: motivo },
           });
         }
+      }
+
+      if (yaFirmados.length > 0) {
+        this.logger.warn(
+          `Regeneración de ${kind}: se conservan ${conservados.join(', ')} porque ya salieron a firma.`,
+        );
       }
     }
 
@@ -605,24 +922,66 @@ export class GeneratedDocumentsService implements OnModuleInit {
 
     if (students.length === 0) throw new NotFoundException('No se encontraron estudiantes con prácticas activas');
 
-    // Todos van a la misma empresa porque se agruparon por empresa en la vista
-    const firstStudent = students[0];
-    const company = firstStudent.practices[0]?.company;
-    const faculty = firstStudent.faculty;
-    const program = firstStudent.program;
+    // 3. ¿En qué periodo se emite? En el activo, y solo en el activo.
+    //
+    // Antes el periodo se leía de la primera práctica del primer estudiante.
+    // Eso hacía dos daños silenciosos: un estudiante que repite empresa en dos
+    // semestres podía aportar la práctica del semestre viejo —y el oficio
+    // salía con las horas, el nivel y el tutor de entonces—, y bastaba que el
+    // primero de la lista arrastrara una práctica cerrada para bloquear la
+    // emisión de todo un grupo que sí estaba al día. El periodo no es un dato
+    // que se descubra: es el que la Facultad tiene abierto.
+    const periodoActivo = await getPeriodoActivo(this.prisma);
+    if (!periodoActivo) {
+      throw new BadRequestException(
+        'No hay ningún periodo académico activo, así que no se puede emitir ningún documento. ' +
+        'Marca el periodo en curso como activo en Configuración (panel de administración).',
+      );
+    }
+    const academicPeriodCode = periodoActivo.code;
 
-    if (!company) throw new NotFoundException('Los estudiantes seleccionados no tienen una empresa asignada');
+    /** ¿Esta práctica pertenece al periodo en que se está emitiendo? */
+    const esDelPeriodo = (p: { academicPeriod: string | null }) =>
+      normalizePeriodCode(p.academicPeriod) === academicPeriodCode;
 
-    // La práctica que interesa es la de ESTA empresa: un estudiante puede
-    // arrastrar prácticas de otra, y tomar la primera imprimiría el tutor y las
-    // horas equivocados.
+    // La empresa sale de una práctica del periodo activo, no de cualquiera:
+    // agrupar por una empresa de un semestre anterior dirigiría el oficio al
+    // destinatario equivocado.
+    const company = students
+      .flatMap((s) => s.practices)
+      .find((p) => esDelPeriodo(p))?.company;
+
+    if (!company) {
+      throw new BadRequestException(
+        `Ninguno de los estudiantes seleccionados tiene una práctica registrada en el periodo ${academicPeriodCode}. ` +
+        'Solo se emiten documentos del periodo activo: revisa el selector de periodo o carga las prácticas de este semestre.',
+      );
+    }
+
+    const faculty = students[0].faculty;
+    const program = students[0].program;
+
+    // La práctica que interesa es la de ESTA empresa y ESTE periodo: un
+    // estudiante puede arrastrar prácticas de otra empresa o de otro semestre,
+    // y tomar la primera imprimiría el tutor y las horas equivocados.
     const practiceOf = (s: typeof students[number]) =>
-      s.practices.find((p) => p.companyId === company.id) ?? s.practices[0];
+      s.practices.find((p) => p.companyId === company.id && esDelPeriodo(p));
 
-    const currentPractice = practiceOf(firstStudent);
+    // Quien no tenga práctica en esta empresa y este periodo no puede ir en el
+    // papel. Se dice quién y por qué, en vez de emitirlo sin él en silencio:
+    // el coordinador lo seleccionó a propósito y tiene que enterarse.
+    const fuera = students.filter((s) => !practiceOf(s));
+    if (fuera.length > 0) {
+      const nombres = fuera.map((s) => `${s.lastName} ${s.firstName}`).join(', ');
+      throw new BadRequestException(
+        `No se puede emitir la ${nombreDelOficio(kind)}: ${fuera.length === 1 ? 'el estudiante' : 'los estudiantes'} ` +
+        `${nombres} no ${fuera.length === 1 ? 'tiene' : 'tienen'} una práctica en "${company.name}" durante el periodo ${academicPeriodCode}. ` +
+        'Un oficio ampara a un solo grupo, de una sola empresa y de un solo periodo: quita a quien no corresponda o corrige su práctica.',
+      );
+    }
 
-    // 3. Preparar diccionario de variables reales
-    const academicPeriodCode = currentPractice?.academicPeriod || '2024-1';
+    // Un periodo cerrado no admite documentos nuevos: se consulta, no se emite.
+    await assertPeriodoAbierto(this.prisma, academicPeriodCode, 'emitir documentos');
 
     // Validar autoridades ANTES de consumir un número de secuencia
     const { deanName, directorName, directorDni, directorPhone, directorEmail } =
@@ -771,7 +1130,20 @@ export class GeneratedDocumentsService implements OnModuleInit {
     // emite hoy; con `scope: 'ESTUDIANTE'` sale un papel por cada uno, cada uno
     // con su propio número de secuencia.
     const scope: OficioScope = docxCfg.scope === 'ESTUDIANTE' ? 'ESTUDIANTE' : 'GRUPO';
-    const lotes = scope === 'ESTUDIANTE' ? students.map((s) => [s]) : [students];
+
+    // La unidad real del oficio no es la empresa sino la empresa Y el tutor
+    // (RF-20). Dos docentes pueden tener estudiantes a la vez en la misma
+    // empresa, y un solo papel que los mezcle sale con «Tutor A / Tutor B» en
+    // el sitio donde debe ir un nombre. Se parte el lote por tutor y se emite
+    // uno por cada grupo de tutoría, cada uno con su propio número.
+    const porTutor = new Map<string, typeof students>();
+    for (const s of students) {
+      const clave = practiceOf(s)?.tutorId ?? practiceOf(s)?.tutorName ?? 'sin-tutor';
+      if (!porTutor.has(clave)) porTutor.set(clave, []);
+      porTutor.get(clave)!.push(s);
+    }
+
+    const lotes = scope === 'ESTUDIANTE' ? students.map((s) => [s]) : [...porTutor.values()];
 
     const emitidos: Awaited<ReturnType<typeof emitirOficio>>[] = [];
     for (const lote of lotes) {
@@ -782,17 +1154,27 @@ export class GeneratedDocumentsService implements OnModuleInit {
     await this.practices.recalculateForStudents(studentIds).catch((): void => undefined);
 
     const nombre = kind === 'SOLICITUD' ? 'Solicitud' : 'Designación';
+    const plural = kind === 'SOLICITUD' ? 'solicitudes' : 'designaciones';
     const mensaje = emitidos.length === 1
       ? `${nombre} generada correctamente`
-      : `${emitidos.length} ${nombre.toLowerCase()}es generadas, una por estudiante`;
+      : scope === 'ESTUDIANTE'
+        ? `${emitidos.length} ${plural} generadas, una por estudiante`
+        : `${emitidos.length} ${plural} generadas, una por cada grupo de tutoría`;
 
     // Los campos del primero se repiten en la raíz por compatibilidad: quien
     // solo espera un documento sigue funcionando sin cambios.
     return {
       scope,
       documents: emitidos,
+      // Qué se reemplazó y qué se respetó por estar ya firmado: sin decirlo, el
+      // coordinador no sabe si el papel viejo sigue valiendo en la empresa.
+      reemplazados,
+      conservadosPorFirma: conservados,
       ...emitidos[0],
-      message: mensaje,
+      message: mensaje +
+        (conservados.length
+          ? `. Se conservaron ${conservados.join(', ')} porque ya salieron a firma: esos papeles siguen valiendo en la empresa.`
+          : ''),
     };
   }
 
@@ -810,17 +1192,44 @@ export class GeneratedDocumentsService implements OnModuleInit {
    * físico compartido — invalidarlo "para uno solo" dejaría un estado
    * imposible, con el mismo papel válido e inválido a la vez.
    */
-  async invalidate(id: string, reason: string, invalidatedById?: string) {
+  async invalidate(id: string, reason: string, invalidatedById?: string, reasonId?: string) {
     const doc = await this.prisma.generatedDocument.findUnique({
       where: { id },
       select: { id: true, studentId: true, documentType: true, documentCode: true, status: true },
     });
     if (!doc) throw new NotFoundException('Documento no encontrado');
 
+    // Anular dos veces no es idempotente: la segunda pasada pisaría el motivo,
+    // la fecha y el nombre de quien anuló la primera. Eso borra justamente el
+    // rastro que la anulación existe para dejar, así que se rechaza.
+    if (doc.status !== 'VALID') {
+      throw new BadRequestException(
+        `Este documento ya no está vigente (${doc.status === 'INVALIDATED' ? 'fue anulado' : 'fue reemplazado por una versión posterior'}), ` +
+        'así que no se puede anular de nuevo.',
+      );
+    }
+
+    // El motivo tipificado (RF-24) es lo que agrupan los reportes; el texto
+    // libre queda como la nota que lo matiza. Se comprueba que exista y que
+    // sirva para invalidar documentos: un id cualquiera en la peticion no basta.
+    let etiqueta: string | null = null;
+    if (reasonId) {
+      const motivo = await this.prisma.reasonCode.findUnique({ where: { id: reasonId } });
+      if (!motivo) throw new BadRequestException('El motivo indicado no existe');
+      if (!motivo.isActive) throw new BadRequestException(`El motivo «${motivo.label}» esta desactivado`);
+      if (motivo.scope !== 'DOCUMENT' && motivo.scope !== 'BOTH') {
+        throw new BadRequestException(`El motivo «${motivo.label}» no corresponde a la invalidacion de un documento`);
+      }
+      etiqueta = motivo.label;
+    }
+
     const data = {
       status: 'INVALIDATED' as const,
       invalidatedAt: new Date(),
-      invalidReason: reason,
+      // Se guarda el texto ya compuesto para que las pantallas y el historial
+      // que solo leen `invalidReason` sigan mostrando algo completo.
+      invalidReason: etiqueta ? (reason?.trim() ? `${etiqueta}: ${reason.trim()}` : etiqueta) : reason,
+      invalidReasonId: reasonId ?? null,
       invalidatedById,
     };
 
@@ -840,9 +1249,125 @@ export class GeneratedDocumentsService implements OnModuleInit {
       await this.prisma.generatedDocument.update({ where: { id }, data });
     }
 
+    // Lo que queda sin objeto al anular este documento se anula con él.
+    //
+    // Hoy solo ocurre en un caso: anular la designación arrastra la solicitud
+    // que la precedió, porque esa solicitud pidió el cupo para una designación
+    // que ya no existe. El certificado NO se arrastra —si llegó a emitirse es
+    // porque el acta acreditó la práctica cumplida—; anularlo es una decisión
+    // aparte. La lista sale de `dependientesDe`, que es donde vive la regla.
+    const arrastrados: Array<{ tipo: string; cuantos: number }> = [];
+    for (const dependiente of dependientesDe(doc.documentType || '')) {
+      const { count } = await this.prisma.generatedDocument.updateMany({
+        where: { studentId: { in: affectedStudentIds }, documentType: dependiente, status: 'VALID' },
+        data: {
+          ...data,
+          invalidReason: `Anulado en cascada al invalidarse ${nombreDelDocumento(doc.documentType || '')}`,
+          // El arrastre hereda el motivo del documento raiz: es el mismo hecho.
+          invalidReasonId: reasonId ?? null,
+        },
+      });
+      if (count > 0) arrastrados.push({ tipo: dependiente, cuantos: count });
+    }
+
+    // El archivo equivocado se retira AHORA, no dentro de treinta días. Lo que
+    // se conserva es el registro: código, tipo, estudiantes, motivo, quién y
+    // cuándo. Guardar el PDF errado no aporta nada y sí permite que alguien lo
+    // reenvíe por descuido creyendo que es el bueno.
+    const archivosRetirados = await this.retirarArchivosAnulados(affectedStudentIds, doc.documentCode, doc.documentType);
+
     // Invalidar la solicitud puede devolver las prácticas a "Pendiente"
     await this.practices.recalculateForStudents(affectedStudentIds).catch((): void => undefined);
-    return { id: doc.id, affected: affectedStudentIds.length };
+    return { id: doc.id, affected: affectedStudentIds.length, cascade: arrastrados, archivosRetirados };
+  }
+
+  /**
+   * Borra del almacén los archivos de las versiones recién anuladas.
+   *
+   * Dos salvedades:
+   *
+   * - Un oficio grupal comparte un mismo archivo entre varias filas. Solo se
+   *   borra cuando ninguna fila VIGENTE lo referencia ya.
+   * - Los documentos FIRMADOS conservan su archivo. Una firma electrónica es un
+   *   hecho ocurrido: el documento salió, lo suscribieron dos autoridades y
+   *   probablemente ya está en manos de la empresa. Borrar nuestra copia no lo
+   *   deshace, solo nos deja sin poder demostrar qué se firmó.
+   */
+  private async retirarArchivosAnulados(studentIds: string[], documentCode: string | null, documentType: string | null) {
+    const anulados = await this.prisma.generatedDocument.findMany({
+      where: {
+        studentId: { in: studentIds },
+        status: { not: 'VALID' },
+        fileRemovedAt: null,
+        signedFileKey: null,
+        signatureStatus: { in: ['NONE'] },
+        ...(documentCode ? { OR: [{ documentCode }, { documentType: { not: documentType } }] } : {}),
+      },
+      select: { id: true, fileUrl: true },
+    });
+    if (anulados.length === 0) return 0;
+
+    let retirados = 0;
+    for (const clave of new Set(anulados.map((a) => a.fileUrl).filter(Boolean))) {
+      const sigueViva = await this.prisma.generatedDocument.count({
+        where: { fileUrl: clave, status: 'VALID' },
+      });
+      if (sigueViva > 0) continue;
+      try {
+        await this.minio.removeObject(clave);
+        retirados++;
+      } catch (e: any) {
+        this.logger.warn(`No se pudo retirar del almacén: ${clave} (${e?.message})`);
+      }
+    }
+
+    await this.prisma.generatedDocument.updateMany({
+      where: { id: { in: anulados.map((a) => a.id) } },
+      data: { fileRemovedAt: new Date() },
+    });
+    return retirados;
+  }
+
+  /**
+   * Qué se llevaría por delante anular este documento, sin llegar a anularlo.
+   * La pantalla lo consulta para avisar antes de que la coordinación confirme.
+   */
+  async invalidationImpact(id: string) {
+    const doc = await this.prisma.generatedDocument.findUnique({
+      where: { id },
+      select: { id: true, studentId: true, documentType: true, documentCode: true, status: true },
+    });
+    if (!doc) throw new NotFoundException('Documento no encontrado');
+
+    let studentIds = [doc.studentId];
+    if (esOficioGrupal(doc.documentType) && doc.documentCode) {
+      const grupo = await this.prisma.generatedDocument.findMany({
+        where: { documentCode: doc.documentCode, documentType: doc.documentType, status: 'VALID' },
+        select: { studentId: true },
+      });
+      studentIds = [...new Set(grupo.map((g) => g.studentId))];
+    }
+
+    const dependientes = dependientesDe(doc.documentType || '');
+    const afectados = dependientes.length
+      ? await this.prisma.generatedDocument.groupBy({
+          by: ['documentType'],
+          where: { studentId: { in: studentIds }, documentType: { in: dependientes }, status: 'VALID' },
+          _count: { _all: true },
+        })
+      : [];
+
+    return {
+      documentType: doc.documentType,
+      students: studentIds.length,
+      // Ordenado como se anularán: del último documento hacia atrás
+      cascade: dependientes
+        .map((t) => {
+          const count = afectados.find((a) => a.documentType === t)?._count._all ?? 0;
+          return { documentType: t, nombre: nombreContable(t, count), count };
+        })
+        .filter((c) => c.count > 0),
+    };
   }
 
   // ─────────── Edición manual del oficio por la coordinación ───────────

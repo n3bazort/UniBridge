@@ -28,11 +28,24 @@ export interface KonvaTemplateJson {
 export class PdfDriver {
   private readonly logger = new Logger(PdfDriver.name);
 
-  async generatePdf(template: KonvaTemplateJson, data: Record<string, any>, outputPath: string): Promise<string> {
-    this.logger.log(`Generando PDF con pdf-lib para ${outputPath}...`);
-    
-    // Inyectar datos en la plantilla JSON
-    let jsonString = JSON.stringify(template);
+  /**
+   * Renderiza el documento y devuelve sus bytes.
+   *
+   * No escribe a disco a propósito: quien llama decide qué hacer con el
+   * resultado. En la emisión masiva eso evita escribir un archivo temporal
+   * para volver a leerlo entero un instante después y borrarlo, tres
+   * operaciones de disco por certificado que en un disco mecánico se pagan
+   * una vez por cada documento del lote.
+   */
+  async generatePdf(template: KonvaTemplateJson, data: Record<string, any>): Promise<Uint8Array> {
+    // El fondo se aparta ANTES de serializar. Llega incrustado como data URI,
+    // así que son cientos de miles de caracteres de base64 en los que no hay
+    // un solo marcador que sustituir: dejarlo dentro obligaba a recorrerlo
+    // entero con cada expresión regular y a copiar la cadena completa en cada
+    // pasada. Se vuelve a colocar tal cual una vez hecha la sustitución.
+    const { background, ...sinFondo } = template;
+
+    let jsonString = JSON.stringify(sinFondo);
     for (const key of Object.keys(data)) {
       const val = data[key] !== undefined && data[key] !== null ? String(data[key]) : '';
       const regex = new RegExp(`{{${key}}}`, 'g');
@@ -40,7 +53,7 @@ export class PdfDriver {
     }
     // Reemplazar placeholders no definidos por vacío para evitar imprimir {{variable}}
     jsonString = jsonString.replace(/{{[a-zA-Z0-9_]+}}/g, '');
-    const processedTemplate: KonvaTemplateJson = JSON.parse(jsonString);
+    const processedTemplate: KonvaTemplateJson = { ...JSON.parse(jsonString), background };
 
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
@@ -139,11 +152,7 @@ export class PdfDriver {
       // pero se podría agregar la lógica aquí si en el futuro se requieren firmas o sellos.
     }
 
-    const pdfBytes = await pdfDoc.save();
-    fs.writeFileSync(outputPath, pdfBytes);
-    this.logger.log(`PDF generado exitosamente en ${outputPath}`);
-    
-    return outputPath;
+    return pdfDoc.save();
   }
 
   private async drawBackground(pdfDoc: PDFDocument, page: any, bg: string, width: number, height: number) {

@@ -31,7 +31,7 @@ export class DocxDriver {
         paragraphLoop: true,
         linebreaks: true,
         delimiters: { start: '{{', end: '}}' },
-        nullGetter(part) {
+        nullGetter() {
             return '';
         }
     });

@@ -2,11 +2,19 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * `containerClassName` da acceso al div que hace el scroll.
+ *
+ * Sin él, quien necesitaba limitar el alto de una tabla tenía que envolverla
+ * en OTRO div con `overflow-auto`, y quedaban dos contenedores de scroll
+ * anidados: la barra horizontal se iba al fondo del contenido interior, así
+ * que para alcanzarla había que recorrer antes toda la lista.
+ */
 const Table = React.forwardRef<
   HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto rounded-md border">
+  React.HTMLAttributes<HTMLTableElement> & { containerClassName?: string }
+>(({ className, containerClassName, ...props }, ref) => (
+  <div className={cn("relative w-full overflow-auto rounded-md border", containerClassName)}>
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}

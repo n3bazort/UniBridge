@@ -46,7 +46,7 @@ export function FloatingActionBar({ count, label, blockedReason, onClear, childr
           animate={{ y: hidden ? -90 : 0, opacity: hidden ? 0 : 1 }}
           exit={{ y: -80, opacity: 0 }}
           transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-          className="sticky top-[84px] z-[60] mx-auto w-fit max-w-full"
+          className="sticky top-[84px] z-30 mx-auto w-fit max-w-full"
         >
           <div className={cn(
             'flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-[14px] shadow-xl border backdrop-blur-md',

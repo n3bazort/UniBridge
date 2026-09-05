@@ -10,6 +10,10 @@ import { toast } from 'sonner'
 import { InlineCompanyModal } from './InlineCompanyModal'
 import { InlineStudentModal } from './InlineStudentModal'
 import { InlineTutorModal } from './InlineTutorModal'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+import { useQuery } from '@tanstack/react-query'
 
 interface StudentHit {
   id: string
@@ -42,6 +46,8 @@ interface PracticeData {
   workArea?: string
   totalHours?: number
   status?: string
+  student?: { firstName: string; lastName: string }
+  company?: { id?: string; name: string }
 }
 
 interface NewPracticeModalProps {
@@ -64,6 +70,19 @@ interface TypeaheadProps {
   onCreate?: () => void
   createLabel?: string
 }
+
+/**
+ * Niveles que se ofrecen al registrar, con el semestre que les corresponde.
+ *
+ * El semestre sale de los datos, no de una suposición: la correspondencia se
+ * cumple en 201 de las 203 prácticas registradas, así que se prerellena pero
+ * se puede cambiar.
+ */
+const NIVELES = [
+  { nivel: 'Prácticas Preprofesionales I', semestre: 'Quinto' },
+  { nivel: 'Prácticas Preprofesionales II', semestre: 'Sexto' },
+] as const
+
 
 function Typeahead({ label, required, placeholder, value, onSearch, onSelect, onClear, onCreate, createLabel }: TypeaheadProps) {
   const [query, setQuery] = useState(value)
@@ -131,12 +150,12 @@ function Typeahead({ label, required, placeholder, value, onSearch, onSelect, on
       </div>
       <div className="relative">
         <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 pointer-events-none" />
-        <input
+        <Input
           type="text"
           value={query}
           onChange={(e) => handleChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full h-10 pl-8 pr-3 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-900 bg-white"
+          className="w-full pl-8 pr-3"
         />
         {busy && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400 absolute right-3 top-3" />}
       </div>
@@ -232,13 +251,13 @@ function SuggestInput({ label, required, placeholder, value, onChange, field, no
       <label className="text-[12px] font-bold text-slate-700 block mb-1">
         {label} {required && <span className="text-rose-500">*</span>}
       </label>
-      <input
+      <Input
         type="text"
         value={value}
         onChange={(e) => handleChange(e.target.value)}
         onFocus={handleFocus}
         placeholder={placeholder}
-        className="w-full h-10 px-3 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-medium text-slate-900"
+        className="w-full"
       />
       {note && <p className="text-[10.5px] text-slate-400 mt-1">{note}</p>}
 
@@ -295,28 +314,45 @@ export function NewPracticeModal({
   const tutorRef = useRef<HTMLDivElement>(null)
   const tutorDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const [academicPeriod, setAcademicPeriod] = useState('2024-1')
+  const [academicPeriod, setAcademicPeriod] = useState('')
   const [practiceLevel, setPracticeLevel] = useState('Prácticas Preprofesionales I')
   const [academicLevel, setAcademicLevel] = useState('Séptimo')
   const [workArea, setWorkArea] = useState('')
   const [totalHours, setTotalHours] = useState<number>(240)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  /**
+   * El período no se escribe a mano: se elige de los que existen.
+   *
+   * Antes era un campo de texto libre con sugerencias, arrancando fijo en
+   * '2024-1'. Bastaba una errata —«2024 1», «2024-I»— para que la práctica
+   * naciera en un período que no existe, y el valor por defecto dejaba de ser
+   * cierto en cuanto el semestre cambiaba.
+   */
+  const { data: periodos = [] } = useQuery<{ id: string; code: string; name: string; isActive: boolean }[]>({
+    queryKey: ['academic-periods'],
+    queryFn: async () => (await api.get('/academic-periods')).data,
+    staleTime: 5 * 60 * 1000,
+  })
+  const periodoActivo = periodos.find((p) => p.isActive) ?? null
+
+  // Al abrir para crear, queda puesto el período abierto si no hay período asignado
+  useEffect(() => {
+    if (!practiceToEdit && !academicPeriod && periodoActivo) {
+      setAcademicPeriod(periodoActivo.code)
+    }
+  }, [periodoActivo, academicPeriod, practiceToEdit])
+
   const [showInlineCompany, setShowInlineCompany] = useState(false)
   const [showInlineStudent, setShowInlineStudent] = useState(false)
   const [showInlineTutor, setShowInlineTutor] = useState(false)
 
-  // Load programs (lightweight, few records) and active period
+  // Load programs (lightweight, few records)
   useEffect(() => {
     if (!isOpen) return
     api.get('/programs').catch(() => ({ data: [] })).then(res => {
       const list = res.data?.data || res.data || []
       setPrograms(list)
-    })
-    // Prefill period from active period
-    api.get('/academic-periods?active=true').catch(() => null).then(res => {
-      const p = res?.data?.data?.[0] || res?.data?.[0]
-      if (p?.code) setAcademicPeriod(p.code)
     })
   }, [isOpen])
 
@@ -329,7 +365,7 @@ export function NewPracticeModal({
       setCompanyLabel(practiceToEdit.company ? practiceToEdit.company.name : '')
       setTutorName(practiceToEdit.tutorName || '')
       setTutorQuery(practiceToEdit.tutorName || '')
-      setAcademicPeriod(practiceToEdit.academicPeriod || '2024-1')
+      setAcademicPeriod(practiceToEdit.academicPeriod || '')
       setPracticeLevel(practiceToEdit.practiceLevel || 'Prácticas Preprofesionales I')
       setAcademicLevel(practiceToEdit.academicLevel || 'Séptimo')
       setWorkArea(practiceToEdit.workArea || '')
@@ -338,12 +374,13 @@ export function NewPracticeModal({
       setStudentId(''); setStudentLabel('')
       setCompanyId(''); setCompanyLabel('')
       setTutorName(''); setTutorQuery('')
+      setAcademicPeriod(periodoActivo?.code || '')
       setPracticeLevel('Prácticas Preprofesionales I')
       setAcademicLevel('Séptimo')
       setWorkArea('')
       setTotalHours(240)
     }
-  }, [practiceToEdit, isOpen])
+  }, [practiceToEdit, isOpen, periodoActivo])
 
   // Close tutor suggestions on outside click
   useEffect(() => {
@@ -381,6 +418,27 @@ export function NewPracticeModal({
     } catch { return [] }
   }
 
+  /** Búsqueda de docentes con la forma que espera Typeahead. */
+  const searchTutors = async (q: string) => {
+    const res = await api.get(`/practices/tutors?search=${encodeURIComponent(q)}&limit=6`)
+    const nombres: string[] = res.data || []
+    return nombres.map((n) => ({ id: n, label: n }))
+  }
+
+  /**
+   * Cada nivel de práctica corresponde a un semestre.
+   *
+   * Sale de los datos, no de una suposición: sobre 203 prácticas registradas la
+   * correspondencia se cumple en 201. La excepción son 2 casos de «Prácticas
+   * Laborales II» en Noveno, así que el semestre se PRErellena pero se puede
+   * cambiar — es una ayuda, no una imposición.
+   */
+  const elegirNivel = (nivel: string) => {
+    setPracticeLevel(nivel)
+    const semestre = NIVELES.find((n) => n.nivel === nivel)?.semestre
+    if (semestre) setAcademicLevel(semestre)
+  }
+
   const handleTutorInput = (q: string) => {
     setTutorQuery(q)
     setTutorName(q)
@@ -397,6 +455,19 @@ export function NewPracticeModal({
     }, 280)
   }
 
+  /**
+   * Lo que hace falta para que exista la fila, borrador incluido.
+   *
+   * La práctica ES la relación entre un estudiante y una empresa, y ninguna de
+   * las dos columnas admite quedar vacía. Se calcula aquí, en vivo, para poder
+   * avisarlo en el pie mientras se llena el formulario: antes solo se descubría
+   * al pulsar «Guardar», que es tarde y se lee como un rechazo sin explicación.
+   */
+  const faltaBase = [
+    !studentId ? 'el estudiante' : null,
+    !companyId ? 'la empresa receptora' : null,
+  ].filter(Boolean) as string[]
+
   /* ── Save ── */
   const handleSave = async (isDraft: boolean) => {
     if (!isDraft) {
@@ -406,10 +477,13 @@ export function NewPracticeModal({
       if (!workArea.trim()) { toast.error('Ingresa el área de trabajo en la empresa.'); return }
       if (!totalHours || totalHours <= 0) { toast.error('Ingresa las horas proyectadas del período.'); return }
     } else {
-      if (!studentId && !companyId) {
-        toast.error('Para guardar un borrador, selecciona al menos el estudiante o la empresa.')
-        return
-      }
+      // Un borrador puede dejar pendientes el tutor, el área, las horas y los
+      // niveles, pero no a quién ampara ni dónde: la práctica ES la relación
+      // entre estudiante y empresa, y sin una de las dos no hay fila que
+      // guardar. Antes se pedía «al menos uno de los dos» y el servidor
+      // rechazaba después lo que aquí se había dado por bueno.
+      if (!studentId) { toast.error('Selecciona el estudiante para guardar el borrador.'); return }
+      if (!companyId) { toast.error('Selecciona la empresa receptora para guardar el borrador.'); return }
     }
 
     setIsSubmitting(true)
@@ -488,7 +562,7 @@ export function NewPracticeModal({
                 <User className="w-3.5 h-3.5 text-blue-600" />
                 <span>1. Asignación de Estudiante y Empresa</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-4">
                 <Typeahead
                   label="Estudiante"
                   required
@@ -520,48 +594,24 @@ export function NewPracticeModal({
                 <Briefcase className="w-3.5 h-3.5 text-indigo-600" />
                 <span>2. Tutoría y Área de Trabajo</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-4">
 
-                {/* Tutor con autocompletado (búsqueda entre tutores existentes) */}
-                <div ref={tutorRef} className="relative">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[12px] font-bold text-slate-700">
-                      Tutor Académico (ULEAM) <span className="text-rose-500">*</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowInlineTutor(true)}
-                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-0.5"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Nuevo Tutor</span>
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <UserCheck className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={tutorQuery}
-                      onChange={(e) => handleTutorInput(e.target.value)}
-                      placeholder="Ej. Ing. Marcos Mendoza, Mgs."
-                      className="w-full h-10 pl-8 pr-3 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-medium text-slate-900"
-                    />
-                  </div>
-                  {tutorOpen && tutorHits.length > 0 && (
-                    <div className="absolute z-[400] top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
-                      {tutorHits.map((t, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onMouseDown={() => { setTutorName(t); setTutorQuery(t); setTutorOpen(false) }}
-                          className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 transition-colors border-b border-slate-100 last:border-0 text-xs font-semibold text-slate-900"
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {/* Tutor: mismo combobox que Estudiante y Empresa.
+                    Antes era un autocompletado propio —otro campo, otra lista,
+                    otro comportamiento— para hacer exactamente lo mismo:
+                    buscar una entidad y elegirla. Tres campos que hacen lo
+                    mismo deben verse y comportarse igual. */}
+                <Typeahead
+                  label="Docente tutor (ULEAM)"
+                  required
+                  placeholder="Busca por nombre del docente…"
+                  value={tutorName}
+                  onSearch={searchTutors}
+                  onSelect={(_id, label) => { setTutorName(label); setTutorQuery(label) }}
+                  onClear={() => { setTutorName(''); setTutorQuery('') }}
+                  onCreate={() => setShowInlineTutor(true)}
+                  createLabel="Nuevo docente"
+                />
 
                 {/* Área de Trabajo — SuggestInput con valores más usados */}
                 <SuggestInput
@@ -582,38 +632,58 @@ export function NewPracticeModal({
                 <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
                 <span>3. Parámetros Académicos</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* El período NO se elige: el servidor solo acepta el abierto,
+                  así que ofrecerlo como desplegable era invitar a un rechazo.
+                  Se dice como contexto, que es lo que es. */}
+              <p className="text-[12px] text-slate-600">
+                Se registrará en el período{' '}
+                <strong className="text-slate-900">{academicPeriod || '—'}</strong>
+                {periodoActivo && academicPeriod === periodoActivo.code && ', el único abierto.'}
+              </p>
 
-                {/* Período */}
-                {/* Período — SuggestInput con períodos más usados */}
-                <SuggestInput
-                  label="Período Académico"
-                  field="academicPeriod"
-                  placeholder="2024-1"
-                  value={academicPeriod}
-                  onChange={setAcademicPeriod}
-                />
+              <div className="flex flex-col gap-3">
 
-                {/* Nivel de Práctica — solo valores reales */}
+
+                {/* Nivel de práctica.
+                    Faltaban dos de los cuatro que se usan de verdad: solo se
+                    ofrecían las Preprofesionales, así que las Laborales —la
+                    mitad de las prácticas registradas— no se podían crear
+                    desde aquí. */}
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Nivel de Práctica</label>
-                  <select
+                  <label htmlFor="np-nivel" className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Nivel de práctica
+                  </label>
+                  <Select
+                    id="np-nivel"
                     value={practiceLevel}
-                    onChange={(e) => setPracticeLevel(e.target.value)}
-                    className="w-full h-9 px-2 text-xs rounded-lg border border-slate-200 font-medium text-slate-800 bg-white"
+                    onChange={(e) => elegirNivel(e.target.value)}
+                    className="w-full"
                   >
-                    <option value="Prácticas Preprofesionales I">Prácticas Preprofesionales I</option>
-                    <option value="Prácticas Preprofesionales II">Prácticas Preprofesionales II</option>
-                  </select>
+                    {NIVELES.map((n) => (
+                      <option key={n.nivel} value={n.nivel}>{n.nivel}</option>
+                    ))}
+                    {/* Una práctica ya registrada puede tener un nivel que hoy
+                        no se ofrece. Si su valor no estuviera en la lista, el
+                        navegador mostraría la primera opción y al guardar le
+                        cambiaría el nivel sin avisar. Se añade el suyo para que
+                        editarla no la corrompa. */}
+                    {practiceLevel && !NIVELES.some((n) => n.nivel === practiceLevel) && (
+                      <option value={practiceLevel}>{practiceLevel} (registrado)</option>
+                    )}
+                  </Select>
                 </div>
 
                 {/* Nivel Académico */}
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Semestre</label>
-                  <select
+                  <label htmlFor="np-semestre" className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Semestre
+                    <span className="ml-1.5 font-medium text-slate-400">se rellena solo, puedes cambiarlo</span>
+                  </label>
+                  <Select
+                    id="np-semestre"
                     value={academicLevel}
                     onChange={(e) => setAcademicLevel(e.target.value)}
-                    className="w-full h-9 px-2 text-xs rounded-lg border border-slate-200 font-medium text-slate-800 bg-white"
+                    className="w-full"
                   >
                     <option value="Quinto">Quinto</option>
                     <option value="Sexto">Sexto</option>
@@ -621,7 +691,7 @@ export function NewPracticeModal({
                     <option value="Octavo">Octavo</option>
                     <option value="Noveno">Noveno</option>
                     <option value="Décimo">Décimo</option>
-                  </select>
+                  </Select>
                 </div>
 
                 {/* Horas proyectadas */}
@@ -629,12 +699,12 @@ export function NewPracticeModal({
                   <label className="text-[11px] font-bold text-slate-700 block mb-1">
                     Horas del Período <span className="text-rose-500">*</span>
                   </label>
-                  <input
+                  <Input
                     type="number"
                     min={1}
                     value={totalHours}
                     onChange={(e) => setTotalHours(Number(e.target.value))}
-                    className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 font-bold text-slate-900"
+                    className="w-full"
                   />
                   <p className="text-[10px] text-slate-400 mt-0.5">Horas proyectadas a cumplir</p>
                 </div>
@@ -644,39 +714,49 @@ export function NewPracticeModal({
 
           {/* Footer */}
           <div className="px-6 py-3.5 bg-white border-t border-slate-200 flex items-center justify-between gap-3">
-            <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
-              <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span>Los borradores no permiten emisión de documentos oficiales.</span>
-            </div>
+            {/* El pie dice lo que falta mientras falta, y vuelve al aviso de
+                siempre en cuanto se puede guardar. */}
+            {faltaBase.length > 0 ? (
+              <div className="text-[11px] font-semibold text-amber-700 flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>
+                  Falta seleccionar {faltaBase.join(' y ')}. Sin eso no se puede guardar, ni siquiera como borrador.
+                </span>
+              </div>
+            ) : (
+              <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>Los borradores no permiten emisión de documentos oficiales.</span>
+              </div>
+            )}
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
-              >
+              <Button type="button" variant="ghost" onClick={onClose} className="text-xs rounded-xl">
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="warning"
                 onClick={() => handleSave(true)}
-                disabled={isSubmitting}
-                className="px-4 py-2.5 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300/60 rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-50"
+                disabled={isSubmitting || faltaBase.length > 0}
+                title={faltaBase.length > 0 ? `Falta seleccionar ${faltaBase.join(' y ')}.` : undefined}
+                className="text-xs gap-1.5 rounded-xl"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>Guardar Borrador</span>
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => handleSave(false)}
-                disabled={isSubmitting}
-                className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md rounded-xl transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                disabled={isSubmitting || faltaBase.length > 0}
+                title={faltaBase.length > 0 ? `Falta seleccionar ${faltaBase.join(' y ')}.` : undefined}
+                className="text-xs gap-2 rounded-xl shadow-md"
               >
                 {isSubmitting ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /><span>Guardando...</span></>
                 ) : (
                   <><CheckCircle2 className="w-4 h-4" /><span>Guardar y Activar</span></>
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

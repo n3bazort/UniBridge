@@ -5,11 +5,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import { toast } from 'sonner'
 import { UserPlus, Mail, Eye, EyeOff, ShieldCheck, Briefcase } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 
 interface TeamUser {
   id: string
   email: string
-  role: 'ADMIN' | 'COORDINATOR' | 'STUDENT' | 'SIGNER'
+  role: 'ADMIN' | 'COORDINATOR' | 'SIGNER'
   createdAt: string
   suspendedAt?: string | null
   coordinator?: { faculty?: { name: string } | null } | null
@@ -85,8 +88,8 @@ export function TeamAccountsConfig() {
         {/* Formulario de creación */}
         <div className="flex flex-col gap-3">
           <div>
-            <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Correo institucional</label>
-            <input
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Correo institucional</label>
+            <Input
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -96,9 +99,9 @@ export function TeamAccountsConfig() {
           </div>
 
           <div>
-            <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Contraseña temporal (mín. 8)</label>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Contraseña temporal (mín. 8)</label>
             <div className="relative">
-              <input
+              <Input
                 type={showPassword ? 'text' : 'password'}
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -109,7 +112,7 @@ export function TeamAccountsConfig() {
                 type="button"
                 onClick={() => setShowPassword(v => !v)}
                 tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 text-[#9ca3af] hover:text-[#374151]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 text-muted-foreground hover:text-[#374151]"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -118,21 +121,21 @@ export function TeamAccountsConfig() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Rol</label>
-              <select
+              <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Rol</label>
+              <Select
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value as 'COORDINATOR' | 'ADMIN' })}
                 className={`${inputCls} cursor-pointer`}
               >
                 <option value="COORDINATOR">Coordinador</option>
                 <option value="ADMIN">Administrador</option>
-              </select>
+              </Select>
             </div>
             <div>
-              <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">
+              <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Facultad {form.role === 'COORDINATOR' ? '(requerida)' : ''}
               </label>
-              <select
+              <Select
                 value={form.facultyId}
                 onChange={(e) => setForm({ ...form, facultyId: e.target.value })}
                 disabled={form.role === 'ADMIN'}
@@ -140,7 +143,7 @@ export function TeamAccountsConfig() {
               >
                 <option value="">Selecciona…</option>
                 {faculties.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -150,28 +153,28 @@ export function TeamAccountsConfig() {
             </p>
           )}
 
-          <button
+          <Button
             onClick={() => createUser.mutate()}
             disabled={!canSubmit || createUser.isPending}
-            className="mt-1 flex items-center justify-center gap-2 h-[42px] bg-[#111827] hover:bg-[#1f2937] disabled:opacity-50 text-white text-[13px] font-semibold rounded-[12px] transition-colors"
+            className="mt-1 h-[42px] gap-2 text-[13px] rounded-[12px]"
           >
             <UserPlus className="w-4 h-4" />
             {createUser.isPending ? 'Creando…' : `Crear cuenta de ${form.role === 'ADMIN' ? 'Administrador' : 'Coordinador'}`}
-          </button>
+          </Button>
         </div>
 
         {/* Lista del equipo */}
         <div className="flex flex-col">
-          <span className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-2">Equipo actual ({teamUsers.length})</span>
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Equipo actual ({teamUsers.length})</span>
           <div className="divide-y divide-[#f3f4f6] border border-[#eef2f7] rounded-[14px] overflow-hidden">
             {teamUsers.map(u => (
               <div key={u.id} className="flex items-center justify-between gap-2 px-4 py-3 bg-white">
                 <div className="flex flex-col min-w-0">
                   <span className="text-[13px] font-semibold text-[#111827] truncate flex items-center gap-1.5">
-                    <Mail className="w-3 h-3 text-[#9ca3af] shrink-0" /> {u.email}
+                    <Mail className="w-3 h-3 text-muted-foreground shrink-0" /> {u.email}
                   </span>
                   {u.coordinator?.faculty?.name && (
-                    <span className="text-[11px] text-[#9ca3af] flex items-center gap-1 mt-0.5">
+                    <span className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
                       <Briefcase className="w-3 h-3" /> {u.coordinator.faculty.name}
                     </span>
                   )}
@@ -182,7 +185,7 @@ export function TeamAccountsConfig() {
               </div>
             ))}
             {teamUsers.length === 0 && (
-              <p className="text-[13px] text-[#9ca3af] px-4 py-6 text-center">Aún no hay cuentas de equipo.</p>
+              <p className="text-[13px] text-muted-foreground px-4 py-6 text-center">Aún no hay cuentas de equipo.</p>
             )}
           </div>
         </div>

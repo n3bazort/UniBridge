@@ -7,7 +7,7 @@ import { Role } from '@prisma/client';
 import { CreatePdfTemplateDto } from './dto/create-pdf-template.dto';
 import { CreateDocxTemplateDto } from './dto/create-docx-template.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage, memoryStorage } from 'multer';
+import { memoryStorage } from 'multer';
 import { extname } from 'path';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 

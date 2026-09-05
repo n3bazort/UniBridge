@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'COORDINATOR' | 'STUDENT' | 'SIGNER'
+export type Role = 'ADMIN' | 'COORDINATOR' | 'SIGNER'
 
 export interface User {
   id: string
@@ -7,6 +7,8 @@ export interface User {
   lastName?: string
   role: Role
   facultyId?: string
+  /** Solo para SIGNER: DIRECTOR (Responsable de Prácticas) o DEAN (Decano). */
+  signerRole?: 'DIRECTOR' | 'DEAN' | null
 }
 
 export interface AuthTokens {

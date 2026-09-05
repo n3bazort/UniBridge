@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, Min, IsString, IsIn } from 'class-validator';
+import { IsOptional, IsInt, Min, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -35,4 +35,9 @@ export class PaginationDto {
   @ApiPropertyOptional()
   @IsOptional()
   unassignedOnly?: string | boolean;
+
+  @ApiPropertyOptional({ description: 'Código del periodo académico a filtrar, ej: 2024-1. Vacío = todos los periodos.' })
+  @IsOptional()
+  @IsString()
+  academicPeriod?: string;
 }

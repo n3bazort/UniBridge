@@ -30,15 +30,8 @@ export class StudentsController {
     return this.studentsService.findAll(paginationDto);
   }
 
-  @Get('me/profile')
-  @Roles(Role.STUDENT)
-  @ApiOperation({ summary: 'Obtener el perfil del estudiante logueado' })
-  getProfile(@Req() req: any) {
-    return this.studentsService.getProfileByUserId(req.user.id);
-  }
-
   @Get(':id')
-  @Roles(Role.ADMIN, Role.COORDINATOR, Role.STUDENT)
+  @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Obtener un estudiante' })
   findOne(@Param('id') id: string) {
     return this.studentsService.findOne(id);

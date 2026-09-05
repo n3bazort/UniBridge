@@ -154,31 +154,23 @@ async function main() {
     { email: 'm.intriago@uleam.edu.ec', first: 'Melany Dayana',   last: 'Intriago Macías',  dni: '1320123456', phone: '0981678901', prog: progTI.id },
   ];
 
+  // El estudiante se siembra como registro de datos, sin cuenta de acceso:
+  // no entra al sistema, así que no hay usuario que crearle.
   const studentRecords: { id: string; first: string; last: string }[] = [];
   for (const s of students) {
-    const u = await prisma.user.create({
+    const est = await prisma.student.create({
       data: {
-        email: s.email,
-        password: pass,
-        role: 'STUDENT',
+        dni: s.dni,
         firstName: s.first,
         lastName: s.last,
-        studentProfile: {
-          create: {
-            dni: s.dni,
-            firstName: s.first,
-            lastName: s.last,
-            phone: s.phone,
-            facultyId: faculty.id,
-            programId: s.prog,
-          },
-        },
+        phone: s.phone,
+        facultyId: faculty.id,
+        programId: s.prog,
       },
-      include: { studentProfile: true },
     });
-    if (u.studentProfile) studentRecords.push({ id: u.studentProfile.id, first: s.first, last: s.last });
+    studentRecords.push({ id: est.id, first: s.first, last: s.last });
   }
-  console.log(`✅ ${studentRecords.length} estudiantes creados (login principal: a.mendoza@uleam.edu.ec)`);
+  console.log(`✅ ${studentRecords.length} estudiantes creados (sin cuenta: no acceden al sistema)`);
 
   // ─── Prácticas con estados variados (para poblar tableros y reportes) ───
   const plan = [

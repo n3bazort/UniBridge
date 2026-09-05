@@ -5,13 +5,23 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  // active:scale-* da el "clic físico" que faltaba (redesign-existing-projects:
+  // "No active/pressed feedback" es uno de los antipatrones más comunes).
+  // transition-all en vez de -colors porque ahora animamos transform también.
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100",
   {
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        // Para acciones "no definitivas" (guardar borrador, advertencia) —
+        // fondo tenue + texto/borde en el tono, no relleno sólido: nunca
+        // debe leerse con la misma urgencia que un botón destructivo.
+        warning:
+          "bg-warning/10 text-warning border border-warning/30 hover:bg-warning/20",
+        success:
+          "bg-success/10 text-success border border-success/30 hover:bg-success/20",
         outline:
           "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary:

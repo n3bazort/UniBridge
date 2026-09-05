@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FileText, PenLine, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface ConfirmCertificatesModalProps {
   open: boolean
@@ -86,18 +87,12 @@ export function ConfirmCertificatesModal({ open, count, onClose, onConfirm }: Co
             </label>
 
             <div className="flex justify-end gap-2 px-6 py-4 bg-slate-50 border-t border-slate-100">
-              <button
-                onClick={onClose}
-                className="px-4 py-2.5 text-[13px] font-semibold text-slate-600 hover:bg-slate-200/60 rounded-[10px] transition-colors"
-              >
+              <Button variant="ghost" onClick={onClose} className="text-[13px] rounded-[10px]">
                 Cancelar
-              </button>
-              <button
-                onClick={handleConfirm}
-                className="px-5 py-2.5 text-[13px] font-semibold text-white bg-[#111827] hover:bg-[#1f2937] rounded-[10px] transition-colors shadow-sm"
-              >
+              </Button>
+              <Button onClick={handleConfirm} className="text-[13px] rounded-[10px] shadow-sm">
                 {autoSend ? 'Generar y enviar a firma' : 'Generar certificados'}
-              </button>
+              </Button>
             </div>
           </motion.div>
         </motion.div>

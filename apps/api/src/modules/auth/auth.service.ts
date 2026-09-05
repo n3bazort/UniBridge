@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
@@ -8,8 +8,6 @@ import { randomBytes } from 'crypto';
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
-
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
@@ -75,6 +73,18 @@ export class AuthService {
         if (coordinator) facultyId = coordinator.facultyId;
     }
 
+    // Qué clase de firmante es. «Firmante» a secas no dice nada al usuario:
+    // el circuito distingue al Responsable de Prácticas, que firma primero,
+    // del Decano, que cierra. La interfaz necesita ese dato para nombrarlo.
+    let signerRole: string | null = null;
+    if (user.role === 'SIGNER') {
+      const perfil = await this.prisma.signerProfile.findUnique({
+        where: { userId: user.id },
+        select: { signerRole: true },
+      });
+      signerRole = perfil?.signerRole ?? null;
+    }
+
     const payload = { sub: user.id, email: user.email, role: user.role, facultyId };
     
     // Generar Access Token y Refresh Token
@@ -90,7 +100,8 @@ export class AuthService {
         role: user.role,
         firstName: (user as any).firstName ?? null,
         lastName: (user as any).lastName ?? null,
-        facultyId
+        facultyId,
+        signerRole
       }
     };
   }

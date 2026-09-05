@@ -3,14 +3,16 @@
 import React, { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
-import { RoleGate } from '@/components/shared/role-gate'
+import { Select } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { Search, Users, XCircle } from 'lucide-react'
+import { RoleGate } from '@/components/shared/role-gate'
+import { Search, Users, XCircle, ChevronDown } from 'lucide-react'
 import { StudentList, Student } from '@/components/students/StudentList'
 import { StudentDetailPanel } from '@/components/students/StudentDetailPanel'
-import { FilterChip } from '@/components/ui/filter-chip'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
 
 export default function StudentsPage() {
   const [search, setSearch] = useState('')
@@ -61,43 +63,54 @@ export default function StudentsPage() {
 
   return (
     <RoleGate allowedRoles={['ADMIN', 'COORDINATOR']}>
-      <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8]">
-        <div className="flex-1 w-full max-w-[1600px] mx-auto px-4 lg:px-8 py-6">
+      <div className="flex flex-col w-full flex-1">
+        <PageContainer variant="wide" className="flex-1">
           <div className="flex flex-col lg:flex-row items-stretch gap-6 w-full">
             
             {/* LEFT COLUMN: HEADER + LIST */}
             <div className="flex flex-col gap-6 w-full lg:w-[60%] shrink-0">
               {/* TOP HEADER */}
               <div className="flex flex-col gap-4">
-                <div>
-                  <h1 className="text-[24px] font-bold text-[#111827] tracking-tight">Directorio de Estudiantes</h1>
-                  <p className="text-[#6b7280] mt-1 text-[15px] font-medium">
-                    Gestiona la información de todos los estudiantes registrados.
-                    {rawStudents.length > 0 && <span className="ml-2 font-semibold">({filteredStudents.length} registros)</span>}
-                  </p>
-                </div>
+                <PageHeader
+                  description="Registro de estudiantes con práctica en el período."
+                  meta={rawStudents.length > 0 ? `${filteredStudents.length} registros` : undefined}
+                />
 
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <div className="relative max-w-md w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af]" />
-                    <Input 
-                      placeholder="Buscar por cédula, nombre o correo..." 
+                {/* Buscador y filtro, misma altura y mismos tokens que la barra
+                    de Prácticas. El filtro era un FilterChip: tres <div> con
+                    onClick que Tab no alcanzaba, y donde pulsar el texto en vez
+                    del chevrón saltaba al siguiente valor sin avisar. Ahora es
+                    un <select> con su <label>. */}
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                  <div className="relative min-w-0 flex-1 sm:max-w-md">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Buscar"
+                      aria-label="Buscar por cédula, nombre o correo"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="pl-10 h-[48px] bg-white border-[#eef2f7] focus:ring-[#3b82f6]/20 focus:border-[#3b82f6] rounded-[12px] shadow-sm"
+                      className="w-full pl-9 pr-3"
                     />
                   </div>
-                  
-                  <div className="flex items-center shrink-0">
-                    <FilterChip 
-                      label="Carrera" 
-                      value={filterProgram} 
-                      onChange={setFilterProgram}
-                      options={[
-                        { value: null, label: 'Todas' },
-                        ...programs.map(p => ({ value: p as string, label: p as string === 'Tecnologías de la Información' ? 'TI' : p as string }))
-                      ]} 
-                    />
+
+                  <div className="flex min-w-0 items-center gap-2">
+                    <label htmlFor="filtro-carrera" className="hidden shrink-0 text-sm text-muted-foreground sm:block">
+                      Carrera
+                    </label>
+                    <div className="relative min-w-0 flex-1 sm:flex-none">
+                      <Select
+                        id="filtro-carrera"
+                        value={filterProgram ?? ''}
+                        onChange={(e) => setFilterProgram(e.target.value || null)}
+                        className="w-full sm:w-56"
+                      >
+                        <option value="">Todas las carreras</option>
+                        {programs.map((p) => (
+                          <option key={p as string} value={p as string}>{p as string}</option>
+                        ))}
+                      </Select>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -148,7 +161,7 @@ export default function StudentsPage() {
               )}
             </div>
           </div>
-        </div>
+        </PageContainer>
       </div>
     </RoleGate>
   )

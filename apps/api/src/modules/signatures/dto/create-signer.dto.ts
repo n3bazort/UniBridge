@@ -41,4 +41,14 @@ export class CreateSignerDto {
   @IsOptional()
   @IsString()
   programId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  dni?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  phone?: string;
 }

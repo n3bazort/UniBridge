@@ -27,6 +27,10 @@ import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { SignaturesModule } from './modules/signatures/signatures.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { PracticeLabelsModule } from './modules/practice-labels/practice-labels.module';
+import { TutorsModule } from './modules/tutors/tutors.module';
+import { ReasonsModule } from './modules/reasons/reasons.module';
+import { CompletionRecordsModule } from './modules/completion-records/completion-records.module';
+import { PublicRepositoryModule } from './modules/public-repository/public-repository.module';
 
 @Module({
   imports: [
@@ -52,8 +56,6 @@ import { PracticeLabelsModule } from './modules/practice-labels/practice-labels.
           host: configService.get('REDIS_HOST'),
           port: configService.get('REDIS_PORT'),
           maxRetriesPerRequest: null,
-          enableOfflineQueue: false,
-          retryStrategy: () => null,
         },
       }),
       inject: [ConfigService],
@@ -78,6 +80,10 @@ import { PracticeLabelsModule } from './modules/practice-labels/practice-labels.
     SignaturesModule,
     ReportsModule,
     PracticeLabelsModule,
+    TutorsModule,
+    ReasonsModule,
+    CompletionRecordsModule,
+    PublicRepositoryModule,
   ],
   controllers: [],
   providers: [

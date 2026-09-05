@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Req, BadRequestException } from '@nestjs/common';
 import { PracticesService } from './practices.service';
 import { CreatePracticeDto } from './dto/create-practice.dto';
 import { UpdatePracticeDto } from './dto/update-practice.dto';
+import { ClosePracticeDto, ReassignPracticeDto } from './dto/close-practice.dto';
 import { BulkImportPracticesDto } from './dto/bulk-import-practices.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -33,12 +34,27 @@ export class PracticesController {
   }
 
 
+  @Post('bulk-import/preview')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Revisa el archivo fila por fila sin escribir nada (RF-26)' })
+  previewBulkImport(@Body() body: { students?: any[] }, @Req() req: any) {
+    // A propósito SIN el DTO estricto: el trabajo de esta ruta es justamente
+    // recibir un archivo imperfecto y decir qué tiene mal, fila por fila. Si la
+    // validación lo rechazara en la puerta, el coordinador volvería a recibir
+    // «students.2.firstName should not be empty» y tendría que adivinar cuál es
+    // la fila 2 — que es exactamente lo que el RF-26 vino a resolver.
+    if (!Array.isArray(body?.students)) {
+      throw new BadRequestException('No se recibió ninguna fila que revisar')
+    }
+    return this.practicesService.previewBulkImport(body.students, req.user?.facultyId)
+  }
+
   @Get('dashboard-stats')
   @Roles(Role.ADMIN, Role.COORDINATOR, Role.SIGNER)
-  @ApiOperation({ summary: 'Obtener estadísticas del dashboard' })
-  getDashboardStats(@Req() req: any) {
+  @ApiOperation({ summary: 'Obtener estadísticas del dashboard. Sin academicPeriod, agrega todos los periodos.' })
+  getDashboardStats(@Req() req: any, @Query('academicPeriod') academicPeriod?: string) {
     const facultyId = req.user?.facultyId;
-    return this.practicesService.getDashboardStats(facultyId);
+    return this.practicesService.getDashboardStats(facultyId, academicPeriod);
   }
 
   @Get()
@@ -70,7 +86,7 @@ export class PracticesController {
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN, Role.COORDINATOR, Role.STUDENT)
+  @Roles(Role.ADMIN, Role.COORDINATOR)
   @ApiOperation({ summary: 'Obtener detalle de práctica' })
   findOne(@Param('id') id: string) {
     return this.practicesService.findOne(id);
@@ -98,6 +114,27 @@ export class PracticesController {
   }
 
 
+
+  @Patch(':id/close')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Dar de baja al estudiante con su motivo, sin reemitir el documento (RF-21)' })
+  close(@Param('id') id: string, @Body() dto: ClosePracticeDto, @Req() req: any) {
+    return this.practicesService.close(id, dto, req.user?.id)
+  }
+
+  @Post(':id/reassign')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Mover al estudiante a otra empresa o docente, conservando el historial (RF-19)' })
+  reassign(@Param('id') id: string, @Body() dto: ReassignPracticeDto, @Req() req: any) {
+    return this.practicesService.reassign(id, dto, req.user?.id)
+  }
+
+  @Get('history/:studentId')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Recorrido completo del estudiante: sus prácticas encadenadas' })
+  history(@Param('studentId') studentId: string) {
+    return this.practicesService.history(studentId)
+  }
 
   @Delete(':id')
   @Roles(Role.ADMIN)

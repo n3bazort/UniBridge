@@ -4,6 +4,8 @@ import React, { useState } from 'react'
 import { Check, Lock, Plus, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { LabelPill } from './LabelPill'
 import { leerEstado, type PracticeLabel } from './types'
 
@@ -169,7 +171,7 @@ export function LabelPicker({
             </button>
           ) : (
             <div className="p-1.5 flex flex-col gap-2">
-              <input
+              <Input
                 autoFocus
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
@@ -179,7 +181,7 @@ export function LabelPicker({
                 }}
                 maxLength={40}
                 placeholder="Ej. La empresa no responde"
-                className="h-8 w-full rounded-lg border border-slate-200 px-2.5 text-[12.5px] outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10"
+                className="w-full"
               />
               <div className="grid grid-cols-8 gap-1.5">
                 {PALETA.map((c) => (
@@ -197,21 +199,17 @@ export function LabelPicker({
                 ))}
               </div>
               <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={crear}
-                  disabled={!nombre.trim() || guardando}
-                  className="flex-1 h-8 rounded-lg bg-[#111827] text-white text-[12px] font-semibold hover:bg-[#1f2937] disabled:opacity-40 transition-colors"
-                >
+                <Button type="button" onClick={crear} disabled={!nombre.trim() || guardando} className="flex-1 h-8 text-[12px] rounded-lg">
                   {guardando ? 'Guardando…' : 'Crear'}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="ghost"
                   onClick={() => { setCreando(false); setNombre('') }}
-                  className="h-8 px-3 rounded-lg text-[12px] font-medium text-slate-500 hover:bg-slate-100 transition-colors"
+                  className="h-8 px-3 text-[12px] rounded-lg"
                 >
                   Cancelar
-                </button>
+                </Button>
               </div>
             </div>
           )}

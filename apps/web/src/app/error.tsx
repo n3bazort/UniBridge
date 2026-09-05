@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect } from 'react'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface ErrorPageProps {
   error: Error & { digest?: string }
@@ -28,20 +29,17 @@ export default function GlobalError({ error, reset }: ErrorPageProps) {
             Ocurrió un error inesperado. Si el problema persiste, por favor contacta al administrador del sistema.
           </p>
           {error.digest && (
-            <p className="text-[11px] text-[#9ca3af] mt-3 font-mono bg-slate-50 px-3 py-1 rounded-full inline-block">
+            <p className="text-[11px] text-muted-foreground mt-3 font-mono bg-slate-50 px-3 py-1 rounded-full inline-block">
               Código: {error.digest}
             </p>
           )}
         </div>
 
         <div className="flex items-center gap-3 w-full">
-          <button
-            onClick={reset}
-            className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl bg-[#111827] text-white text-sm font-medium hover:bg-[#1f2937] transition-colors"
-          >
+          <Button onClick={reset} className="flex-1 gap-2 rounded-xl">
             <RefreshCw className="w-4 h-4" />
             Reintentar
-          </button>
+          </Button>
           <Link
             href="/overview"
             className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl border border-[#eef2f7] text-[#374151] text-sm font-medium hover:bg-[#f9fafb] transition-colors"

@@ -12,8 +12,6 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFiles,
-  UploadedFile,
-  BadRequestException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -70,6 +68,18 @@ export class SignaturesController {
   @ApiOperation({ summary: 'Lista los usuarios registrados' })
   listSigners() {
     return this.signers.listSigners();
+  }
+
+  @Patch('users/:userId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualiza los datos del perfil de un usuario firmante' })
+  updateSigner(
+    @Param('userId') userId: string,
+    @Body() body: { fullName?: string; title?: string; dni?: string; phone?: string; email?: string },
+  ) {
+    return this.signers.updateSigner(userId, body);
   }
 
   @Patch('users/:userId/suspend')
@@ -145,6 +155,42 @@ export class SignaturesController {
   downloadSignedZip(@Query('ids') ids: string, @Res() res: Response) {
     const batchIds = ids ? ids.split(',').filter(Boolean) : undefined;
     return this.signatures.streamSignedZip(res, batchIds);
+  }
+
+  @Get('batches/signed-by-me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SIGNER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Historial de documentos que este firmante ya suscribió, agrupado por lote' })
+  findSignedByMe(@Req() req: any) {
+    return this.signatures.findSignedByMe(req.user.id);
+  }
+
+  @Get('batches/pending-zip')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SIGNER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Un solo ZIP con los lotes pendientes de tu firma (todos, o los ids indicados)' })
+  downloadPendingZip(@Req() req: any, @Query('ids') ids: string, @Res() res: Response) {
+    const batchIds = ids ? ids.split(',').filter(Boolean) : undefined;
+    return this.signatures.streamPendingZip(req.user.id, res, batchIds);
+  }
+
+  @Post('upload-signed')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SIGNER)
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FilesInterceptor('files', 1000, {
+    storage: memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024 },
+  }))
+  @ApiOperation({ summary: 'Sube firmados de varios lotes a la vez; cada archivo se encamina a su lote por el código' })
+  uploadSignedMulti(
+    @Req() req: any,
+    @UploadedFiles() files: Array<{ originalname: string; buffer: Buffer; mimetype: string }>,
+  ) {
+    return this.signatures.uploadSignedFilesMulti(req.user.id, files);
   }
 
   @Get('batches')

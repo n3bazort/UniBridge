@@ -3,17 +3,27 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PracticeStatus } from '@prisma/client';
 
 export class CreatePracticeDto {
-  @ApiProperty()
+  // Un BORRADOR es, por definición, una práctica a medio llenar: se guarda con
+  // el estudiante y se completa la empresa después, o al revés. Por eso los
+  // tres campos son opcionales AQUÍ y la exigencia se aplica en el servicio,
+  // que sí sabe si lo que llega es un borrador o una práctica en firme.
+  //
+  // Antes los tres eran obligatorios y guardar un borrador devolvía
+  // «facultyId must be a UUID» sin haber llegado a la lógica de negocio.
+  @ApiPropertyOptional()
   @IsUUID()
-  studentId!: string;
+  @IsOptional()
+  studentId?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsUUID()
-  companyId!: string;
+  @IsOptional()
+  companyId?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Si no se envía, se resuelve del estudiante' })
   @IsUUID()
-  facultyId!: string;
+  @IsOptional()
+  facultyId?: string;
 
   @ApiPropertyOptional({ example: '2024-1', description: 'Se asigna automáticamente del periodo activo si no se envía' })
   @IsString()

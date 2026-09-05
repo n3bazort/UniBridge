@@ -5,16 +5,23 @@ import { Stage, Layer, Text as KonvaText, Image as KonvaImage } from 'react-konv
 import useImage from 'use-image'
 import { api } from '@/lib/axios'
 import { RoleGate } from '@/components/shared/role-gate'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/auth-store'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
-import { FileText, Hash } from 'lucide-react'
+import { FileText, Hash, Download, Pencil, Trash2, Star, Plus, Eye } from 'lucide-react'
 import { getAssetUrl } from '@/lib/utils'
 import { DocxPreviewModal } from '@/components/shared/DocxPreviewModal'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+import { usePeriodStore } from '@/store/period'
 
 interface DocumentTemplate {
   id: string
@@ -44,7 +51,13 @@ const OFICIOS: Record<OficioKind, {
   SOLICITUD: {
     titulo: 'Solicitud de Vacantes',
     descripcion: 'Pide a la empresa la apertura de vacantes para el grupo de estudiantes.',
-    ejemplo: 'Solicitud de Prácticas Oficial.docx',
+    // El archivo tiene que existir en `apps/web/public/templates/`: el enlace
+    // apunta ahí directamente. Antes nombraba «Solicitud de Prácticas
+    // Oficial.docx», que nunca estuvo en el repositorio, así que «Ver ejemplo»
+    // devolvía un 404 silencioso. Se usa la variante sin imágenes a propósito:
+    // las que llevan firma y sello incrustan la rúbrica del Responsable, y esa
+    // no se publica como descarga.
+    ejemplo: 'Solicitud de Pra. 2026(1) sin_img.docx',
     patron: '{YYYY}-{PROGRAM}-{SEQ:3}',
     color: 'blue',
   },
@@ -91,6 +104,64 @@ interface DocumentSequenceItem {
   periodCode: string
   lastNumber: number
   nextNumber: number
+}
+
+/** Encabezado de sección — mismo patrón (título + descripción opcional +
+ *  acción a la derecha) en las 3 secciones de la página, antes escrito a
+ *  mano 3 veces con tamaños de texto ligeramente distintos cada vez. */
+function SectionHeader({
+  title,
+  description,
+  action,
+}: {
+  title: string
+  description?: string
+  action?: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+      <div>
+        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+        {description && <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{description}</p>}
+      </div>
+      {action}
+    </div>
+  )
+}
+
+/** Botón de ícono para las acciones secundarias de una tarjeta: oculto hasta
+ *  hover para no competir con el contenido, siempre con foco visible por
+ *  teclado. Antes la tarjeta de oficios DOCX mostraba las 4 acciones todo
+ *  el tiempo mientras que la de diseños PDF sí las ocultaba — misma
+ *  pantalla, dos comportamientos distintos para el mismo patrón. */
+function CardIconButton({
+  onClick,
+  title,
+  active,
+  activeClassName,
+  children,
+}: {
+  onClick: (e: React.MouseEvent) => void
+  title: string
+  active?: boolean
+  activeClassName?: string
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className={cn(
+        'flex items-center justify-center w-7 h-7 rounded-lg border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        active
+          ? cn('opacity-100 border-transparent', activeClassName)
+          : 'opacity-0 group-hover:opacity-100 bg-white text-muted-foreground border-border hover:text-foreground hover:bg-accent',
+      )}
+    >
+      {children}
+    </button>
+  )
 }
 
 function SequenceControlCard({
@@ -155,19 +226,22 @@ function SequenceControlCard({
           Próximo número a emitir:
         </label>
         <div className="flex items-center gap-2">
-          <input
+          <Input
             type="number"
             min="1"
             value={val}
             onChange={(e) => setVal(e.target.value)}
-            className="w-24 h-9 px-3 bg-slate-50 border border-slate-200 rounded-[10px] text-[13px] font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            className="w-24 font-mono"
           />
           <Button
             size="sm"
             onClick={handleSave}
             disabled={isSaving || parseInt(val, 10) === currentNext}
             className={`h-9 px-3 text-[12px] rounded-[10px] gap-1.5 ${
-              kind === 'SOLICITUD' ? 'bg-[#111827] hover:bg-[#1f2937]' : 'bg-violet-600 hover:bg-violet-700'
+              // Mismo azul/violeta que ya usa el resto de esta tarjeta para
+              // distinguir SOLICITUD de DESIGNACION (antes este botón solo
+              // rompía el patrón con negro).
+              kind === 'SOLICITUD' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-violet-600 hover:bg-violet-700'
             }`}
           >
             {isSaving ? 'Guardando...' : 'Retomar numeración'}
@@ -196,6 +270,10 @@ function vistaPreviaCodigo(patron: string, docTypeAbbr: string, numEjemplo = 17)
 
 export default function DocumentsPage() {
   const router = useRouter()
+  // El periodo del workspace (topbar) manda: la numeración es POR periodo,
+  // así que mostrar la del "periodo activo" mientras el usuario está parado
+  // en otro le enseñaba correlativos que no son los que va a usar.
+  const { selectedPeriod } = usePeriodStore()
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ['document-templates'],
@@ -206,12 +284,15 @@ export default function DocumentsPage() {
   })
 
   const { data: sequences = [] } = useQuery<DocumentSequenceItem[]>({
-    queryKey: ['document-sequences'],
-    queryFn: async () => (await api.get('/document-templates/sequences')).data,
+    queryKey: ['document-sequences', selectedPeriod],
+    queryFn: async () => (await api.get('/document-templates/sequences', {
+      params: { periodCode: selectedPeriod || undefined },
+    })).data,
+    enabled: !!selectedPeriod,
   })
 
   const handleSaveSequence = async (type: OficioKind, nextNum: number) => {
-    await api.patch('/document-templates/sequences', { type, nextNumber: nextNum })
+    await api.patch('/document-templates/sequences', { type, nextNumber: nextNum, periodCode: selectedPeriod || undefined })
     queryClient.invalidateQueries({ queryKey: ['document-sequences'] })
     queryClient.invalidateQueries({ queryKey: ['document-templates'] })
   }
@@ -403,29 +484,21 @@ export default function DocumentsPage() {
 
   return (
     <RoleGate allowedRoles={['ADMIN', 'COORDINATOR']}>
-      <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-slate-50 pt-6 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-6xl mx-auto flex flex-col gap-8">
-          
+      <div className="flex flex-col w-full flex-1">
+        <PageContainer variant="reading" className="flex flex-col gap-16">
+
           <div>
-            <h1 className="text-[26px] tracking-tight font-extrabold text-slate-800">Gestión de Plantillas y Documentos</h1>
-            <p className="text-slate-500 mt-1.5 text-[14.5px] font-medium leading-relaxed">Gestiona los diseños de certificados PDF, las plantillas de oficios DOCX y su correlativo de numeración.</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Gestión de Plantillas y Documentos</h1>
+            <p className="text-muted-foreground mt-1.5 text-sm max-w-2xl">Gestiona los diseños de certificados PDF, las plantillas de oficios DOCX y su correlativo de numeración.</p>
           </div>
 
-          {/* Sección de Control de Numeración / Retoma de Secuencia */}
-          <div className="flex flex-col gap-4 bg-white p-5 rounded-[18px] border border-[#eef2f7] shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#f3f4f6]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-[10px] bg-slate-100 flex items-center justify-center text-slate-700">
-                  <Hash className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <h2 className="text-[16px] font-bold text-[#111827]">Control de Numeración y Retoma de Secuencia</h2>
-                  <p className="text-[12.5px] text-[#6b7280]">Configura el número correlativo desde el cual se continuará numerando cada oficio en el periodo académico actual.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
+          {/* Sección: Configuración */}
+          <section className="flex flex-col gap-6">
+            <SectionHeader
+              title="Control de Numeración y Retoma de Secuencia"
+              description="Configura el número correlativo desde el cual se continuará numerando cada oficio en el periodo académico actual."
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {(Object.keys(OFICIOS) as OficioKind[]).map((kind) => {
                 const seq = sequences.find(s => s.type === kind)
                 return (
@@ -438,43 +511,43 @@ export default function DocumentsPage() {
                 )
               })}
             </div>
-          </div>
+          </section>
 
-          {/* Sección de Certificados PDF */}
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-[20px] font-semibold text-[#111827]">Certificados PDF (Diseños Visuales)</h2>
-              <a 
-                href="/templates/Certificado Real.png" 
-                download="Certificado Real.png"
-                title="Descargar plantilla de ejemplo"
-                className="flex items-center justify-center w-8 h-8 rounded-[10px] text-[#9ca3af] hover:text-[#111827] hover:bg-white border border-transparent hover:border-[#eef2f7] hover:shadow-sm transition-all"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              </a>
-            </div>
-            
+          {/* Sección: Diseños */}
+          <section className="flex flex-col gap-6">
+            <SectionHeader
+              title="Certificados PDF (Diseños Visuales)"
+              action={
+                <a
+                  href="/templates/Certificado Real.png"
+                  download="Certificado Real.png"
+                  title="Descargar plantilla de ejemplo"
+                  className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Plantilla de ejemplo
+                </a>
+              }
+            />
+
             {isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {[1,2,3,4].map(i => <Skeleton key={i} className="min-h-[220px] rounded-[16px] bg-white border border-[#eef2f7]" />)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {[1,2,3,4].map(i => <Skeleton key={i} className="min-h-[220px] rounded-xl bg-white border border-border" />)}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+
                 {/* Tarjeta: Crear Nuevo Diseño */}
                 <button
                   onClick={() => router.push('/documents/designer')}
-                  className="group flex flex-col items-center justify-center gap-3 min-h-[220px] rounded-[16px] border border-dashed border-[#d1d5db] bg-white/50 hover:bg-white hover:border-[#9ca3af] hover:shadow-soft transition-all duration-200 cursor-pointer"
+                  className="group flex flex-col items-center justify-center gap-3 min-h-[220px] rounded-xl border border-dashed border-border bg-white/50 hover:bg-white hover:border-muted-foreground hover:shadow-sm transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <div className="w-12 h-12 rounded-full bg-[#f3f4f6] group-hover:bg-[#eef2f7] flex items-center justify-center transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#6b7280] group-hover:text-[#374151]">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
+                  <div className="w-12 h-12 rounded-full bg-muted group-hover:bg-accent flex items-center justify-center transition-colors">
+                    <Plus className="w-6 h-6 text-muted-foreground group-hover:text-foreground" />
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    <span className="font-semibold text-[#374151] text-[14px]">Crear Nuevo Diseño</span>
-                    <span className="text-[12px] font-medium text-[#9ca3af]">Editor visual interactivo</span>
+                    <span className="font-semibold text-foreground text-sm">Crear Nuevo Diseño</span>
+                    <span className="text-xs font-medium text-muted-foreground">Editor visual interactivo</span>
                   </div>
                 </button>
 
@@ -497,29 +570,24 @@ export default function DocumentsPage() {
               })}
             </div>
           )}
-        </div>
+        </section>
 
-          {/* Sección de Oficios DOCX */}
-          <div className="flex flex-col gap-4 mt-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h2 className="text-[20px] font-semibold text-[#111827] ">Oficios en Word</h2>
-                <p className="text-[13px] text-[#6b7280] mt-0.5">
-                  La Facultad emite dos formatos: uno pide las vacantes y el otro designa al estudiante con su tutor.
-                </p>
-              </div>
-
-              <input
-                type="file"
-                accept=".docx"
-                ref={fileInputRef}
-                className="hidden"
-                onChange={handleDocxUpload}
-              />
-            </div>
+          {/* Sección: Plantillas */}
+          <section className="flex flex-col gap-6">
+            <SectionHeader
+              title="Oficios en Word"
+              description="La Facultad emite dos formatos: uno pide las vacantes y el otro designa al estudiante con su tutor."
+            />
+            <input
+              type="file"
+              accept=".docx"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleDocxUpload}
+            />
 
             {/* Columnas por tipo de oficio */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {(Object.keys(OFICIOS) as OficioKind[]).map((kind) => {
                 const info = OFICIOS[kind]
                 const propias = docxTemplates.filter((t) => kindOf(t) === kind)
@@ -536,22 +604,26 @@ export default function DocumentsPage() {
                       <div className={`absolute top-0 left-0 w-full h-1 ${kind === 'SOLICITUD' ? 'bg-blue-500' : 'bg-violet-500'}`}></div>
                       <div className="flex items-start justify-between gap-3 mt-1">
                         <div>
-                          <h3 className="text-[17px] tracking-tight font-bold text-slate-800">{info.titulo}</h3>
-                          <p className="text-[13px] text-slate-500 mt-1 leading-snug">{info.descripcion}</p>
+                          <h3 className="text-base font-semibold tracking-tight text-foreground">{info.titulo}</h3>
+                          <p className="text-sm text-muted-foreground mt-1 leading-snug">{info.descripcion}</p>
                         </div>
                         <span
                           className={`shrink-0 text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider ${
                             kind === 'SOLICITUD' ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'
                           }`}
+                          title={`Patrón de numeración: ${info.patron}`}
                         >
                           {propias.length} {propias.length === 1 ? 'PLANTILLA' : 'PLANTILLAS'}
                         </span>
                       </div>
 
-                      <p className="text-[12px] text-slate-500 font-mono mt-1">Numeración: <span className="text-slate-700 font-semibold">{info.patron}</span></p>
-
+                      {/* La línea "Numeración: {patrón}" que vivía aquí era
+                          jerga técnica compitiendo con lo importante — y
+                          cada tarjeta de abajo ya muestra el resultado
+                          legible ("Oficio No. 2026-TI-022"). Queda como
+                          tooltip en el conteo, no como texto permanente. */}
                       {!tienePredeterminada && (
-                        <p className="text-[12.5px] font-medium text-amber-700 bg-amber-50/80 border border-amber-200/60 rounded-[12px] px-3 py-2.5 mt-1 leading-snug">
+                        <p className="text-sm font-medium text-warning bg-warning/10 border border-warning/30 rounded-xl px-3 py-2.5 mt-1 leading-snug">
                           {propias.length === 0
                             ? 'No hay plantilla subida: este oficio todavía no se puede emitir.'
                             : 'Ninguna está marcada como predeterminada: se usará la primera de la lista.'}
@@ -559,22 +631,26 @@ export default function DocumentsPage() {
                       )}
 
                       <div className="flex items-center gap-3 mt-3">
-                        <button
+                        {/* Sólido, no degradado — el gradiente azul es justo
+                            la huella visual más reconocible de "hecho por IA"
+                            (redesign-existing-projects). La sombra sigue
+                            teñida del mismo tono, eso sí se conserva. */}
+                        <Button
                           onClick={() => { setUploadKind(kind); fileInputRef.current?.click() }}
                           disabled={isUploading}
-                          className={`flex items-center gap-2 h-10 px-4 rounded-xl text-[13.5px] font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 ${
-                            kind === 'SOLICITUD' ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-blue-500/30' : 'bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 shadow-violet-500/30'
+                          className={`h-10 gap-2 text-sm rounded-xl shadow-lg transition-all hover:-translate-y-0.5 disabled:hover:translate-y-0 ${
+                            kind === 'SOLICITUD' ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/30' : 'bg-violet-600 hover:bg-violet-500 shadow-violet-500/30'
                           }`}
                         >
                           {isUploading && uploadKind === kind ? 'Subiendo…' : 'Subir formato'}
-                        </button>
+                        </Button>
                         <a
                           href={`/templates/${encodeURIComponent(info.ejemplo)}`}
                           download={info.ejemplo}
                           title="Descarga el formato de ejemplo"
-                          className="flex items-center gap-1.5 h-10 px-4 rounded-xl text-[13px] font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 transition-all"
+                          className="flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground bg-muted hover:bg-accent border border-border transition-all"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                          <Download className="w-3.5 h-3.5" />
                           Ver ejemplo
                         </a>
                       </div>
@@ -582,147 +658,38 @@ export default function DocumentsPage() {
 
                     {/* Lista de plantillas de este tipo */}
                     {isLoading ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                        {[1, 2].map(i => <Skeleton key={i} className="min-h-[120px] rounded-[16px] bg-white border border-[#eef2f7]" />)}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {[1, 2].map(i => <Skeleton key={i} className="min-h-[120px] rounded-xl bg-white border border-border" />)}
                       </div>
                     ) : propias.length === 0 ? (
-                      <div className="mt-2">
-                        <EmptyState 
-                          icon={FileText} 
-                          title="No hay plantillas DOCX" 
-                          description={`Sube una plantilla para emitir ${info.titulo.toLowerCase()}.`}
-                        />
-                      </div>
+                      <EmptyState
+                        icon={FileText}
+                        title="No hay plantillas DOCX"
+                        description={`Sube una plantilla para emitir ${info.titulo.toLowerCase()}.`}
+                      />
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                        {propias.map((template) => {
-                          const isDocxDefault = typeof template.content === 'object' && template.content?.isDefault === true
-                          const cfg = typeof template.content === 'object' && template.content !== null ? template.content : {}
-                          const esDesignacion = kind === 'DESIGNACION'
-                          return (
-                            <div key={template.id} className={`group relative flex flex-col p-4 rounded-[20px] bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 ${isDocxDefault ? 'ring-2 ring-emerald-500/50' : ''}`}>
-                              {isDocxDefault && (
-                                <span className="absolute -top-2.5 right-4 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm uppercase tracking-wide z-10">
-                                  ✓ Predeterminado
-                                </span>
-                              )}
-                              <span
-                                className={`absolute -top-2.5 left-4 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm uppercase tracking-wide z-10 ${
-                                  esDesignacion ? 'bg-violet-600 text-white' : 'bg-blue-600 text-white'
-                                }`}
-                              >
-                                {esDesignacion ? 'Designación' : 'Solicitud'}
-                              </span>
-                              <div 
-                                onClick={(e) => handlePreviewTemplate(template, e)}
-                                className={`w-full h-32 rounded-[12px] border flex items-center justify-center mb-3 cursor-pointer hover:bg-opacity-80 transition-opacity ${esDesignacion ? 'bg-violet-50/50 border-violet-100 hover:bg-violet-100/50' : 'bg-[#f8fafc] border-[#eef2f7] hover:bg-blue-50/50'}`}
-                                title="Clic para previsualizar la plantilla"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={esDesignacion ? 'text-violet-500' : 'text-[#3b82f6]'}>
-                                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
-                                  <polyline points="14 2 14 8 20 8"></polyline>
-                                  <path d="M8 13h8"></path>
-                                  <path d="M8 17h8"></path>
-                                  <path d="M8 9h2"></path>
-                                </svg>
-                              </div>
-                              <div className="flex flex-col gap-1">
-                                <div className="flex items-start justify-between gap-2">
-                                  <h3 className="font-semibold text-[#111827] text-[14px] leading-tight line-clamp-2" title={template.name}>
-                                    {template.name}
-                                  </h3>
-                                  <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                      onClick={(e) => handleDownloadTemplate(template, e)}
-                                      className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#111827] hover:bg-slate-100 rounded-[8px] transition-colors"
-                                      title="Descargar la plantilla Word original"
-                                    >
-                                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                        <polyline points="7 10 12 15 17 10"></polyline>
-                                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                                      </svg>
-                                    </button>
-                                    <button
-                                      onClick={(e) => handleMakeDefault(template, e)}
-                                      className={`flex items-center justify-center w-7 h-7 rounded-[8px] transition-colors ${isDocxDefault ? 'text-emerald-600 bg-emerald-50' : 'text-[#9ca3af] hover:text-emerald-600 hover:bg-emerald-50'}`}
-                                      title={isDocxDefault ? 'Plantilla predeterminada' : 'Establecer como predeterminada'}
-                                    >
-                                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={isDocxDefault ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                                      </svg>
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleRenameClick(template.id, template.name)
-                                      }}
-                                      className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#3b82f6] hover:bg-[#eff6ff] rounded-[8px] transition-colors"
-                                      title="Renombrar plantilla"
-                                    >
-                                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                      </svg>
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleDelete(template.id)
-                                      }}
-                                      className="flex items-center justify-center w-7 h-7 text-[#9ca3af] hover:text-[#ef4444] hover:bg-[#fef2f2] rounded-[8px] transition-colors"
-                                      title="Eliminar plantilla"
-                                    >
-                                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M3 6h18"></path>
-                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                      </svg>
-                                    </button>
-                                  </div>
-                                </div>
-                                <span className="text-[12px] font-medium text-[#9ca3af]">
-                                  Creado el {new Date(template.createdAt).toLocaleDateString('es-ES')}
-                                </span>
-                                {/* Alcance: se ve sin abrir la configuración */}
-                                <span
-                                  className={`mt-2 self-start text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${
-                                    scopeOf(template) === 'ESTUDIANTE'
-                                      ? 'bg-amber-50 text-amber-700 border border-amber-200/60'
-                                      : 'bg-slate-100 text-slate-500'
-                                  }`}
-                                  title={ALCANCES[scopeOf(template)].detalle}
-                                >
-                                  {ALCANCES[scopeOf(template)].titulo}
-                                </span>
-                                {/* Numeración del oficio: patrón configurable por plantilla */}
-                                <button
-                                  onClick={() => openCodeModal(template)}
-                                  className="mt-2 flex items-center gap-1.5 text-left text-[11.5px] font-mono text-slate-500 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded-[8px] px-2.5 py-1.5 transition-colors truncate"
-                                  title="Editar el alcance y la numeración del oficio"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                  </svg>
-                                  <span className="truncate">
-                                    Oficio No.{' '}
-                                    <span className={esDesignacion ? 'text-violet-600 font-bold' : 'text-blue-600 font-bold'}>
-                                      {vistaPreviaCodigo(cfg.codePattern || OFICIOS[kind].patron, cfg.docTypeAbbr || 'SPP', sequences.find(s => s.type === kind)?.nextNumber || 17)}
-                                    </span>
-                                  </span>
-                                </button>
-                              </div>
-                            </div>
-                          )
-                        })}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {propias.map((template) => (
+                          <OficioTemplateCard
+                            key={template.id}
+                            template={template}
+                            kind={kind}
+                            sequenceNext={sequences.find(s => s.type === kind)?.nextNumber || 17}
+                            onPreview={(e) => handlePreviewTemplate(template, e)}
+                            onDownload={(e) => handleDownloadTemplate(template, e)}
+                            onMakeDefault={(e) => handleMakeDefault(template, e)}
+                            onRename={(e) => { e.stopPropagation(); handleRenameClick(template.id, template.name) }}
+                            onDelete={(e) => { e.stopPropagation(); handleDelete(template.id) }}
+                            onEditNumbering={() => openCodeModal(template)}
+                          />
+                        ))}
                       </div>
                     )}
                   </div>
                 )
               })}
             </div>
-          </div>
+          </section>
 
         {/* Modal de Confirmación de Borrado */}
           {deleteModal.show && (
@@ -742,18 +709,12 @@ export default function DocumentsPage() {
                     ¿Estás seguro de que deseas eliminar este diseño? Esta acción no se puede deshacer.
                   </p>
                   <div className="flex items-center justify-end gap-3">
-                    <button 
-                      onClick={() => setDeleteModal({ show: false, templateId: null })}
-                      className="px-5 py-2.5 text-[14px] font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
-                    >
+                    <Button variant="secondary" onClick={() => setDeleteModal({ show: false, templateId: null })} className="text-[14px] rounded-xl">
                       Cancelar
-                    </button>
-                    <button 
-                      onClick={confirmDelete}
-                      className="px-5 py-2.5 text-[14px] font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-sm shadow-red-500/20"
-                    >
+                    </Button>
+                    <Button variant="destructive" onClick={confirmDelete} className="text-[14px] rounded-xl shadow-sm">
                       Eliminar
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -776,11 +737,11 @@ export default function DocumentsPage() {
                   <p className="text-[14px] text-slate-500 mb-5">
                     Ingresa el nuevo nombre para este diseño:
                   </p>
-                  <input
+                  <Input
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[14px] text-slate-800 font-medium focus:outline-none focus:ring-[3px] focus:ring-blue-500/20 focus:border-blue-500 transition-all mb-8 shadow-inner shadow-slate-100/50"
+                    className="w-full mb-8"
                     placeholder="Nombre de la plantilla"
                     autoFocus
                     onKeyDown={(e) => {
@@ -788,18 +749,12 @@ export default function DocumentsPage() {
                     }}
                   />
                   <div className="flex items-center justify-end gap-3">
-                    <button 
-                      onClick={() => setRenameModal({ show: false, templateId: null, currentName: '' })}
-                      className="px-5 py-2.5 text-[14px] font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
-                    >
+                    <Button variant="secondary" onClick={() => setRenameModal({ show: false, templateId: null, currentName: '' })} className="text-[14px] rounded-xl">
                       Cancelar
-                    </button>
-                    <button 
-                      onClick={confirmRename}
-                      className="px-5 py-2.5 text-[14px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-sm shadow-blue-500/30"
-                    >
+                    </Button>
+                    <Button onClick={confirmRename} className="text-[14px] rounded-xl shadow-sm">
                       Guardar
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -853,12 +808,12 @@ export default function DocumentsPage() {
                     impide que dos oficios se repitan.
                   </p>
 
-                  <input
+                  <Input
                   type="text"
                   value={codePattern}
                   onChange={(e) => setCodePattern(e.target.value)}
                   placeholder={OFICIOS[kindOf(codeModal.template)].patron}
-                  className="w-full px-3 py-2.5 mb-1 bg-white border border-[#e5e7eb] rounded-[10px] text-[14px] font-mono text-[#111827] focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
+                  className="w-full mb-1 font-mono"
                 />
                 <p className="text-[11.5px] text-slate-400 mb-4">
                   Si lo dejas vacío se usa el del formato: <span className="font-mono">{OFICIOS[kindOf(codeModal.template)].patron}</span>
@@ -897,12 +852,12 @@ export default function DocumentsPage() {
                 {(codePattern || OFICIOS[kindOf(codeModal.template)].patron).includes('{TYPE}') && (
                   <div className="flex items-center gap-2 mb-4">
                     <label className="text-[13px] text-slate-600">Abreviatura del tipo:</label>
-                    <input
+                    <Input
                       type="text"
                       value={docTypeAbbr}
                       onChange={(e) => setDocTypeAbbr(e.target.value.toUpperCase())}
                       placeholder="SPP"
-                      className="w-[70px] px-2 py-1.5 bg-white border border-[#e5e7eb] rounded-[8px] text-[13px] font-mono text-center uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
+                      className="w-[70px] font-mono text-center"
                     />
                   </div>
                 )}
@@ -913,18 +868,12 @@ export default function DocumentsPage() {
                 </div>
 
                 <div className="flex items-center justify-end gap-3 mt-8">
-                  <button
-                    onClick={() => setCodeModal({ show: false, template: null })}
-                    className="px-5 py-2.5 text-[14px] font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
-                  >
+                  <Button variant="secondary" onClick={() => setCodeModal({ show: false, template: null })} className="text-[14px] rounded-xl">
                     Cancelar
-                  </button>
-                  <button
-                    onClick={saveCodeConfig}
-                    className="px-5 py-2.5 text-[14px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-sm shadow-blue-500/30"
-                  >
+                  </Button>
+                  <Button onClick={saveCodeConfig} className="text-[14px] rounded-xl shadow-sm">
                     Guardar configuración
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -937,9 +886,126 @@ export default function DocumentsPage() {
             url={previewTemplate?.url || null}
             title={previewTemplate?.title}
           />
-        </div>
+        </PageContainer>
       </div>
     </RoleGate>
+  )
+}
+
+/** Una plantilla DOCX (Solicitud o Designación) dentro de su columna.
+ *  Antes vivía inline en el .map() de la página (120 líneas, SVGs a mano);
+ *  separarla la hace legible y reutilizable, y de paso unifica sus íconos
+ *  de acción con el mismo CardIconButton que ya usa TemplateCard. */
+function OficioTemplateCard({
+  template,
+  kind,
+  sequenceNext,
+  onPreview,
+  onDownload,
+  onMakeDefault,
+  onRename,
+  onDelete,
+  onEditNumbering,
+}: {
+  template: DocumentTemplate
+  kind: OficioKind
+  sequenceNext: number
+  onPreview: (e: React.MouseEvent) => void
+  onDownload: (e: React.MouseEvent) => void
+  onMakeDefault: (e: React.MouseEvent) => void
+  onRename: (e: React.MouseEvent) => void
+  onDelete: (e: React.MouseEvent) => void
+  onEditNumbering: () => void
+}) {
+  const isDefault = typeof template.content === 'object' && template.content?.isDefault === true
+  const cfg = typeof template.content === 'object' && template.content !== null ? template.content : {}
+  const esDesignacion = kind === 'DESIGNACION'
+  const accent = esDesignacion ? 'violet' : 'blue'
+
+  return (
+    <div className={cn(
+      'group relative flex flex-col p-3 rounded-xl bg-white border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200',
+      isDefault ? 'border-transparent ring-2 ring-success/40' : 'border-border',
+    )}>
+      <span className={cn(
+        'absolute -top-2 left-3 z-10 text-[9.5px] font-bold px-2 py-0.5 rounded-full shadow-sm uppercase tracking-wide text-white',
+        accent === 'violet' ? 'bg-violet-600' : 'bg-blue-600',
+      )}>
+        {esDesignacion ? 'Designación' : 'Solicitud'}
+      </span>
+
+      {/* La banda de previsualización era de 128 px de alto para mostrar un
+          solo icono: ocupaba más que todo el texto de la tarjeta junta y
+          obligaba a desplazarse para comparar dos plantillas. Con 64 px sigue
+          siendo un objetivo de clic cómodo y la tarjeta cabe entera en pantalla. */}
+      <div
+        onClick={onPreview}
+        className={cn(
+          'w-full h-16 rounded-lg border flex items-center justify-center mb-2 cursor-pointer transition-colors',
+          accent === 'violet' ? 'bg-violet-50/50 border-violet-100 hover:bg-violet-100/50' : 'bg-blue-50/40 border-blue-100 hover:bg-blue-100/40',
+        )}
+        title="Clic para previsualizar la plantilla"
+      >
+        <FileText className={cn('w-7 h-7', accent === 'violet' ? 'text-violet-500' : 'text-blue-500')} strokeWidth={1.5} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2" title={template.name}>
+            {template.name}
+          </h3>
+          <div className="flex items-center gap-1 shrink-0">
+            <CardIconButton onClick={onDownload} title="Descargar la plantilla Word original">
+              <Download className="w-3.5 h-3.5" />
+            </CardIconButton>
+            <CardIconButton
+              onClick={onMakeDefault}
+              title={isDefault ? 'Plantilla predeterminada' : 'Establecer como predeterminada'}
+              active={isDefault}
+              activeClassName="bg-success/10 text-success"
+            >
+              <Star className="w-3.5 h-3.5" fill={isDefault ? 'currentColor' : 'none'} />
+            </CardIconButton>
+            <CardIconButton onClick={onRename} title="Renombrar plantilla">
+              <Pencil className="w-3.5 h-3.5" />
+            </CardIconButton>
+            <CardIconButton onClick={onDelete} title="Eliminar plantilla">
+              <Trash2 className="w-3.5 h-3.5" />
+            </CardIconButton>
+          </div>
+        </div>
+        {/* Fecha y alcance comparten fila: son dos datos cortos, y apilarlos
+            añadía una línea entera a cada tarjeta sin ganar legibilidad. */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-medium text-muted-foreground">
+            {new Date(template.createdAt).toLocaleDateString('es-ES')}
+          </span>
+          <span
+            className={cn(
+              'text-[10px] font-semibold px-1.5 py-0.5 rounded-full',
+              scopeOf(template) === 'ESTUDIANTE' ? 'text-warning bg-warning/10 border border-warning/30' : 'bg-muted text-muted-foreground',
+            )}
+            title={ALCANCES[scopeOf(template)].detalle}
+          >
+            {ALCANCES[scopeOf(template)].titulo}
+          </span>
+        </div>
+        {/* Numeración del oficio: patrón configurable por plantilla */}
+        <button
+          onClick={onEditNumbering}
+          className="mt-1.5 flex items-center gap-1.5 text-left text-[11px] font-mono text-muted-foreground bg-muted hover:bg-accent hover:text-foreground border border-border rounded-lg px-2 py-1 transition-colors truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          title="Editar el alcance y la numeración del oficio"
+        >
+          <Pencil className="w-2.5 h-2.5 shrink-0" />
+          <span className="truncate">
+            Oficio No.{' '}
+            <span className={accent === 'violet' ? 'text-violet-600 font-bold' : 'text-blue-600 font-bold'}>
+              {vistaPreviaCodigo(cfg.codePattern || OFICIOS[kind].patron, cfg.docTypeAbbr || 'SPP', sequenceNext)}
+            </span>
+          </span>
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -965,93 +1031,62 @@ function TemplateCard({
   const content = template.content as any
   const elementCount = content?.schemas?.[0]?.length || content?.elements?.length || 0
 
+  const canManage = !isDefault || user?.role === 'ADMIN'
+
   return (
     <div className="relative group">
       <button
         onClick={onClick}
-        className={`w-full relative flex flex-col p-4 rounded-[16px] bg-white border transition-all duration-200 cursor-pointer text-left
-          ${isDefault ? 'border-emerald-500 ring-4 ring-emerald-500/10 shadow-soft' : 'border-[#eef2f7] hover:border-[#cbd5e1] hover:shadow-soft'}`}
-      >
-        {isDefault && (
-          <div className="absolute -top-3 -right-2 z-10 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-3 py-1 rounded-[8px] border border-emerald-200 shadow-sm uppercase tracking-wider flex items-center gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            Predeterminado
-          </div>
+        className={cn(
+          'w-full relative flex flex-col p-3 rounded-xl bg-white border transition-all duration-200 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          isDefault ? 'border-transparent ring-2 ring-success/40 shadow-sm' : 'border-border hover:border-muted-foreground/40 hover:shadow-sm',
         )}
-        
-        {/* Miniatura del diseño */}
-        <div className="w-full h-32 rounded-[12px] bg-[#f8fafc] border border-[#eef2f7] relative overflow-hidden mb-3">
+      >
+        {/* Miniatura del diseño. Aquí sí hay algo que ver —el certificado
+            real—, así que se recorta menos que en las tarjetas de oficio. */}
+        <div className="w-full h-24 rounded-lg bg-slate-50 border border-border relative overflow-hidden mb-2">
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-80">
             <MiniTemplatePreview template={template} />
           </div>
-          {/* Badge de cantidad de elementos */}
-          <div className="absolute bottom-2 left-2 bg-white/90 text-[#475569] text-[10px] font-semibold px-2 py-1 rounded-[6px] border border-[#eef2f7] backdrop-blur-md shadow-sm">
+          <div className="absolute bottom-1.5 left-1.5 bg-white/90 text-muted-foreground text-[9.5px] font-semibold px-1.5 py-0.5 rounded-md border border-border backdrop-blur-md shadow-sm">
             {elementCount} variables
           </div>
         </div>
 
-        <div className="flex flex-col gap-1 w-full">
-          <h3 className="font-semibold text-[14px] text-[#111827] truncate pr-6 leading-tight">
+        <div className="flex flex-col gap-0.5 w-full">
+          <h3 className="font-semibold text-sm text-foreground truncate pr-6 leading-tight">
             {template.name}
           </h3>
-          <span className="text-[12px] font-medium text-[#9ca3af]">
-            Actualizado el {new Date(template.createdAt).toLocaleDateString('es-ES')}
+          <span className="text-[11px] font-medium text-muted-foreground">
+            {new Date(template.createdAt).toLocaleDateString('es-ES')}
           </span>
         </div>
       </button>
-      
-      {/* Botones Flotantes (Aparecen en hover o si están activos) */}
-      <div className="absolute bottom-[20px] right-[20px] flex items-center gap-1 z-20">
-        {onDownload && (
-          <button
-            onClick={onDownload}
-            className="flex items-center justify-center w-7 h-7 bg-white text-[#9ca3af] rounded-[8px] opacity-0 group-hover:opacity-100 hover:bg-slate-100 hover:text-[#111827] transition-all border border-[#eef2f7]"
-            title="Descargar el diseño (JSON)"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-          </button>
-        )}
-        <button
-          onClick={onMakeDefault}
-          className={`flex items-center justify-center w-7 h-7 rounded-[8px] transition-all
-            ${isDefault ? 'bg-emerald-100 text-emerald-600 opacity-100' : 'bg-white text-[#9ca3af] opacity-0 group-hover:opacity-100 hover:text-emerald-600 hover:bg-emerald-50 border border-[#eef2f7]'}`}
-          title={isDefault ? "Plantilla predeterminada" : "Establecer como predeterminada"}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={isDefault ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-          </svg>
-        </button>
 
-        {(!isDefault || user?.role === 'ADMIN') && (
-          <button
-            onClick={(e) => onRename(template.id, template.name, e)}
-            className="flex items-center justify-center w-7 h-7 bg-white text-[#9ca3af] rounded-[8px] opacity-0 group-hover:opacity-100 hover:bg-[#eff6ff] hover:text-[#3b82f6] transition-all border border-[#eef2f7]"
-            title="Renombrar plantilla"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-              <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
-          </button>
+      {/* Acciones — ocultas hasta hover, igual que en las tarjetas de oficios */}
+      <div className="absolute bottom-3 right-3 flex items-center gap-1 z-20">
+        {onDownload && (
+          <CardIconButton onClick={onDownload} title="Descargar el diseño (JSON)">
+            <Download className="w-3.5 h-3.5" />
+          </CardIconButton>
         )}
-        
-        {(!isDefault || user?.role === 'ADMIN') && (
-          <button
-            onClick={(e) => onDelete(template.id, e)}
-            className="flex items-center justify-center w-7 h-7 bg-white text-[#9ca3af] rounded-[8px] opacity-0 group-hover:opacity-100 hover:bg-[#fef2f2] hover:text-[#ef4444] transition-all border border-[#eef2f7]"
-            title="Eliminar plantilla"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-          </button>
+        <CardIconButton
+          onClick={onMakeDefault}
+          title={isDefault ? 'Plantilla predeterminada' : 'Establecer como predeterminada'}
+          active={isDefault}
+          activeClassName="bg-success/10 text-success"
+        >
+          <Star className="w-3.5 h-3.5" fill={isDefault ? 'currentColor' : 'none'} />
+        </CardIconButton>
+        {canManage && (
+          <CardIconButton onClick={(e) => onRename(template.id, template.name, e)} title="Renombrar plantilla">
+            <Pencil className="w-3.5 h-3.5" />
+          </CardIconButton>
+        )}
+        {canManage && (
+          <CardIconButton onClick={(e) => onDelete(template.id, e)} title="Eliminar plantilla">
+            <Trash2 className="w-3.5 h-3.5" />
+          </CardIconButton>
         )}
       </div>
     </div>
@@ -1074,8 +1109,9 @@ function MiniTemplatePreview({ template }: { template: DocumentTemplate }) {
     }
   }, [rawBg]);
   const [bgImage] = useImage(getAssetUrl(resolvedBg) || '');
-  // Aumentar la escala para que se vea mucho más grande
-  const scale = 0.16;
+  // Ajustada a la altura de la miniatura (96 px): 794 × 0.12 ≈ 95 px, así el
+  // diseño entra entero en la caja en vez de quedar recortado por arriba.
+  const scale = 0.12;
   const width = content?.width || 1123;
   const height = content?.height || 794;
 

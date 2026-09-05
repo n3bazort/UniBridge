@@ -4,6 +4,8 @@ import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { Stage, Layer, Text as KonvaText, Image as KonvaImage, Transformer, Rect } from 'react-konva'
 import useImage from 'use-image'
 import { api } from '@/lib/axios'
+import { Select } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -407,12 +409,12 @@ export function CertificateDesignerFull() {
 
         {/* Template name */}
         <div className="px-5 pt-4 pb-3 border-b border-gray-100">
-          <input
+          <Input
             type="text"
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
             placeholder="Nombre de la plantilla..."
-            className="w-full text-[15px] font-semibold text-gray-900 placeholder-gray-400 bg-transparent border-none outline-none"
+            className="w-full"
           />
         </div>
 
@@ -513,7 +515,7 @@ export function CertificateDesignerFull() {
 
                 {/* Font Family */}
                 <Field label="Fuente">
-                  <select
+                  <Select
                     value={selectedElement.fontFamily || 'Arial'}
                     onChange={(e) => updateElement(selectedId!, { fontFamily: e.target.value })}
                     className="input-field"
@@ -524,28 +526,28 @@ export function CertificateDesignerFull() {
                     <option value="Georgia">Georgia</option>
                     <option value="Courier New">Courier New</option>
                     <option value="Verdana">Verdana</option>
-                  </select>
+                  </Select>
                 </Field>
 
                 {/* Font Size + Weight */}
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="Tamaño (px)">
-                    <input
+                    <Input
                       type="number"
                       value={selectedElement.fontSize || 24}
                       onChange={(e) => updateElement(selectedId!, { fontSize: Number(e.target.value) })}
-                      className="input-field"
+                      
                     />
                   </Field>
                   <Field label="Estilo">
-                    <select
+                    <Select
                       value={selectedElement.fontWeight || 'normal'}
                       onChange={(e) => updateElement(selectedId!, { fontWeight: e.target.value })}
                       className="input-field"
                     >
                       <option value="normal">Normal</option>
                       <option value="bold">Negrita (Bold)</option>
-                    </select>
+                    </Select>
                   </Field>
                 </div>
 
@@ -553,17 +555,17 @@ export function CertificateDesignerFull() {
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="Color">
                     <div className="flex items-center gap-2 input-field !py-1">
-                      <input
+                      <Input
                         type="color"
                         value={selectedElement.color || '#000000'}
                         onChange={(e) => updateElement(selectedId!, { color: e.target.value })}
-                        className="w-5 h-5 rounded border-none cursor-pointer bg-transparent p-0"
+                        className="w-5"
                       />
                       <span className="text-[10px] text-gray-500 font-mono">{selectedElement.color || '#000000'}</span>
                     </div>
                   </Field>
                   <Field label="Alineación">
-                    <select
+                    <Select
                       value={selectedElement.textAlign || 'center'}
                       onChange={(e) => updateElement(selectedId!, { textAlign: e.target.value })}
                       className="input-field"
@@ -571,17 +573,17 @@ export function CertificateDesignerFull() {
                       <option value="left">Izquierda</option>
                       <option value="center">Centrado</option>
                       <option value="right">Derecha</option>
-                    </select>
+                    </Select>
                   </Field>
                 </div>
 
                 {/* Block Width Control */}
                 <Field label="Ancho del bloque (px)">
-                  <input
+                  <Input
                     type="number"
                     value={selectedElement.width || 400}
                     onChange={(e) => updateElement(selectedId!, { width: Number(e.target.value) })}
-                    className="input-field"
+                    
                     placeholder="Ej: 800"
                   />
                 </Field>

@@ -10,7 +10,7 @@ export function CompanyDetailPanel({ company }: CompanyDetailPanelProps) {
   if (!company) {
     return (
       <div className="sticky top-[96px] flex flex-col items-center justify-center gap-4 w-full h-[calc(100vh-120px)] bg-white rounded-[24px] border border-dashed border-[#eef2f7]">
-        <div className="w-16 h-16 bg-[#f8fafc] rounded-full flex items-center justify-center text-[#94a3b8]">
+        <div className="w-16 h-16 bg-[#f8fafc] rounded-full flex items-center justify-center text-muted-foreground">
           <Building2 size={32} />
         </div>
         <p className="text-[#64748b] font-medium">Selecciona una empresa para ver sus detalles</p>
@@ -39,12 +39,12 @@ export function CompanyDetailPanel({ company }: CompanyDetailPanelProps) {
         
         {/* Contact Person Info */}
         <div>
-          <h3 className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-wider mb-3">
+          <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
             Representante / Tutor Empresarial
           </h3>
           <div className="flex flex-col gap-4">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 text-[#cbd5e1]">
+              <div className="mt-0.5 text-muted-foreground">
                 <UserCircle size={18} />
               </div>
               <div className="flex flex-col gap-0.5">
@@ -54,7 +54,7 @@ export function CompanyDetailPanel({ company }: CompanyDetailPanelProps) {
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 text-[#cbd5e1]">
+              <div className="mt-0.5 text-muted-foreground">
                 <Briefcase size={18} />
               </div>
               <div className="flex flex-col gap-0.5">
@@ -69,12 +69,12 @@ export function CompanyDetailPanel({ company }: CompanyDetailPanelProps) {
 
         {/* Contact Info */}
         <div>
-          <h3 className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-wider mb-3">
+          <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
             Información de Contacto
           </h3>
           <div className="flex flex-col gap-4">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 text-[#cbd5e1]">
+              <div className="mt-0.5 text-muted-foreground">
                 <Mail size={18} />
               </div>
               <div className="flex flex-col gap-0.5">
@@ -86,7 +86,7 @@ export function CompanyDetailPanel({ company }: CompanyDetailPanelProps) {
             </div>
             
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 text-[#cbd5e1]">
+              <div className="mt-0.5 text-muted-foreground">
                 <Phone size={18} />
               </div>
               <div className="flex flex-col gap-0.5">

@@ -11,8 +11,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
-      enableSystem
+      // Fijado en claro: los tokens .dark existen en globals.css pero casi
+      // ningún componente los consume todavía (sin variantes dark: reales),
+      // y no hay selector de tema en la UI. Con "system" activo, cualquier
+      // usuario con el SO en oscuro veía una interfaz a medio pintar. Migrar
+      // los ~34 archivos con colores hardcodeados es un trabajo aparte;
+      // hasta entonces, una sola apariencia consistente es mejor que una rota.
+      defaultTheme="light"
+      enableSystem={false}
       disableTransitionOnChange
     >
       <QueryClientProvider client={queryClient}>

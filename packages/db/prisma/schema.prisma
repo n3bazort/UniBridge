@@ -7,10 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Quién opera el sistema. Son tres, y el estudiante no está entre ellos:
+// el estudiante es el SUJETO del trámite, no un actor de la aplicación.
+// Sus datos los carga la coordinación y sus documentos se los entrega la
+// Facultad por sus canales; nunca inicia sesión ni consulta nada aquí, así
+// que no tiene cuenta ni credenciales que proteger.
 enum Role {
   ADMIN
   COORDINATOR
-  STUDENT
   SIGNER
 }
 
@@ -27,7 +31,6 @@ model User {
   suspendedAt DateTime?  // cuenta inhabilitada: no puede iniciar sesión (reversible)
 
   coordinator        Coordinator?
-  studentProfile     Student?
   signerProfile      SignerProfile?
   refreshTokens      RefreshToken[]
   auditLogs          AuditLog[]
@@ -40,6 +43,11 @@ model User {
   signatureBatches   SignatureBatch[]
   generationBatches  GenerationBatch[]
   userInvitations    UserInvitation[] @relation("UserInvitations")
+  registeredApprovals Practice[]      @relation("PracticeApprovalRegistrar")
+  completionRecords  CompletionRecord[]
+  returnedDocuments  GeneratedDocument[] @relation("DocumentReturned")
+  deanAcademicPeriods AcademicPeriod[] @relation("AcademicPeriodDean")
+  directorAcademicPeriods AcademicPeriod[] @relation("AcademicPeriodDirector")
 
   @@map("users")
 }
@@ -62,6 +70,8 @@ model Faculty {
   userInvitations UserInvitation[]
   signerProfiles  SignerProfile[]
   practiceLabels  PracticeLabel[]
+  tutors          Tutor[]
+  completionRecords CompletionRecord[]
 
   @@map("faculties")
 }
@@ -94,13 +104,16 @@ model Program {
   faculty     Faculty  @relation(fields: [facultyId], references: [id])
   students    Student[]
   coordinators Coordinator[]
+  tutors      Tutor[]
 
   @@map("programs")
 }
 
+// El estudiante es un registro de información, no una cuenta: nombre, cédula
+// y a qué carrera pertenece son los datos que los documentos imprimen. No
+// lleva userId porque no hay usuario que enlazar.
 model Student {
   id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @unique @db.Uuid
   facultyId   String   @db.Uuid
   programId   String   @db.Uuid
   dni         String   @unique
@@ -111,7 +124,6 @@ model Student {
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
 
-  user        User     @relation(fields: [userId], references: [id])
   faculty     Faculty  @relation(fields: [facultyId], references: [id])
   program     Program  @relation(fields: [programId], references: [id])
   practices   Practice[]
@@ -152,6 +164,11 @@ model Practice {
   companyId       String   @db.Uuid
   facultyId       String   @db.Uuid
   academicPeriod  String   @default("2024-1")
+  // Docente tutor. `tutorId` es el dato de verdad desde el RF-23; `tutorName`
+  // sobrevive como copia del nombre para que las plantillas de documento y los
+  // reportes sigan leyendo un texto. La escribe un solo sitio -el ayudante de
+  // asignacion de tutor- para que no vuelva a haber dos versiones de la verdad.
+  tutorId         String?  @db.Uuid
   tutorName       String?
   practiceLevel   String?
   academicLevel   String?
@@ -166,6 +183,23 @@ model Practice {
   startDate       DateTime?
   endDate         DateTime?
   totalHours      Int      @default(0)
+
+  // -- RF-18: aprobacion del tutor por acta de culminacion --
+  // Sin esta marca no se emite el certificado. Queda a nombre del tutor que
+  // firma el acta -que puede no ser el asignado- y de quien la registro.
+  tutorApprovedAt        DateTime?
+  approvalTutorId        String?  @db.Uuid
+  approvalRegisteredById String?  @db.Uuid
+  completionRecordId     String?  @db.Uuid
+
+  // -- RF-19 y RF-21: cierre con motivo, y cadena con la que la sucede --
+  // Reasignar y dar de baja son el mismo gesto en la base: se cierra la
+  // practica con su motivo. Lo que las distingue es si nace otra despues.
+  closedAt           DateTime?
+  closureReasonId    String?  @db.Uuid
+  closureNote        String?
+  previousPracticeId String?  @db.Uuid
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   deletedAt       DateTime?
@@ -175,7 +209,18 @@ model Practice {
   faculty         Faculty  @relation(fields: [facultyId], references: [id])
   period          AcademicPeriod? @relation(fields: [academicPeriod], references: [code])
   label           PracticeLabel? @relation(fields: [labelId], references: [id], onDelete: SetNull)
+  tutor           Tutor?   @relation("PracticeTutor", fields: [tutorId], references: [id])
+  approvalTutor   Tutor?   @relation("PracticeTutorApproval", fields: [approvalTutorId], references: [id])
+  approvalRegisteredBy User? @relation("PracticeApprovalRegistrar", fields: [approvalRegisteredById], references: [id])
+  completionRecord CompletionRecord? @relation(fields: [completionRecordId], references: [id], onDelete: SetNull)
+  closureReason   ReasonCode? @relation(fields: [closureReasonId], references: [id])
+  previousPractice Practice?  @relation("PracticeChain", fields: [previousPracticeId], references: [id])
+  nextPractices   Practice[] @relation("PracticeChain")
 
+  // El tope de veinte se comprueba al asignar, al importar y al reasignar:
+  // conviene que contar salga barato.
+  @@index([tutorId, academicPeriod])
+  @@index([companyId, academicPeriod])
   @@map("practices")
 }
 
@@ -241,8 +286,19 @@ model GeneratedDocument {
   documentType  String?
   status        DocumentStatus @default(VALID)
   invalidatedAt DateTime?
+  // `invalidReasonId` es el motivo tipificado (RF-24) e `invalidReason` pasa a
+  // ser la nota libre que lo acompaña, no el motivo entero.
+  invalidReasonId String? @db.Uuid
   invalidReason String?
   invalidatedById String? @db.Uuid  // quién lo invalidó (trazabilidad)
+  /// Cuándo se retiró el archivo de MinIO.
+  ///
+  /// Una versión equivocada no se conserva: en cuanto se anula, el archivo se
+  /// borra del almacén. Lo que queda es ESTA fila —código, tipo, estudiante,
+  /// motivo, quién y cuándo—, que es el historial. Antes el archivo vivía
+  /// treinta días y después se borraba la fila entera, justo al revés: se
+  /// guardaba el documento errado y se perdía el rastro de que existió.
+  fileRemovedAt DateTime?
   version       Int      @default(1)
   replacedById  String?  @db.Uuid
   createdAt     DateTime @default(now())
@@ -254,6 +310,16 @@ model GeneratedDocument {
   signedChecksum  String?         // SHA-256 del archivo firmado final
   signedAt        DateTime?
 
+  // ── Copia devuelta por la empresa (RF-27) ──
+  // El oficio sale del sistema, la empresa lo firma y lo sella en papel, y esa
+  // copia escaneada vuelve. NO se guarda en `signedFileKey`: ese campo es del
+  // circuito de firma electrónica y su checksum acompaña a un PDF concreto;
+  // pisarlo con un escaneo dejaría la huella apuntando a otro archivo.
+  returnedFileKey String?
+  returnedFileName String?
+  returnedAt      DateTime?
+  returnedById    String?  @db.Uuid
+
   template      DocumentTemplate @relation(fields: [templateId], references: [id])
   student       Student          @relation(fields: [studentId], references: [id])
   generatedBy   User?            @relation(fields: [generatedById], references: [id])
@@ -261,8 +327,124 @@ model GeneratedDocument {
   replacedBy    GeneratedDocument? @relation("DocumentReplacement", fields: [replacedById], references: [id])
   replaces      GeneratedDocument[] @relation("DocumentReplacement")
   signatureItems SignatureBatchItem[]
+  invalidReasonCode ReasonCode? @relation(fields: [invalidReasonId], references: [id])
+  returnedBy    User?            @relation("DocumentReturned", fields: [returnedById], references: [id])
 
   @@map("generated_documents")
+}
+
+// ═══════════════ TUTORÍA ACADÉMICA ═══════════════
+
+// Docente que la carrera asigna para acompañar las prácticas.
+//
+// Hasta el RF-23 vivía como texto libre dentro de la práctica, y eso impedía
+// dos cosas que el tribunal pidió: contar cuántos estudiantes lleva cada uno
+// -«Ing. Pérez» e «Ing. Perez» contaban por separado- y agrupar el oficio de
+// designación por empresa y tutor, que es la unidad real del papel cuando dos
+// docentes tienen estudiantes en la misma empresa.
+model Tutor {
+  id          String   @id @default(uuid()) @db.Uuid
+  facultyId   String   @db.Uuid
+  programId   String?  @db.Uuid
+  fullName    String
+  dni         String?
+  email       String?
+  phone       String?
+  title       String?  // "Ing." / "Mg.", tal como el oficio lo imprime
+  /// Tope de estudiantes simultáneos por período (RF-22). Vive por docente y no
+  /// como constante para poder excepcionar un caso sin tocar el código.
+  maxStudents Int      @default(20)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  faculty     Faculty  @relation(fields: [facultyId], references: [id])
+  program     Program? @relation(fields: [programId], references: [id])
+  practices   Practice[] @relation("PracticeTutor")
+  approvals   Practice[] @relation("PracticeTutorApproval")
+  completionRecords CompletionRecord[]
+
+  @@unique([facultyId, fullName])
+  @@map("tutors")
+}
+
+// Acta de culminación que el tutor entrega y el coordinador carga.
+//
+// El sistema rastrea las cédulas por patrón -diez dígitos- y no por la
+// estructura de la tabla, así que sigue funcionando aunque Xisce cambie el
+// formato del acta. Lo que no corresponde a un estudiante con práctica activa
+// en el período se descarta solo.
+//
+// El archivo se conserva 30 días y después lo barre la purga programada: el
+// acta ya vive en Xisce y guardarla dos veces es duplicar sin motivo.
+model CompletionRecord {
+  id             String   @id @default(uuid()) @db.Uuid
+  facultyId      String   @db.Uuid
+  academicPeriod String
+  /// Docente a cuyo nombre queda la aprobación. NO se elige a mano: se
+  /// reconoce leyendo la cabecera del propio acta (`professorRaw`). Antes había
+  /// un desplegable que permitía atribuir el acta a un docente distinto del que
+  /// la firma, que es justo lo que un acta no debe permitir.
+  tutorId        String   @db.Uuid
+  fileKey        String?  // objectKey en MinIO; nulo una vez purgado a los 30 días
+  fileName       String?
+
+  // Lo que el acta declara de sí misma. Se guarda tal como viene para poder
+  // responder «¿qué acta aprobó a este estudiante?» sin conservar el archivo,
+  // que se purga a los 30 días. El número y la versión bastan para pedirla otra
+  // vez al sistema académico.
+  actaNumber     String?
+  actaVersion    String?
+  subject        String?  // «PRÁCTICAS LABORALES II»
+  courseCode     String?  // «IS-806»
+  level          String?  // «8»
+  parallel       String?  // «F»
+  /// Nombre del docente tal como lo imprime el acta, que viene en orden
+  /// APELLIDOS NOMBRES y no siempre coincide con la grafía del sistema.
+  professorRaw   String?
+  /// Cuántas cédulas traía el acta y a cuántas se les halló práctica activa
+  totalDnis      Int      @default(0)
+  matchedCount   Int      @default(0)
+  uploadedById   String   @db.Uuid
+  purgeAt        DateTime
+  createdAt      DateTime @default(now())
+
+  faculty        Faculty  @relation(fields: [facultyId], references: [id])
+  tutor          Tutor    @relation(fields: [tutorId], references: [id])
+  uploadedBy     User     @relation(fields: [uploadedById], references: [id])
+  approvedPractices Practice[]
+
+  @@index([purgeAt])
+  @@map("completion_records")
+}
+
+// ═══════════════ MOTIVOS TIPIFICADOS (RF-24) ═══════════════
+
+enum ReasonScope {
+  DOCUMENT  // invalidar un documento ya emitido
+  PRACTICE  // cerrar o dar de baja una práctica
+  BOTH
+}
+
+// Catálogo administrable de motivos. El `code` es lo que los reportes agrupan,
+// así que se mantiene estable aunque se reescriba la etiqueta que se ve.
+model ReasonCode {
+  id        String      @id @default(uuid()) @db.Uuid
+  code      String      @unique
+  label     String
+  scope     ReasonScope @default(BOTH)
+  /// Motivo base creado por el sistema: se puede desactivar, no eliminar
+  isSystem  Boolean     @default(false)
+  isActive  Boolean     @default(true)
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  closedPractices      Practice[]
+  invalidatedDocuments GeneratedDocument[]
+
+  @@map("reason_codes")
 }
 
 // ═══════════════ FIRMA DIGITAL (FirmaEC) ═══════════════
@@ -309,6 +491,8 @@ model SignerProfile {
   signerRole SignerRole
   fullName   String
   title      String?    // ej. "Decano de la Facultad de Ciencias de la Vida"
+  dni        String?
+  phone      String?
   facultyId  String?    @db.Uuid
   createdAt  DateTime   @default(now())
 
@@ -471,6 +655,12 @@ model AcademicPeriod {
   directorDni   String?
   directorPhone String?
   directorEmail String?
+
+  deanUserId    String?  @db.Uuid
+  directorUserId String?  @db.Uuid
+
+  deanUser      User?    @relation("AcademicPeriodDean", fields: [deanUserId], references: [id])
+  directorUser  User?    @relation("AcademicPeriodDirector", fields: [directorUserId], references: [id])
 
   practices     Practice[]
   sequences     DocumentSequence[]

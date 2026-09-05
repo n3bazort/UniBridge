@@ -4,39 +4,54 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import * as XLSX from 'xlsx'
-import { Filter, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle, Loader2, Plus, Building2, UserCheck, List, MoreHorizontal } from 'lucide-react'
-import { FilterChip } from '@/components/ui/filter-chip'
+import { Filter, FilterX, Search, ChevronDown, Download, Printer, FileText, CheckSquare, FolderSearch, XCircle, Loader2, Lock, Plus, Building2, UserCheck, UserSearch, List, MoreHorizontal, MoreVertical } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EntityList, type Group, type Practice } from '@/components/practices/EntityList'
-import { ReassignCompanyModal, rememberRecentCompany, type ReassignImpact } from '@/components/practices/ReassignCompanyModal'
+import { ReassignCompanyModal, rememberRecentCompany, type ReassignImpact, type ReassignPayload } from '@/components/practices/ReassignCompanyModal'
+import { ClosePracticeModal, type CloseResult } from '@/components/practices/ClosePracticeModal'
 import { FloatingActionBar } from '@/components/practices/FloatingActionBar'
 import { ConfirmCertificatesModal } from '@/components/practices/ConfirmCertificatesModal'
 import { RightDetailPanel } from '@/components/practices/RightDetailPanel'
 import { NewPracticeModal } from '@/components/practices/NewPracticeModal'
 import { MissingDataModal } from '@/components/practices/MissingDataModal'
+import { GenerationOverlay } from '@/components/shared/GenerationOverlay'
 import { RoleGate } from '@/components/shared/role-gate'
+import { cn } from '@/lib/utils'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
 import { LabelPicker } from '@/components/practices/labels/LabelPicker'
 import { faltaParaCerrar, ESTADOS_DERIVADOS, type PracticeLabel } from '@/components/practices/labels/types'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { useSearchStore } from '@/store/search'
+import { usePeriodStore } from '@/store/period'
+import { usePeriodoCerrado } from '@/components/layout/periodo-cerrado-aviso'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
+/**
+ * Un oficio por emitir: la empresa a la que se dirige, los estudiantes que
+ * ampara y si ya existe uno vigente al que este vaya a reemplazar.
+ */
+type GrupoOficio = {
+  companyId: string
+  companyName: string
+  items: Practice[]
+  existing: boolean
+}
+
 export default function PracticesPage() {
   const router = useRouter()
-  const { searchQuery } = useSearchStore()
+  const { searchQuery, setSearchQuery } = useSearchStore()
   const queryClient = useQueryClient()
   
-  const [filterPeriod, setFilterPeriodState] = useState<string | null>(null)
   const [filterStatus, setFilterStatusState] = useState<string | null>(null)
   const [filterFaculty, setFilterFacultyState] = useState<string | null>(null)
   const [filterProgram, setFilterProgramState] = useState<string | null>(null)
 
   useEffect(() => {
-    const savedPeriod = localStorage.getItem('practices-filter-period')
-    if (savedPeriod) setFilterPeriodState(savedPeriod)
-    
     const savedStatus = localStorage.getItem('practices-filter-status')
     if (savedStatus) setFilterStatusState(savedStatus)
       
@@ -47,11 +62,6 @@ export default function PracticesPage() {
     if (savedProgram) setFilterProgramState(savedProgram)
   }, [])
 
-  const setFilterPeriod = (val: string | null) => {
-    setFilterPeriodState(val)
-    if (val) localStorage.setItem('practices-filter-period', val)
-    else localStorage.removeItem('practices-filter-period')
-  }
   const setFilterStatus = (val: string | null) => {
     setFilterStatusState(val)
     if (val) localStorage.setItem('practices-filter-status', val)
@@ -68,6 +78,52 @@ export default function PracticesPage() {
     else localStorage.removeItem('practices-filter-program')
   }
   const [groupBy, setGroupBy] = useState<'none' | 'company' | 'tutor' | 'level'>('company')
+
+  /** Panel de filtros plegado por defecto: ruido visual solo cuando se pide. */
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
+  const buscadorRef = useRef<HTMLInputElement>(null)
+
+  /**
+   * Borrador del panel. Los tres filtros se aplican juntos al pulsar
+   * «Aplicar»: aplicarlos uno a uno recargaba la tabla tres veces y la lista
+   * saltaba bajo las manos mientras se terminaba de elegir.
+   */
+  const [borrador, setBorrador] = useState<{ status: string | null; faculty: string | null; program: string | null }>({
+    status: null, faculty: null, program: null,
+  })
+
+  // Al abrir, el borrador parte de lo que ya está aplicado.
+  useEffect(() => {
+    if (filtrosAbiertos) setBorrador({ status: filterStatus, faculty: filterFaculty, program: filterProgram })
+  }, [filtrosAbiertos])
+
+  const filtrosActivos = [filterStatus, filterFaculty, filterProgram].filter(Boolean).length
+
+  const aplicarFiltros = () => {
+    setFilterStatus(borrador.status)
+    setFilterFaculty(borrador.faculty)
+    setFilterProgram(borrador.program)
+    setFiltrosAbiertos(false)
+  }
+
+  const limpiarFiltros = () => {
+    setBorrador({ status: null, faculty: null, program: null })
+    setFilterStatus(null)
+    setFilterFaculty(null)
+    setFilterProgram(null)
+  }
+
+  // Ctrl+K enfoca el buscador, como anuncia la propia tecla en la barra.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        buscadorRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   
   const [activeTab, setActiveTab] = useState<'assigned' | 'unassigned'>('assigned')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -77,6 +133,7 @@ export default function PracticesPage() {
 
   // Reasignación de empresa
   const [reassignPractice, setReassignPractice] = useState<Practice | null>(null)
+  const [closePractice, setClosePractice] = useState<Practice | null>(null)
   const [isReassigning, setIsReassigning] = useState(false)
   const [recentlyInvalidatedDocIds, setRecentlyInvalidatedDocIds] = useState<Set<string>>(new Set())
 
@@ -124,7 +181,20 @@ export default function PracticesPage() {
   // Modal previo a generar el oficio: formato (DOCX/PDF) + aviso de reemplazo
   // `kind` decide cuál de los dos oficios en Word se emite: los dos salen
   // agrupados por empresa y comparten este mismo diálogo.
-  const [solicitudModal, setSolicitudModal] = useState<{ kind: 'SOLICITUD' | 'DESIGNACION'; items: Practice[]; companyName: string; existing: boolean } | null>(null)
+  //
+  // Cada grupo es un oficio: una empresa, sus estudiantes, y si ya tenía uno
+  // vigente que este vaya a reemplazar.
+  /**
+   * Un oficio se dirige a UNA empresa —lleva su destinatario y su cargo
+   * impresos—, pero la selección puede abarcar varias. En vez de rechazarla,
+   * se parte por empresa y sale un oficio por cada una, con sus estudiantes y
+   * su propio número de secuencia. Es lo que hace la Facultad a mano al cierre
+   * del período, solo que en una pasada.
+   */
+  const [solicitudModal, setSolicitudModal] = useState<{
+    kind: 'SOLICITUD' | 'DESIGNACION'
+    grupos: GrupoOficio[]
+  } | null>(null)
   const [solicitudAsPdf, setSolicitudAsPdf] = useState(false)
   const [useBlankSignatures, setUseBlankSignatures] = useState(false)
   const [openInBrowser, setOpenInBrowser] = useState(false)
@@ -146,6 +216,10 @@ export default function PracticesPage() {
   }
 
   // Estados para la barra de progreso circular de generación de certificados
+  // Overlay de "generando oficio": el tramo de convertir a PDF tarda ~7 s
+  // (abre LibreOffice), asi que mostrar los pasos reales evita que la
+  // pantalla se sienta congelada.
+  const [oficioOverlay, setOficioOverlay] = useState<{ title: string; asPdf: boolean; subtitle?: string } | null>(null)
   const [isProgressModalOpen, setIsProgressModalOpen] = useState(false)
   const [generationProgress, setGenerationProgress] = useState(0)
   const [generationTotal, setGenerationTotal] = useState(0)
@@ -154,23 +228,52 @@ export default function PracticesPage() {
   const [generationResults, setGenerationResults] = useState<Array<{ studentName: string, success: boolean, fileUrl?: string, error?: string }>>([])
   const [isGenerationFinished, setIsGenerationFinished] = useState(false)
 
+  /**
+   * Escape limpia la selección — pero solo cuando no hay nada encima. El
+   * listener vive en `window`, así que antes cerrar con Escape cualquier
+   * modal (por ejemplo el de emisión masiva) descartaba de paso la selección
+   * de prácticas que había debajo: diez minutos de trabajo perdidos por
+   * cerrar un diálogo. Ahora Escape atiende primero a la capa superior y solo
+   * toca la selección si la lista es lo único visible.
+   */
+  const hayCapaAbierta =
+    isNewPracticeModalOpen || showConfirmCerts || periodCertModal || isProgressModalOpen ||
+    !!reassignPractice || !!closePractice || !!solicitudModal || !!oficioOverlay ||
+    missingDataGuard.isOpen
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setSelectedIds(new Set())
+      if (e.key !== 'Escape') return
+      if (hayCapaAbierta) return           // el modal se cierra solo; la selección no se toca
+      if (showActionsMenu) {                // un menú abierto también es una capa
+        setShowActionsMenu(false)
+        return
       }
+      setSelectedIds(new Set())
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [hayCapaAbierta, showActionsMenu])
 
-  // 1. Fetch real data
+  // 1. Fetch real data — acotado al periodo del selector global (topbar). El
+  // queryKey incluye el periodo a propósito: React Query solo vuelve a
+  // pedir datos cuando cambia, y cachea cada periodo por separado en vez de
+  // traer los 500 registros de todos los años cada vez que se abre la página.
+  const { selectedPeriod } = usePeriodStore()
+
+  // Período cerrado = solo consulta. El aviso lo pinta el layout; aquí solo
+  // se usa para no ofrecer botones que el servidor va a rechazar.
+  const { periodoActivo, soloLectura } = usePeriodoCerrado()
+
   const { data: response, isLoading: isLoadingPractices, error } = useQuery({
-    queryKey: ['practices-all'],
+    queryKey: ['practices-all', selectedPeriod],
     queryFn: async () => {
-      const res = await api.get('/practices', { params: { page: 1, limit: 500 } })
+      const res = await api.get('/practices', {
+        params: { page: 1, limit: 500, academicPeriod: selectedPeriod || undefined },
+      })
       return res.data
-    }
+    },
+    enabled: !!selectedPeriod, // espera a que el switcher resuelva el periodo activo
   })
 
   const { data: responseUnassigned, isLoading: isLoadingUnassigned } = useQuery({
@@ -207,6 +310,32 @@ export default function PracticesPage() {
   })
 
   const refrescarPracticas = () => queryClient.invalidateQueries({ queryKey: ['practices-all'] })
+
+  /**
+   * Marca como obsoletas las dos listas de documentos que mantiene la app.
+   * Son claves distintas y hay que nombrar las dos: el panel lateral cachea
+   * por estudiante bajo ['generated-documents', studentId], mientras que la
+   * pantalla de Certificados cachea por periodo bajo
+   * ['generated-documents-all', periodo]. Invalidar solo la primera dejaba la
+   * segunda con una copia anterior a la emisión, de modo que al llegar con
+   * ?highlight=<id> el documento recién generado todavía no figuraba.
+   */
+  const refrescarDocumentos = () => {
+    queryClient.invalidateQueries({ queryKey: ['generated-documents'] })
+    queryClient.invalidateQueries({ queryKey: ['generated-documents-all'] })
+  }
+
+  /**
+   * Todo lo que una baja o una reasignación deja obsoleto: la lista, los
+   * documentos y el expediente del estudiante. Se nombran las tres porque son
+   * cachés distintas y refrescar solo la primera dejaba las otras mostrando un
+   * estado anterior al movimiento.
+   */
+  const refrescarTodo = async () => {
+    refrescarDocumentos()
+    await queryClient.invalidateQueries({ queryKey: ['practices-all'] })
+    await queryClient.invalidateQueries({ queryKey: ['students-all'] })
+  }
 
   /** Asigna la etiqueta a la práctica indicada, o a toda la selección si la incluye. */
   const handleAssignLabel = async (practice: Practice, labelId: string | null) => {
@@ -282,14 +411,15 @@ export default function PracticesPage() {
         p.company?.name?.toLowerCase().includes(searchStr) ||
         p.tutorName?.toLowerCase().includes(searchStr)
 
-      const matchesPeriod = !filterPeriod || p.academicPeriod === filterPeriod
       const matchesStatus = !filterStatus || p.status === filterStatus
       const pFaculty = p.faculty?.name || 'Ciencias de la Vida y Tecnología'
       const matchesFaculty = !filterFaculty || pFaculty === filterFaculty
       const pProgram = p.student?.program?.name || 'Tecnologías de la Información'
       const matchesProgram = !filterProgram || pProgram === filterProgram
 
-      return matchesSearch && matchesPeriod && matchesStatus && matchesFaculty && matchesProgram
+      // El periodo ya no se filtra aquí: el switcher del topbar lo resuelve
+      // server-side (ver el useQuery de 'practices-all' más arriba).
+      return matchesSearch && matchesStatus && matchesFaculty && matchesProgram
     })
 
     // Sort A-Z by student name
@@ -298,7 +428,7 @@ export default function PracticesPage() {
       const nameB = `${b.student.firstName} ${b.student.lastName}`.toLowerCase()
       return nameA.localeCompare(nameB)
     })
-  }, [rawPractices, searchQuery, filterPeriod, filterStatus, filterFaculty, filterProgram])
+  }, [rawPractices, searchQuery, filterStatus, filterFaculty, filterProgram])
 
   // 3. Group data to match UI Group[] structure
   const groups = useMemo<Group[]>(() => {
@@ -361,28 +491,77 @@ export default function PracticesPage() {
   // La selección es POR EMPRESA (checkbox del grupo). Solo se emite a quien
   // realmente lo necesita: tiene solicitud vigente y AÚN NO tiene certificado.
   // Los demás se omiten solos, sin pasos extra para el usuario.
-  const hasValidSolicitud = (p: Practice) =>
-    (p.student.generatedDocs || []).some(d => d.template.type === 'DOCX' && (d.status ?? 'VALID') === 'VALID')
+  /**
+   * El certificado necesita el acta del docente Y la designación vigente.
+   *
+   * La solicitud no se exige: es un trámite previo y colectivo que la empresa
+   * puede haberse saltado acordando el cupo de palabra, y bloquear por ella
+   * dejaba fuera a estudiantes que sí habían culminado.
+   *
+   * La designación sí, porque es la que nombra a este estudiante, le asigna su
+   * tutor y fija horas y nivel: exactamente lo que el certificado imprime.
+   * Estas dos condiciones son espejo de `canIssueCertificate` en el servidor.
+   */
+  const tieneActa = (p: Practice) => !!p.tutorApprovedAt
+
+  const tieneDesignacion = (p: Practice) =>
+    (p.student.generatedDocs || []).some(
+      d => d.documentType === 'DESIGNACION' && (d.status ?? 'VALID') === 'VALID'
+    )
+
+  const puedeCertificar = (p: Practice) =>
+    tieneActa(p) && tieneDesignacion(p) && !hasValidCertificate(p) &&
+    p.status !== 'CANCELED' && p.status !== 'REJECTED'
 
   const hasValidCertificate = (p: Practice) =>
     (p.student.generatedDocs || []).some(d => d.template.type === 'PDF' && (d.status ?? 'VALID') === 'VALID')
+
+  /**
+   * Selección para oficios. Un oficio se dirige a UNA empresa —lleva su
+   * destinatario y su cargo impresos—, pero eso no obliga a marcar de una en
+   * una: si la selección abarca varias, se emite un oficio por cada una. Antes
+   * se rechazaba la selección entera, y al cierre del período eso significaba
+   * repetir el mismo trámite empresa por empresa.
+   */
+  const seleccionOficios = useMemo(
+    () => rawPractices.filter((p) => selectedIds.has(p.id) && !p.closedAt),
+    [rawPractices, selectedIds],
+  )
+  const empresasDeLaSeleccion = useMemo(
+    () => new Set(seleccionOficios.map((p) => p.company?.name || 'Sin empresa')).size,
+    [seleccionOficios],
+  )
+  const bloqueoOficios =
+    seleccionOficios.length === 0 ? 'No hay estudiantes seleccionados.' : null
+
+  // Resumen de lo que el diálogo de oficios va a producir.
+  const totalAlumnosModal = solicitudModal?.grupos.reduce((n, g) => n + g.items.length, 0) ?? 0
+  const gruposQueReemplazan = solicitudModal?.grupos.filter((g) => g.existing).length ?? 0
 
   const certEligibility = useMemo(() => {
     const selected = rawPractices.filter(p => selectedIds.has(p.id))
     // Ya tiene certificado vigente: no hay nada que emitir
     const alreadyCertified = selected.filter(p => hasValidCertificate(p))
-    const eligible = selected.filter(p =>
-      hasValidSolicitud(p) && !hasValidCertificate(p) && p.status !== 'CANCELED' && p.status !== 'REJECTED'
-    )
+    const eligible = selected.filter(puedeCertificar)
     const omitted = selected.length - eligible.length - alreadyCertified.length
     const companies = new Set(selected.map(p => p.company?.name || 'Sin empresa')).size
 
-    // Nada que emitir: o ya están todos certificados, o ninguno tiene solicitud
+    // Nada que emitir. El motivo se nombra con precisión: decir «falta el acta»
+    // cuando lo que falta es la designación manda a buscar el documento
+    // equivocado, y son dos trámites distintos con dos responsables distintos.
     let blockedReason: string | null = null
     if (selected.length > 0 && eligible.length === 0) {
+      const pendientes = selected.filter(p => !hasValidCertificate(p))
+      const sinDesignacion = pendientes.filter(p => !tieneDesignacion(p)).length
+      const sinActa = pendientes.filter(p => tieneDesignacion(p) && !tieneActa(p)).length
+
       blockedReason = alreadyCertified.length === selected.length
         ? 'Todos ya tienen su certificado emitido.'
-        : 'Ninguno puede certificarse aún: falta su solicitud vigente.'
+        : sinDesignacion > 0 && sinActa === 0
+          ? 'Falta generar la designación de estudiante y tutor.'
+          : sinActa > 0 && sinDesignacion === 0
+            ? 'Falta cargar el acta del docente.'
+            : 'Faltan la designación y el acta del docente.'
     }
 
     return { selected, eligible, alreadyCertified, omitted, companies, blockedReason }
@@ -395,9 +574,7 @@ export default function PracticesPage() {
       ((p as any).academicPeriod || '2024-1') === massPeriod &&
       (massProgram === 'ALL' || (p.student as any)?.program?.name === massProgram)
     )
-    const eligible = inScope.filter(p =>
-      hasValidSolicitud(p) && !hasValidCertificate(p) && p.status !== 'CANCELED' && p.status !== 'REJECTED'
-    )
+    const eligible = inScope.filter(puedeCertificar)
     const already = inScope.filter(p => hasValidCertificate(p)).length
     const noSolicitud = inScope.length - eligible.length - already
     return { inScope, eligible, already, noSolicitud }
@@ -442,46 +619,61 @@ export default function PracticesPage() {
     return { documentCode: validDocx.documentCode, otherStudents }
   }, [reassignPractice, rawPractices])
 
-  const handleConfirmReassign = async (company: { id: string; name: string }) => {
+  /**
+   * Reasignar deja de editar la práctica en su sitio (RF-19): cierra la que
+   * había con su motivo y abre otra encadenada. Por eso ya no se ofrece
+   * «Deshacer» de un clic — el movimiento queda registrado en el historial del
+   * estudiante a propósito, y borrarlo sin dejar rastro contradiría el motivo
+   * por el que se pide el motivo.
+   */
+  const handleConfirmReassign = async (payload: ReassignPayload) => {
     if (!reassignPractice) return
     const practiceId = reassignPractice.id
-    const oldCompanyId = reassignPractice.companyId || (reassignPractice.company as any)?.id
     const studentName = `${reassignPractice.student.firstName} ${reassignPractice.student.lastName}`
 
     setIsReassigning(true)
     try {
-      const res = await api.patch(`/practices/${practiceId}`, { companyId: company.id })
-      const reassignment = res.data?.reassignment
-      const invalidatedIds: string[] = reassignment?.invalidatedDocumentIds || []
+      const { data } = await api.post(`/practices/${practiceId}/reassign`, {
+        reasonId: payload.reasonId,
+        companyId: payload.company.id,
+        tutorId: payload.tutorId,
+        note: payload.note,
+      })
 
-      rememberRecentCompany(company.id)
+      rememberRecentCompany(payload.company.id)
       setReassignPractice(null)
-      setRecentlyInvalidatedDocIds(new Set(invalidatedIds))
-      await queryClient.invalidateQueries({ queryKey: ['practices-all'] })
-
-      const undo = async () => {
-        try {
-          if (oldCompanyId) await api.patch(`/practices/${practiceId}`, { companyId: oldCompanyId })
-          if (invalidatedIds.length > 0) await api.post('/practices/restore-documents', { documentIds: invalidatedIds })
-          setRecentlyInvalidatedDocIds(new Set())
-          queryClient.invalidateQueries({ queryKey: ['practices-all'] })
-          toast.success('Reasignación deshecha: todo volvió a su estado anterior')
-        } catch {
-          toast.error('No se pudo deshacer la reasignación')
-        }
-      }
+      // Los documentos que acaban de dejar de valer se animan al quebrarse,
+      // que es lo que hace visible el efecto del movimiento en la lista.
+      setRecentlyInvalidatedDocIds(new Set(data.documentoIdsAnulados ?? []))
+      await refrescarTodo()
 
       toast.success(
-        invalidatedIds.length > 0
-          ? `${studentName} movido a ${company.name}. Se invalidó la solicitud ${reassignment.invalidatedCodes?.[0] || ''} del grupo anterior.`
-          : `${studentName} movido a ${company.name}.`,
-        { duration: 10000, action: { label: 'Deshacer', onClick: undo } }
+        `${studentName} movido a ${payload.company.name} · ${data.motivo}.` +
+        (data.documentosAnulados > 0
+          ? ` Se anularon ${data.documentosAnulados} documento(s) del grupo anterior.`
+          : ''),
+        { duration: 10000 },
       )
+      toast.info(data.aviso, { duration: 12000 })
     } catch (error: any) {
-      console.error(error)
-      toast.error(error.response?.data?.message || 'Error al reasignar la empresa')
+      toast.error(error.response?.data?.message || 'Error al reasignar la empresa', { duration: 10000 })
     } finally {
       setIsReassigning(false)
+    }
+  }
+
+  /** Baja de un estudiante (RF-21): registra, y dice si conviene regenerar. */
+  const handleClosed = async (r: CloseResult) => {
+    const nombre = closePractice
+      ? `${closePractice.student.firstName} ${closePractice.student.lastName}`
+      : 'El estudiante'
+    setClosePractice(null)
+    await refrescarTodo()
+    toast.success(`${nombre} dado de baja · ${r.motivo}`, { duration: 8000 })
+    if (r.regenerarConviene) {
+      toast.warning(r.consejo, { duration: 12000 })
+    } else if (r.documentosFirmados > 0) {
+      toast.info(r.consejo, { duration: 12000 })
     }
   }
 
@@ -527,34 +719,54 @@ export default function PracticesPage() {
       setGenerationCurrentName('Procesando en el servidor...')
 
       // Polling del progreso cada 1.2s hasta que el lote termine
-      const finalStats: { completed: number; failed: number } = await new Promise((resolve, reject) => {
-        let attempts = 0
-        const interval = setInterval(async () => {
-          try {
-            const { data: p } = await api.get(`/generated-documents/batch/${batch.batchId}/progress`)
-            setGenerationTotal(p.total)
-            setGenerationCurrent(p.completed + p.failed)
-            setGenerationProgress(p.progress)
-            if (p.status !== 'PROCESSING') {
-              clearInterval(interval)
-              resolve({ completed: p.completed, failed: p.failed })
+      type Fallo = { studentId: string; nombre: string; motivo: string }
+      const finalStats: { completed: number; failed: number; errores: Fallo[] } =
+        await new Promise((resolve, reject) => {
+          let attempts = 0
+          const interval = setInterval(async () => {
+            try {
+              const { data: p } = await api.get(`/generated-documents/batch/${batch.batchId}/progress`)
+              setGenerationTotal(p.total)
+              setGenerationCurrent(p.completed + p.failed)
+              setGenerationProgress(p.progress)
+              if (p.status !== 'PROCESSING') {
+                clearInterval(interval)
+                resolve({ completed: p.completed, failed: p.failed, errores: p.errores || [] })
+              }
+            } catch (e) {
+              attempts++
+              if (attempts > 5) { clearInterval(interval); reject(e) }
             }
-          } catch (e) {
-            attempts++
-            if (attempts > 5) { clearInterval(interval); reject(e) }
-          }
-        }, 1200)
-      })
+          }, 1200)
+        })
 
+      // El resultado se arma con lo que de verdad falló, no repartiendo los
+      // contadores por orden: antes se marcaban como exitosos los primeros N
+      // de la lista, así que el nombre que aparecía junto a un error podía no
+      // ser el del estudiante que realmente falló.
+      const motivoPorEstudiante = new Map(finalStats.errores.map((e) => [e.studentId, e.motivo]))
       setGenerationResults(
-        selectedPractices.slice(0, finalStats.completed + finalStats.failed).map((p: any, i: number) => ({
-          studentName: `${p.student.firstName} ${p.student.lastName}`,
-          success: i < finalStats.completed
-        }))
+        selectedPractices.map((p: any) => {
+          const motivo = motivoPorEstudiante.get(p.studentId)
+          return {
+            studentName: `${p.student.firstName} ${p.student.lastName}`,
+            success: !motivo,
+            error: motivo,
+          }
+        })
       )
       setIsGenerationFinished(true)
+
       if (finalStats.failed > 0) {
-        toast.warning(`Generación completada: ${finalStats.completed} certificados listos, ${finalStats.failed} con error (reintentados 3 veces).`)
+        // Los primeros motivos van en su propio aviso: un contador sin razón
+        // deja al usuario sin nada que hacer con la información.
+        finalStats.errores.slice(0, 3).forEach((e) =>
+          toast.error(`${e.nombre}: ${e.motivo}`, { duration: 10000 })
+        )
+        toast.warning(
+          `${finalStats.completed} certificados listos, ${finalStats.failed} sin generar.` +
+          (finalStats.errores.length > 3 ? ' El detalle completo está en la ventana de progreso.' : '')
+        )
       } else {
         toast.success(`¡Generación completada! ${finalStats.completed} certificados listos.`)
       }
@@ -588,6 +800,7 @@ export default function PracticesPage() {
 
       setSelectedIds(new Set())
       queryClient.invalidateQueries({ queryKey: ['practices-all'] })
+      refrescarDocumentos()
     } catch (err: any) {
       console.error(err)
       toast.error(err.response?.data?.message || 'Error al iniciar la generación de certificados.')
@@ -661,9 +874,9 @@ export default function PracticesPage() {
       }
     }
 
-    const company = groupItems[0].company
-    if (!company) {
-      toast.error("Error: Los estudiantes no tienen empresa asignada.")
+    const sinEmpresa = groupItems.filter((p) => !p.company?.id)
+    if (sinEmpresa.length > 0) {
+      toast.error('Error: Los estudiantes no tienen empresa asignada.')
       return
     }
 
@@ -677,18 +890,44 @@ export default function PracticesPage() {
       }
     }
 
-    try {
-      const studentIds = groupItems.map((p) => p.studentId)
-      const checkRes = await api.post('/generated-documents/check-oficio', { kind, studentIds })
-      setSolicitudModal({
-        kind,
-        items: groupItems,
-        companyName: company.name,
-        existing: !!checkRes.data?.exists,
-      })
-    } catch {
-      setSolicitudModal({ kind, items: groupItems, companyName: company.name, existing: false })
+    // Se parte la selección por empresa: cada una es un oficio distinto, con
+    // su destinatario y su número. El servidor sigue recibiendo un solo grupo
+    // por llamada, que es su invariante; lo que cambia es que aquí puede haber
+    // varias llamadas en vez de un rechazo.
+    const porEmpresa = new Map<string, GrupoOficio>()
+    for (const p of groupItems) {
+      const company = p.company
+      // Ya se rechazó arriba a quien no tenga empresa; esto solo lo hace
+      // evidente para el compilador, que no puede seguir esa comprobación.
+      if (!company?.id) continue
+      const grupo: GrupoOficio = porEmpresa.get(company.id)
+        ?? { companyId: company.id, companyName: company.name, items: [], existing: false }
+      grupo.items.push(p)
+      porEmpresa.set(company.id, grupo)
     }
+
+    // Se pregunta por cada empresa si ya tiene un oficio vigente. Si la
+    // consulta falla se asume que no lo hay: el servidor vuelve a comprobarlo
+    // al emitir, así que lo único que se pierde es el aviso previo.
+    const grupos = await Promise.all(
+      [...porEmpresa.values()].map(async (g) => {
+        try {
+          const res = await api.post('/generated-documents/check-oficio', {
+            kind,
+            studentIds: g.items.map((p) => p.studentId),
+          })
+          return { ...g, existing: !!res.data?.exists }
+        } catch {
+          return g
+        }
+      }),
+    )
+
+    // Las empresas se ordenan por nombre para que la lista del diálogo salga
+    // siempre igual, y no en el orden accidental de la selección.
+    grupos.sort((a, b) => a.companyName.localeCompare(b.companyName, 'es'))
+
+    setSolicitudModal({ kind, grupos })
   }
 
   const handleGenerateSolicitud = (groupItems: Practice[]) => handleGenerateOficio('SOLICITUD', groupItems)
@@ -700,10 +939,17 @@ export default function PracticesPage() {
     setSolicitudModal(null)
     setIsGenerating(true)
     const etiqueta = modal.kind === 'SOLICITUD' ? 'solicitud' : 'designación'
-    const toastMsg = solicitudAsPdf
-      ? `Generando y convirtiendo ${etiqueta} a PDF oficial...`
-      : `Generando ${etiqueta} en formato Word (.docx)...`
-    const toastId = toast.loading(toastMsg)
+    const totalAlumnos = modal.grupos.reduce((n, g) => n + g.items.length, 0)
+    // El overlay es la única señal mientras genera: antes había además un
+    // toast "Generando…" diciendo lo mismo en la esquina. El toast ahora
+    // queda solo para el resultado.
+    setOficioOverlay({
+      title: modal.grupos.length === 1 ? `Generando ${etiqueta}` : `Generando ${modal.grupos.length} ${etiqueta}s`,
+      asPdf: solicitudAsPdf,
+      subtitle: modal.grupos.length === 1
+        ? `${modal.grupos[0].companyName} · ${totalAlumnos} estudiante${totalAlumnos === 1 ? '' : 's'}`
+        : `${modal.grupos.length} empresas · ${totalAlumnos} estudiantes`,
+    })
     try {
       const templatesRes = await api.get('/document-templates')
       // Cada oficio tiene su propia plantilla. Las subidas antes de que
@@ -714,7 +960,7 @@ export default function PracticesPage() {
       if (docxTemplates.length === 0) {
         toast.error(
           `No hay ninguna plantilla de ${etiqueta} subida. Súbela en Plantillas y márcala como predeterminada.`,
-          { id: toastId, duration: 7000 },
+          { duration: 7000 },
         )
         return
       }
@@ -732,33 +978,63 @@ export default function PracticesPage() {
         }
       }
 
-      const studentIds = modal.items.map((p) => p.studentId)
+      // Un POST por empresa. Se emiten en serie, no en paralelo, porque cada
+      // uno consume un número de la secuencia oficial y el servidor los
+      // serializa igual con un bloqueo de fila: lanzarlos a la vez solo haría
+      // que se esperaran entre ellos, y complicaría decir cuál falló.
+      const emitidos: any[] = []
+      const fallidos: { empresa: string; motivo: string }[] = []
 
-      const response = await api.post('/generated-documents/generate-oficio', {
-        kind: modal.kind,
-        templateId: targetTemplate?.id,
-        studentIds,
-        overwrite: modal.existing,
-        asPdf: solicitudAsPdf,
-      })
+      for (const grupo of modal.grupos) {
+        setOficioOverlay({
+          title: modal.grupos.length === 1 ? `Generando ${etiqueta}` : `Generando ${modal.grupos.length} ${etiqueta}s`,
+          asPdf: solicitudAsPdf,
+          subtitle: `${grupo.companyName} · ${grupo.items.length} estudiante${grupo.items.length === 1 ? '' : 's'}`,
+        })
+        try {
+          const response = await api.post('/generated-documents/generate-oficio', {
+            kind: modal.kind,
+            templateId: targetTemplate?.id,
+            studentIds: grupo.items.map((p) => p.studentId),
+            overwrite: grupo.existing,
+            asPdf: solicitudAsPdf,
+          })
+          const docs = response.data?.documents?.length ? response.data.documents : [response.data]
+          emitidos.push(...docs)
+        } catch (e: any) {
+          // Que una empresa falle no cancela las demás: cada oficio es
+          // independiente y el coordinador prefiere tener nueve de diez a no
+          // tener ninguno. Al final se dice cuáles quedaron pendientes.
+          const m = e.response?.data?.message
+          fallidos.push({
+            empresa: grupo.companyName,
+            motivo: Array.isArray(m) ? m.join(', ') : (typeof m === 'string' ? m : 'error desconocido'),
+          })
+        }
+      }
 
       queryClient.invalidateQueries({ queryKey: ['practices-all'] })
-      queryClient.invalidateQueries({ queryKey: ['generated-documents'] })
+      refrescarDocumentos()
 
-      const emitidos: any[] = response.data?.documents?.length
-        ? response.data.documents
-        : [response.data]
+      if (fallidos.length > 0) {
+        toast.error(
+          `No se pudo emitir para ${fallidos.map((f) => f.empresa).join(', ')}: ${fallidos[0].motivo}`,
+          { duration: 10000 },
+        )
+      }
+      if (emitidos.length === 0) return
 
       const firstDocId = emitidos[0]?.id || ''
       const actionPayload = { label: 'Ir a Repositorio', onClick: () => router.push(`/certificates?highlight=${firstDocId}`) }
 
       const nombre = modal.kind === 'SOLICITUD' ? 'Solicitud' : 'Designación'
-      const resumen = emitidos.length === 1
+      const codigosUnicos = new Set(emitidos.map((d) => d?.documentCode).filter(Boolean))
+      const resumen = codigosUnicos.size <= 1
         ? `${nombre} ${emitidos[0]?.documentCode || ''}`
-        : `${emitidos.length} oficios (uno por estudiante)`
+        : `${codigosUnicos.size} oficios (uno por empresa)`
 
       if (solicitudAsPdf) {
-        toast.success(`${resumen} generada en PDF`, { id: toastId, action: actionPayload })
+        toast.success(`${resumen} generada en PDF`, { action: actionPayload })
         if (openInBrowser) {
           try {
             const docs = await api.get('/generated-documents')
@@ -778,7 +1054,7 @@ export default function PracticesPage() {
           } catch {}
         }
       } else if (emitidos.some((d) => d?.downloadUrl)) {
-        toast.success(`${resumen} generada — descargando DOCX`, { id: toastId, action: actionPayload })
+        toast.success(`${resumen} generada — descargando DOCX`, { action: actionPayload })
         if (openInBrowser) {
           for (const doc of emitidos) {
             if (!doc?.downloadUrl) continue
@@ -809,9 +1085,10 @@ export default function PracticesPage() {
       }
 
       const msg = detail ? detail : `Error en la generación de la ${etiqueta}.`
-      toast.error(msg, { id: toastId, duration: 8000 })
+      toast.error(msg, { duration: 8000 })
     } finally {
       setIsGenerating(false)
+      setOficioOverlay(null)
     }
   }
 
@@ -897,44 +1174,108 @@ export default function PracticesPage() {
 
   return (
     <RoleGate allowedRoles={['ADMIN', 'COORDINATOR']}>
-      <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8] pt-6 pb-12 px-4 lg:px-8">
-        
-        {/* Tabs + Actions Row */}
-        <div className="flex items-center justify-between gap-6 mb-6 border-b border-gray-200 w-full max-w-[1600px] mx-auto pb-2.5">
-          <div className="flex items-center gap-6">
-            <button
-              onClick={() => { setActiveTab('assigned'); setSelectedIds(new Set()); }}
-              className={`pb-2.5 text-[15px] font-semibold transition-colors relative ${activeTab === 'assigned' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Estudiantes Asignados
-              {activeTab === 'assigned' && <div className="absolute -bottom-2.5 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />}
-            </button>
-            <button
-              onClick={() => { setActiveTab('unassigned'); setSelectedIds(new Set()); setGroupBy('none'); }}
-              className={`pb-2.5 text-[15px] font-semibold transition-colors relative ${activeTab === 'unassigned' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Estudiantes Sin Asignar
-              {activeTab === 'unassigned' && <div className="absolute -bottom-2.5 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />}
-            </button>
-          </div>
+      <div className="flex flex-col w-full flex-1">
+        <PageContainer variant="wide" className="flex flex-col flex-1">
 
-          <div className="flex items-center gap-2 pb-0.5">
-            <Button
-              onClick={() => { setPracticeToEdit(null); setIsNewPracticeModalOpen(true); }}
-              className="bg-[#111827] hover:bg-[#1f2937] text-white font-bold px-3.5 py-2 text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-            >
-              <Plus className="w-4 h-4 text-blue-400" />
-              <span>Nueva Práctica</span>
-            </Button>
-            {activeTab === 'unassigned' && selectedIds.size > 0 && (
-              <Button 
-                onClick={() => toast.info('La interfaz de vinculación a Empresa estará disponible en la próxima actualización.')}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs py-2 px-3 shrink-0"
+        {/* ── Cabecera: título, acción principal y el resto en un menú ── */}
+        <PageHeader
+          className="mb-5"
+          description="Gestiona y supervisa las prácticas preprofesionales de los estudiantes."
+          actions={
+            <>
+              {!soloLectura && (
+                <Button
+                  onClick={() => { setPracticeToEdit(null); setIsNewPracticeModalOpen(true); }}
+                  className="gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Nueva práctica</span>
+                  <span className="sm:hidden">Nueva</span>
+                </Button>
+              )}
+
+              {/* Lo secundario deja de ocupar sitio en la barra de filtros. */}
+              <div className="relative shrink-0" ref={actionsMenuRef}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Más acciones"
+                  aria-expanded={showActionsMenu}
+                  aria-haspopup="menu"
+                  onClick={() => setShowActionsMenu((prev) => !prev)}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+
+                {showActionsMenu && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 z-40 mt-1.5 w-64 rounded-xl border border-border bg-popover p-1.5 shadow-md"
+                    onClick={() => setShowActionsMenu(false)}
+                  >
+                    {/* Emitir escribe; exportar solo lee. En un período
+                        cerrado solo queda lo segundo. */}
+                    {!soloLectura && (
+                      <button
+                        role="menuitem"
+                        onClick={openPeriodCertModal}
+                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                      >
+                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span>Emitir certificados de período…</span>
+                      </button>
+                    )}
+                    <button
+                      role="menuitem"
+                      onClick={handleExportPracticesExcel}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                    >
+                      <Download className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span>Exportar a Excel (.xlsx)</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          }
+        />
+
+        {/* ── Pestañas ── */}
+        {/* `overflow-x-auto` + `no-scrollbar`: en 375px los dos rótulos no
+            caben en una línea, y partirlos rompería la línea de la pestaña
+            activa. Se deslizan en horizontal en vez de desbordarse. */}
+        <div
+          role="tablist"
+          aria-label="Vista de estudiantes"
+          className="mb-5 flex items-center gap-5 overflow-x-auto border-b border-border [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {([
+            { id: 'assigned' as const, icono: UserCheck, texto: 'Estudiantes asignados' },
+            { id: 'unassigned' as const, icono: UserSearch, texto: 'Estudiantes sin asignar' },
+          ]).map((t) => {
+            const activa = activeTab === t.id
+            return (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={activa}
+                onClick={() => {
+                  setActiveTab(t.id)
+                  setSelectedIds(new Set())
+                  if (t.id === 'unassigned') setGroupBy('none')
+                }}
+                className={cn(
+                  'relative -mb-px flex items-center gap-2 border-b-2 px-0.5 pb-2.5 text-sm font-medium transition-colors',
+                  activa
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground',
+                )}
               >
-                Vincular a Empresa ({selectedIds.size})
-              </Button>
-            )}
-          </div>
+                <t.icono className="h-4 w-4 shrink-0" />
+                <span className="whitespace-nowrap">{t.texto}</span>
+              </button>
+            )
+          })}
         </div>
 
         {/* Main Grid: Entity List + Right Panel */}
@@ -946,125 +1287,196 @@ export default function PracticesPage() {
           {/* Left Column: Entity List + Filters */}
           <div className="w-full xl:flex-1 flex flex-col gap-6 min-w-0">
             
-            {/* Filter Chips Bar */}
+            {/* ── Barra de búsqueda, filtros y agrupación ──
+                Una sola fila. Antes había tres FilterChip sueltos, un menú de
+                acciones y el selector de agrupación compitiendo en la misma
+                línea: cinco controles con unas quince opciones desplegadas a la
+                vez. Ahora los filtros viven plegados tras un botón que dice
+                cuántos hay puestos, y las acciones secundarias se fueron al
+                menú de la cabecera.
+
+                Los FilterChip eran <div> con onClick: no se alcanzaban con Tab
+                y escondían dos comportamientos en la misma pieza. Aquí son
+                <Select> de verdad. */}
             {activeTab === 'assigned' && (
-              <div className="flex flex-wrap items-center gap-3 w-full">
-                <FilterChip 
-                  label="Periodo" 
-                  value={filterPeriod} 
-                  onChange={setFilterPeriod}
-                  options={[
-                    { value: null, label: 'Todos' },
-                    ...periods.map(p => ({ value: p as string, label: p as string }))
-                  ]} 
-                />
-                
-                <FilterChip 
-                  label="Estado" 
-                  value={filterStatus} 
-                  onChange={setFilterStatus}
-                  options={[
-                    { value: null, label: 'Todos' },
-                    { value: 'PENDING', label: 'No iniciado' },
-                    { value: 'IN_PROGRESS', label: 'En proceso' },
-                    { value: 'COMPLETED', label: 'Finalizado' },
-                    { value: 'CANCELED', label: 'Cancelado' },
-                  ]}
-                />
-                
-                <FilterChip 
-                  label="Facultad" 
-                  className="hidden md:block"
-                  value={filterFaculty} 
-                  onChange={setFilterFaculty}
-                  options={[
-                    { value: null, label: 'Todas' },
-                    ...faculties.map(f => ({ value: f as string, label: f as string === 'Ciencias de la Vida y Tecnología' ? 'FCVT' : f as string }))
-                  ]} 
-                />
-                
-                <FilterChip 
-                  label="Carrera" 
-                  className="hidden xl:block"
-                  value={filterProgram} 
-                  onChange={setFilterProgram}
-                  options={[
-                    { value: null, label: 'Todos' },
-                    ...programs.map(p => ({ value: p as string, label: p as string }))
-                  ]} 
-                />
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                  <div className="relative min-w-0 flex-1">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      ref={buscadorRef}
+                      type="search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Buscar"
+                      aria-label="Buscar estudiante, empresa o carrera"
+                      className="w-full pl-9 pr-16"
+                    />
+                    <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground sm:block">
+                      Ctrl + K
+                    </kbd>
+                  </div>
 
-                <div className="flex-1" />
-
-                {/* Menú de Acciones Secundarias (Exportar / Emitir) */}
-                <div className="relative shrink-0" ref={actionsMenuRef}>
-                  <button
-                    onClick={() => setShowActionsMenu(prev => !prev)}
-                    className="flex items-center gap-1.5 h-[36px] px-3.5 rounded-xl bg-white border border-[#eef2f7] shadow-soft text-[12.5px] font-bold text-[#374151] hover:bg-slate-50 hover:border-[#cbd5e1] transition-colors cursor-pointer"
-                  >
-                    <MoreHorizontal className="w-4 h-4 text-slate-500" />
-                    <span>Acciones</span>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
-
-                  {showActionsMenu && (
-                    <div 
-                      className="absolute right-0 mt-1.5 w-56 bg-white rounded-[12px] border border-[#eef2f7] shadow-lg p-1.5 z-40"
-                      onClick={() => setShowActionsMenu(false)}
+                  <div className="flex items-center gap-2.5">
+                    <Button
+                      variant="outline"
+                      onClick={() => setFiltrosAbiertos((v) => !v)}
+                      aria-expanded={filtrosAbiertos}
+                      aria-controls="panel-filtros"
+                      className="h-10 shrink-0 gap-2"
                     >
-                      <button
-                        onClick={openPeriodCertModal}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-slate-50 rounded-[8px] transition-colors cursor-pointer"
-                      >
-                        <FileText className="w-4 h-4 text-rose-500 shrink-0" />
-                        <span>Emitir certificados de período...</span>
-                      </button>
-                      <button
-                        onClick={handleExportPracticesExcel}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-slate-50 rounded-[8px] transition-colors cursor-pointer"
-                      >
-                        <Download className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Exportar a Excel (.xlsx)</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                      <Filter className="h-4 w-4" />
+                      <span>Filtros</span>
+                      {filtrosActivos > 0 && (
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold tabular-nums text-primary-foreground">
+                          {filtrosActivos}
+                        </span>
+                      )}
+                      <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', filtrosAbiertos && 'rotate-180')} />
+                    </Button>
 
-                <div className="flex items-center gap-2 bg-[#f1f5f9] p-1 rounded-[10px] pr-2 shrink-0">
-                  <span className="text-[11.5px] font-medium text-[#64748b] pl-2 hidden sm:inline">Agrupar por:</span>
-                  <div className="relative flex items-center">
-                    <select
-                      value={groupBy}
-                      onChange={(e) => setGroupBy(e.target.value as any)}
-                      className="appearance-none bg-white border border-[#eef2f7] rounded-[8px] pl-8 pr-7 py-1.5 text-[11.5px] font-bold text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-pointer shadow-sm hover:border-[#cbd5e1] transition-colors"
-                    >
-                      <option value="none">Sin agrupar</option>
-                      <option value="company">Empresa</option>
-                      <option value="tutor">Tutor</option>
-                      <option value="level">Nivel</option>
-                    </select>
-                    <div className="absolute left-2.5 text-blue-600 pointer-events-none">
-                      {groupBy === 'company' && <Building2 className="w-3.5 h-3.5" />}
-                      {groupBy === 'tutor' && <UserCheck className="w-3.5 h-3.5" />}
-                      {groupBy === 'level' && <List className="w-3.5 h-3.5" />}
-                      {groupBy === 'none' && <List className="w-3.5 h-3.5" />}
+                    <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
+                      <label htmlFor="agrupar-por" className="hidden shrink-0 text-sm text-muted-foreground md:block">
+                        Agrupar por
+                      </label>
+                      <Select
+                        id="agrupar-por"
+                        containerClassName="min-w-0 flex-1 sm:flex-none"
+                        className="w-full sm:w-44"
+                        value={groupBy}
+                        onChange={(e) => setGroupBy(e.target.value as any)}
+                        icon={
+                          groupBy === 'company' ? <Building2 className="h-4 w-4" />
+                            : groupBy === 'tutor' ? <UserCheck className="h-4 w-4" />
+                            : <List className="h-4 w-4" />
+                        }
+                      >
+                        <option value="none">Sin agrupar</option>
+                        <option value="company">Empresa</option>
+                        <option value="tutor">Docente tutor</option>
+                        <option value="level">Nivel</option>
+                      </Select>
                     </div>
-                    <ChevronDown className="w-3.5 h-3.5 absolute right-2 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
+
+                {/* Panel plegable. Los cambios no se aplican hasta pulsar
+                    «Aplicar»: con tres listas encadenadas, recargar la tabla en
+                    cada cambio hace que la lista salte bajo las manos. */}
+                {filtrosAbiertos && (
+                  <div
+                    id="panel-filtros"
+                    className="rounded-lg border border-border bg-card p-4"
+                  >
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {([
+                        {
+                          id: 'f-estado', etiqueta: 'Estado', valor: borrador.status,
+                          set: (v: string | null) => setBorrador((b) => ({ ...b, status: v })),
+                          opciones: [
+                            { value: null, label: 'Todos' },
+                            { value: 'PENDING', label: 'No iniciado' },
+                            { value: 'IN_PROGRESS', label: 'En proceso' },
+                            { value: 'COMPLETED', label: 'Finalizado' },
+                            { value: 'CANCELED', label: 'Cancelado' },
+                          ],
+                        },
+                        {
+                          id: 'f-facultad', etiqueta: 'Facultad', valor: borrador.faculty,
+                          set: (v: string | null) => setBorrador((b) => ({ ...b, faculty: v })),
+                          opciones: [
+                            { value: null, label: 'Todas' },
+                            ...faculties.map((f) => ({ value: f as string, label: f as string })),
+                          ],
+                        },
+                        {
+                          id: 'f-carrera', etiqueta: 'Carrera', valor: borrador.program,
+                          set: (v: string | null) => setBorrador((b) => ({ ...b, program: v })),
+                          opciones: [
+                            { value: null, label: 'Todas' },
+                            ...programs.map((p) => ({ value: p as string, label: p as string })),
+                          ],
+                        },
+                      ]).map((f) => (
+                        <div key={f.id} className="flex flex-col gap-1.5">
+                          <label htmlFor={f.id} className="text-sm font-medium text-foreground">
+                            {f.etiqueta}
+                          </label>
+                          <div className="relative">
+                            <Select
+                              id={f.id}
+                              value={f.valor ?? ''}
+                              onChange={(e) => f.set(e.target.value || null)}
+                              className="w-full"
+                            >
+                              {f.opciones.map((o) => (
+                                <option key={o.label} value={o.value ?? ''}>{o.label}</option>
+                              ))}
+                            </Select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-4 flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-end">
+                      <Button
+                        variant="ghost"
+                        onClick={limpiarFiltros}
+                        disabled={filtrosActivos === 0 && !borrador.status && !borrador.faculty && !borrador.program}
+                        className="gap-2"
+                      >
+                        <FilterX className="h-4 w-4" />
+                        Limpiar filtros
+                      </Button>
+                      <Button onClick={aplicarFiltros} className="gap-2">
+                        Aplicar filtros
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Barra de acciones flotante: acompaña la selección durante todo
                 el scroll, así no hay que volver arriba para actuar. */}
+            {/* Una sola barra para los TRES documentos.
+                Antes solo sabía emitir certificados: la solicitud y la
+                designación se generaban desde la cabecera de la empresa y
+                SIEMPRE para el grupo entero. Si de doce estudiantes solo cinco
+                tenían que entrar en el oficio, no había forma de decirlo.
+                Ahora los tres se emiten igual: marcas lo que quieras y actúas
+                sobre la selección. */}
             <FloatingActionBar
-              count={certEligibility.companies}
-              label={`empresa${certEligibility.companies > 1 ? 's' : ''} · ${certEligibility.eligible.length} certificable${certEligibility.eligible.length !== 1 ? 's' : ''}`}
-              blockedReason={certEligibility.blockedReason}
+              count={seleccionOficios.length}
+              label={`estudiante${seleccionOficios.length === 1 ? '' : 's'} · ${empresasDeLaSeleccion} empresa${empresasDeLaSeleccion === 1 ? '' : 's'}`}
+              blockedReason={bloqueoOficios}
               onClear={() => setSelectedIds(new Set())}
             >
-              {!certEligibility.blockedReason && (
+              {!bloqueoOficios && (
                 <>
+                  <button
+                    onClick={() => handleGenerateSolicitud(seleccionOficios)}
+                    disabled={isGenerating}
+                    className="h-[34px] px-4 flex items-center gap-2 rounded-[10px] bg-white hover:bg-slate-100 text-[#111827] text-[12.5px] font-bold transition-colors disabled:opacity-50 whitespace-nowrap"
+                    title={empresasDeLaSeleccion > 1
+                      ? `${empresasDeLaSeleccion} solicitudes, una por empresa, para los ${seleccionOficios.length} estudiantes marcados`
+                      : `Un único oficio de solicitud para los ${seleccionOficios.length} estudiantes marcados`}
+                  >
+                    <Printer className="w-4 h-4 text-blue-600" />
+                    Solicitud
+                  </button>
+                  <button
+                    onClick={() => handleGenerateDesignacion(seleccionOficios)}
+                    disabled={isGenerating}
+                    className="h-[34px] px-4 flex items-center gap-2 rounded-[10px] bg-white hover:bg-slate-100 text-[#111827] text-[12.5px] font-bold transition-colors disabled:opacity-50 whitespace-nowrap"
+                    title={empresasDeLaSeleccion > 1
+                      ? `${empresasDeLaSeleccion} designaciones, una por empresa, para los ${seleccionOficios.length} estudiantes marcados`
+                      : `Un único oficio de designación para los ${seleccionOficios.length} estudiantes marcados`}
+                  >
+                    <UserCheck className="w-4 h-4 text-violet-600" />
+                    Designación
+                  </button>
+                  <span className="h-5 w-px bg-white/20" />
                   {certEligibility.alreadyCertified.length > 0 && (
                     <span
                       className="text-[11.5px] font-medium text-emerald-300 whitespace-nowrap"
@@ -1076,22 +1488,38 @@ export default function PracticesPage() {
                   {certEligibility.omitted > 0 && (
                     <span
                       className="text-[11.5px] font-medium text-amber-300 whitespace-nowrap"
-                      title="Aún no tienen solicitud vigente: no entran en la emisión"
+                      title="Les falta la designación o el acta del docente: no entran en la emisión"
                     >
-                      {certEligibility.omitted} sin solicitud
+                      {certEligibility.omitted} sin requisitos
                     </span>
                   )}
-                  <button
-                    onClick={() => setShowConfirmCerts(true)}
-                    disabled={isGenerating || certEligibility.eligible.length === 0}
-                    className="h-[34px] px-4 flex items-center gap-2 rounded-[10px] bg-white hover:bg-slate-100 text-[#111827] text-[12.5px] font-bold transition-colors disabled:opacity-50 whitespace-nowrap"
-                  >
-                    <FileText className="w-4 h-4 text-rose-500" />
-                    Emitir {certEligibility.eligible.length} certificado{certEligibility.eligible.length > 1 ? 's' : ''}
-                  </button>
+                  {/* Un botón que solo puede rechazar no es un botón: si nadie
+                      de la selección es elegible, en su lugar va el motivo.
+                      Antes se ofrecía apagado y sin explicación, y el usuario
+                      lo pulsaba esperando que pasara algo. */}
+                  {certEligibility.eligible.length > 0 ? (
+                    <button
+                      onClick={() => setShowConfirmCerts(true)}
+                      disabled={isGenerating}
+                      className="h-[34px] px-4 flex items-center gap-2 rounded-[10px] bg-white hover:bg-slate-100 text-[#111827] text-[12.5px] font-bold transition-colors disabled:opacity-50 whitespace-nowrap"
+                      title={
+                        certEligibility.omitted > 0
+                          ? `Se emite a ${certEligibility.eligible.length} de ${certEligibility.selected.length}: al resto le falta la designación o el acta del docente.`
+                          : undefined
+                      }
+                    >
+                      <FileText className="w-4 h-4 text-rose-500" />
+                      Emitir {certEligibility.eligible.length} certificado{certEligibility.eligible.length > 1 ? 's' : ''}
+                    </button>
+                  ) : (
+                    <span className="text-[11.5px] font-medium text-white/60 whitespace-nowrap">
+                      {certEligibility.blockedReason}
+                    </span>
+                  )}
                 </>
               )}
             </FloatingActionBar>
+
 
             {/*
               Pendientes por completar.
@@ -1167,6 +1595,20 @@ export default function PracticesPage() {
                   onAction={() => queryClient.invalidateQueries({ queryKey: ['practices-all'] })}
                 />
               </div>
+            ) : !selectedPeriod ? (
+              // Sin periodo resuelto la consulta ni siquiera corre (ver
+              // `enabled` arriba). Antes esto caía en "No hay resultados", que
+              // hacía pensar que los filtros estaban mal cuando en realidad
+              // no se pudo leer el catálogo de periodos.
+              <div className="mt-4">
+                <EmptyState
+                  icon={XCircle}
+                  title="No se pudo determinar el periodo académico"
+                  description="Las prácticas se consultan por periodo. Elige uno en el selector de arriba, o reintenta si la lista de periodos no cargó."
+                  actionLabel="Reintentar"
+                  onAction={() => queryClient.invalidateQueries({ queryKey: ['academic-periods'] })}
+                />
+              </div>
             ) : filteredPractices.length === 0 ? (
               <div className="mt-4">
                 <EmptyState 
@@ -1175,7 +1617,6 @@ export default function PracticesPage() {
                   description="No se encontraron prácticas que coincidan con los filtros actuales o la búsqueda." 
                   actionLabel="Limpiar Filtros"
                   onAction={() => {
-                    setFilterPeriod(null)
                     setFilterStatus(null)
                     setFilterFaculty(null)
                     setFilterProgram(null)
@@ -1188,14 +1629,16 @@ export default function PracticesPage() {
                 selectedIds={selectedIds}
                 onToggleSelection={handleToggleSelection}
                 onToggleAll={handleToggleAll}
-                onGenerateSolicitud={groupBy === 'company' ? handleGenerateSolicitud : undefined}
-                onGenerateDesignacion={groupBy === 'company' ? handleGenerateDesignacion : undefined}
+                soloLectura={soloLectura}
+                onGenerateSolicitud={!soloLectura && groupBy === 'company' ? handleGenerateSolicitud : undefined}
+                onGenerateDesignacion={!soloLectura && groupBy === 'company' ? handleGenerateDesignacion : undefined}
                 isGenerating={isGenerating}
                 onSelectPractice={handleSelectPractice}
                 activePracticeId={activePracticeId}
                 isGrouped={groupBy !== 'none'}
-                onUpdateStatus={handleUpdateStatus}
-                onReassign={activeTab === 'assigned' ? setReassignPractice : undefined}
+                onUpdateStatus={soloLectura ? undefined : handleUpdateStatus}
+                onReassign={!soloLectura && activeTab === 'assigned' ? setReassignPractice : undefined}
+                onClosePractice={!soloLectura && activeTab === 'assigned' ? setClosePractice : undefined}
                 recentlyInvalidatedDocIds={recentlyInvalidatedDocIds}
                 generatingCertIds={generatingCertIds}
                 onDocumentClick={handleDocumentClick}
@@ -1222,7 +1665,7 @@ export default function PracticesPage() {
           >
             {/* Resizer Handle */}
             <div 
-              className="sticky top-[80px] float-left -ml-[16px] w-[8px] h-[calc(100vh-100px)] cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 rounded-full transition-colors z-[80]"
+              className="sticky top-[80px] float-left -ml-[16px] w-[8px] h-[calc(100vh-100px)] cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 rounded-full transition-colors z-20"
               onMouseDown={handleMouseDown}
             />
             <RightDetailPanel
@@ -1230,7 +1673,8 @@ export default function PracticesPage() {
               selectedPractice={activePractice}
               onClearSelection={() => setActivePracticeId(null)}
               onGenerateCertificate={() => handleGenerateCertificates()}
-              onReassign={activeTab === 'assigned' ? setReassignPractice : undefined}
+              onReassign={!soloLectura && activeTab === 'assigned' ? setReassignPractice : undefined}
+              onClosePractice={!soloLectura && activeTab === 'assigned' ? setClosePractice : undefined}
             />
           </div>
           
@@ -1276,34 +1720,62 @@ export default function PracticesPage() {
                   <span className="text-[10px] text-[#475569] mt-0.5 truncate animate-pulse font-medium">
                     {generationCurrentName || 'Preparando...'}
                   </span>
-                  <span className="text-[9px] text-[#9ca3af] font-medium mt-0.5">
+                  <span className="text-[9px] text-muted-foreground font-medium mt-0.5">
                     Procesando {generationCurrent} de {generationTotal}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-3 w-[280px]">
+              (() => {
+              // La tarjeta refleja lo que de verdad pasó. Antes anunciaba
+              // «¡Completado!» con visto verde aunque no se hubiera generado
+              // ni un documento, y el usuario se quedaba sin saberlo.
+              const fallos = generationResults.filter((r) => !r.success)
+              const logrados = generationResults.length - fallos.length
+              const hayFallos = fallos.length > 0
+              return (
+              <div className="flex flex-col gap-2.5 w-[320px]">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
+                  <div className={cn(
+                    'w-8 h-8 rounded-full border flex items-center justify-center shrink-0',
+                    hayFallos
+                      ? 'bg-amber-50 border-amber-100 text-amber-600'
+                      : 'bg-emerald-50 border-emerald-100 text-emerald-600',
+                  )}>
+                    {hayFallos ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    )}
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[12px] font-bold text-[#111827] leading-tight">¡Completado!</span>
-                    <span className="text-[10px] text-slate-500 leading-tight mt-0.5">{generationTotal} listos</span>
+                    <span className="text-[12px] font-bold text-[#111827] leading-tight">
+                      {hayFallos ? 'Terminó con errores' : '¡Completado!'}
+                    </span>
+                    <span className="text-[10px] text-slate-500 leading-tight mt-0.5">
+                      {hayFallos
+                        ? `${logrados} generados · ${fallos.length} sin generar`
+                        : `${logrados} listos`}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button
+                  <Button
                     onClick={() => {
                       setIsProgressModalOpen(false)
                       router.push('/certificates')
                     }}
-                    className="h-[28px] px-2.5 bg-[#111827] hover:bg-[#1f2937] text-white text-[10px] font-bold rounded-lg transition-colors flex items-center justify-center"
+                    className="h-[28px] px-2.5 text-[10px] rounded-lg"
                   >
                     Historial
-                  </button>
+                  </Button>
                   <button
                     onClick={() => setIsProgressModalOpen(false)}
                     className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
@@ -1315,6 +1787,26 @@ export default function PracticesPage() {
                   </button>
                 </div>
               </div>
+
+              {/* El motivo de cada fallo, que es lo que permite arreglarlo.
+                  Sin esto el usuario solo sabía cuántos habían fallado. */}
+              {hayFallos && (
+                <div className="flex flex-col gap-1.5 max-h-[168px] overflow-y-auto border-t border-slate-100 pt-2">
+                  {fallos.map((f, i) => (
+                    <div key={i} className="flex flex-col gap-0.5 px-2 py-1.5 rounded-lg bg-amber-50/70">
+                      <span className="text-[10.5px] font-bold text-[#111827] leading-tight">
+                        {f.studentName}
+                      </span>
+                      <span className="text-[10px] text-amber-800 leading-snug">
+                        {f.error || 'Error no especificado.'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              </div>
+              )
+              })()
             )}
           </div>
         )}
@@ -1329,6 +1821,13 @@ export default function PracticesPage() {
             onConfirm={handleConfirmReassign}
           />
         )}
+
+        {/* Baja de un estudiante, con su motivo (RF-21) */}
+        <ClosePracticeModal
+          practice={closePractice}
+          onClose={() => setClosePractice(null)}
+          onDone={handleClosed}
+        />
 
         {/* Confirmación de certificados + palomita de envío automático a firma */}
         <ConfirmCertificatesModal
@@ -1354,25 +1853,25 @@ export default function PracticesPage() {
 
               <div className="mx-6 grid grid-cols-2 gap-3 mb-4">
                 <div>
-                  <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Período electivo</label>
-                  <select
+                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Período electivo</label>
+                  <Select
                     value={massPeriod}
                     onChange={(e) => setMassPeriod(e.target.value)}
-                    className="w-full mt-1 px-3 py-2 bg-[#f9fafb] border border-[#eef2f7] rounded-[10px] text-[13px] font-medium cursor-pointer"
+                    className="w-full mt-1"
                   >
                     {periods.map(p => <option key={String(p)} value={String(p)}>{String(p)}</option>)}
-                  </select>
+                  </Select>
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Carrera</label>
-                  <select
+                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Carrera</label>
+                  <Select
                     value={massProgram}
                     onChange={(e) => setMassProgram(e.target.value)}
-                    className="w-full mt-1 px-3 py-2 bg-[#f9fafb] border border-[#eef2f7] rounded-[10px] text-[13px] font-medium cursor-pointer"
+                    className="w-full mt-1"
                   >
                     <option value="ALL">Todas las carreras</option>
                     {programs.map(p => <option key={String(p)} value={String(p)}>{String(p)}</option>)}
-                  </select>
+                  </Select>
                 </div>
               </div>
 
@@ -1406,19 +1905,16 @@ export default function PracticesPage() {
               </label>
 
               <div className="flex justify-end gap-2 px-6 py-4 bg-slate-50 border-t border-slate-100">
-                <button
-                  onClick={() => setPeriodCertModal(false)}
-                  className="px-4 py-2.5 text-[13px] font-semibold text-slate-600 hover:bg-slate-200/60 rounded-[10px] transition-colors"
-                >
+                <Button variant="ghost" onClick={() => setPeriodCertModal(false)} className="text-[13px] rounded-[10px]">
                   Cancelar
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleGenerateCertificates(massAutoSign, massEligibility.eligible)}
                   disabled={massEligibility.eligible.length === 0 || isGenerating}
-                  className="px-5 py-2.5 text-[13px] font-semibold text-white bg-[#111827] hover:bg-[#1f2937] rounded-[10px] transition-colors shadow-sm disabled:opacity-50"
+                  className="text-[13px] rounded-[10px] shadow-sm"
                 >
                   Emitir {massEligibility.eligible.length} certificado{massEligibility.eligible.length !== 1 ? 's' : ''}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1433,20 +1929,43 @@ export default function PracticesPage() {
             <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[440px] border border-slate-100 overflow-hidden">
               <div className="px-6 pt-5 pb-4">
                 <h2 className="text-[16px] font-bold text-[#111827]">
-                  Generar {solicitudModal.kind === 'SOLICITUD' ? 'solicitud' : 'designación'} · {solicitudModal.companyName}
+                  {solicitudModal.grupos.length === 1
+                    ? `Generar ${solicitudModal.kind === 'SOLICITUD' ? 'solicitud' : 'designación'} · ${solicitudModal.grupos[0].companyName}`
+                    : `Generar ${solicitudModal.grupos.length} ${solicitudModal.kind === 'SOLICITUD' ? 'solicitudes' : 'designaciones'}`}
                 </h2>
                 <p className="text-[12.5px] text-slate-500 mt-0.5">
-                  {solicitudModal.kind === 'SOLICITUD'
-                    ? `Un único oficio que pide vacantes para los ${solicitudModal.items.length} estudiante${solicitudModal.items.length > 1 ? 's' : ''} del grupo.`
-                    : `Un único oficio que designa a los ${solicitudModal.items.length} estudiante${solicitudModal.items.length > 1 ? 's' : ''} del grupo con su tutor académico.`}
+                  {solicitudModal.grupos.length > 1
+                    ? `Un oficio por empresa, cada uno con sus ${totalAlumnosModal} estudiante${totalAlumnosModal > 1 ? 's' : ''} repartidos y su propio número.`
+                    : solicitudModal.kind === 'SOLICITUD'
+                      ? `Un único oficio que pide vacantes para los ${totalAlumnosModal} estudiante${totalAlumnosModal > 1 ? 's' : ''} del grupo.`
+                      : `Un único oficio que designa a los ${totalAlumnosModal} estudiante${totalAlumnosModal > 1 ? 's' : ''} del grupo con su tutor académico.`}
                 </p>
               </div>
 
-              {solicitudModal.existing && (
+              {/* Con varias empresas se enumeran: el coordinador tiene que ver
+                  cuántos papeles va a producir y con quién va cada uno antes
+                  de confirmar, no después. */}
+              {solicitudModal.grupos.length > 1 && (
+                <div className="mx-6 mb-3 rounded-[10px] border border-slate-200 divide-y divide-slate-100 max-h-[168px] overflow-y-auto">
+                  {solicitudModal.grupos.map((g) => (
+                    <div key={g.companyId} className="flex items-center justify-between gap-3 px-3 py-2">
+                      <span className="text-[12.5px] font-medium text-[#111827] truncate">{g.companyName}</span>
+                      <span className="text-[11.5px] text-slate-500 whitespace-nowrap shrink-0">
+                        {g.items.length} est.
+                        {g.existing && <span className="text-amber-600 ml-1.5">· reemplaza</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {gruposQueReemplazan > 0 && (
                 <div className="mx-6 mb-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-[10px] px-3 py-2.5">
                   <span className="text-[12px] text-amber-800 leading-snug">
-                    ⚠ Ya existe una {solicitudModal.kind === 'SOLICITUD' ? 'solicitud' : 'designación'} vigente para este grupo:
-                    la versión anterior quedará invalidada (visible en el historial por 30 días).
+                    ⚠ {gruposQueReemplazan === 1
+                      ? `Ya existe una ${solicitudModal.kind === 'SOLICITUD' ? 'solicitud' : 'designación'} vigente para ${solicitudModal.grupos.length === 1 ? 'este grupo' : 'una de las empresas'}: la versión anterior`
+                      : `Ya existen oficios vigentes para ${gruposQueReemplazan} de las empresas: las versiones anteriores`}
+                    {' '}quedará{gruposQueReemplazan > 1 ? 'n' : ''} invalidada{gruposQueReemplazan > 1 ? 's' : ''} (visible en el historial por 30 días).
                   </span>
                 </div>
               )}
@@ -1501,19 +2020,13 @@ export default function PracticesPage() {
               </div>
 
               <div className="flex justify-end gap-2 px-6 py-4 bg-slate-50 border-t border-slate-100">
-                <button
-                  onClick={() => setSolicitudModal(null)}
-                  className="px-4 py-2.5 text-[13px] font-semibold text-slate-600 hover:bg-slate-200/60 rounded-[10px] transition-colors"
-                >
+                <Button variant="ghost" onClick={() => setSolicitudModal(null)} className="text-[13px] rounded-[10px]">
                   Cancelar
-                </button>
-                <button
-                  onClick={confirmGenerateSolicitud}
-                  disabled={isGenerating}
-                  className="px-5 py-2.5 text-[13px] font-semibold text-white bg-[#111827] hover:bg-[#1f2937] rounded-[10px] transition-colors shadow-sm disabled:opacity-50"
-                >
-                  {solicitudModal.existing ? 'Regenerar' : 'Generar'} en {solicitudAsPdf ? 'PDF' : 'DOCX'}
-                </button>
+                </Button>
+                <Button onClick={confirmGenerateSolicitud} disabled={isGenerating} className="text-[13px] rounded-[10px] shadow-sm">
+                  {gruposQueReemplazan > 0 ? 'Regenerar' : 'Generar'}
+                  {solicitudModal.grupos.length > 1 ? ` ${solicitudModal.grupos.length}` : ''} en {solicitudAsPdf ? 'PDF' : 'DOCX'}
+                </Button>
               </div>
             </div>
           </div>
@@ -1546,6 +2059,15 @@ export default function PracticesPage() {
             }
           }}
         />
+
+        {/* Pasos reales mientras se emite el oficio (convertir a PDF tarda ~7 s) */}
+        <GenerationOverlay
+          isOpen={!!oficioOverlay}
+          title={oficioOverlay?.title || ''}
+          asPdf={oficioOverlay?.asPdf}
+          subtitle={oficioOverlay?.subtitle}
+        />
+        </PageContainer>
       </div>
     </RoleGate>
   )

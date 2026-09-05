@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Get, Patch, Param, Body, UseGuards, Req, Res,
+  Controller, Post, Get, Patch, Param, Body, Query, UseGuards, Req, Res,
   UseInterceptors, UploadedFile, BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -10,6 +10,7 @@ import { GenerateDocumentDto } from './dto/generate-document.dto';
 import { GenerateBatchDto } from './dto/generate-batch.dto';
 import { GenerateSolicitudDto } from './dto/generate-solicitud.dto';
 import { GenerateOficioDto } from './dto/generate-oficio.dto';
+import { InvalidateDocumentDto } from './dto/invalidate-document.dto';
 import { OficioKind } from './oficio.util';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -69,16 +70,9 @@ export class GeneratedDocumentsController {
 
   @Get()
   @Roles(Role.ADMIN, Role.COORDINATOR)
-  @ApiOperation({ summary: 'Lista todos los documentos generados' })
-  findAll() {
-    return this.service.findAll();
-  }
-
-  @Get('me')
-  @Roles(Role.STUDENT)
-  @ApiOperation({ summary: 'Obtiene los documentos del estudiante logueado' })
-  findMyDocuments(@Req() req: any) {
-    return this.service.findMyDocuments(req.user.id);
+  @ApiOperation({ summary: 'Lista todos los documentos generados. Sin academicPeriod, trae todos (compatibilidad).' })
+  findAll(@Query('academicPeriod') academicPeriod?: string) {
+    return this.service.findAll(academicPeriod);
   }
 
   @SkipThrottle()
@@ -90,10 +84,27 @@ export class GeneratedDocumentsController {
   }
 
   @Get(':id/download')
-  @Roles(Role.ADMIN, Role.COORDINATOR, Role.STUDENT, Role.SIGNER)
+  @Roles(Role.ADMIN, Role.COORDINATOR, Role.SIGNER)
   @ApiOperation({ summary: 'Devuelve una URL prefirmada de descarga (bucket privado, expira en 15 min)' })
   getDownloadUrl(@Req() req: any, @Param('id') id: string) {
     return this.service.getDownloadUrl(id, { id: req.user.id, role: req.user.role });
+  }
+
+  @Post('check-certificate-eligibility')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Quiénes pueden certificarse y qué le falta a cada uno de los demás' })
+  checkCertificateEligibility(@Body('studentIds') studentIds: string[]) {
+    return this.service.checkCertificateEligibility(studentIds);
+  }
+
+  @Post('export-certificados-zip')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'ZIP con los certificados seleccionados, con nombres legibles para el estudiante' })
+  exportCertificadosZip(
+    @Body() body: { documentIds: string[]; academicPeriod?: string },
+    @Res() res: Response,
+  ) {
+    return this.service.streamCertificadosZip(res, body?.documentIds, body?.academicPeriod);
   }
 
   @Post('purge-trash')
@@ -104,7 +115,7 @@ export class GeneratedDocumentsController {
   }
 
   @Get(':id/view')
-  @Roles(Role.ADMIN, Role.COORDINATOR, Role.STUDENT, Role.SIGNER)
+  @Roles(Role.ADMIN, Role.COORDINATOR, Role.SIGNER)
   @ApiOperation({ summary: 'Devuelve una URL prefirmada para visualización en línea (bucket privado)' })
   getViewUrl(@Req() req: any, @Param('id') id: string) {
     return this.service.getViewUrl(id, { id: req.user.id, role: req.user.role });
@@ -117,11 +128,18 @@ export class GeneratedDocumentsController {
     return this.service.findByStudent(studentId);
   }
 
+  @Get(':id/invalidation-impact')
+  @Roles(Role.ADMIN, Role.COORDINATOR)
+  @ApiOperation({ summary: 'Qué documentos se anularían en cascada al invalidar este' })
+  invalidationImpact(@Param('id') id: string) {
+    return this.service.invalidationImpact(id);
+  }
+
   @Patch(':id/invalidate')
   @Roles(Role.ADMIN, Role.COORDINATOR)
-  @ApiOperation({ summary: 'Invalida un documento generado' })
-  invalidate(@Param('id') id: string, @Body('reason') reason: string, @Req() req: any) {
-    return this.service.invalidate(id, reason, req.user?.id);
+  @ApiOperation({ summary: 'Invalida un documento generado y los que dependían de él' })
+  invalidate(@Param('id') id: string, @Body() dto: InvalidateDocumentDto, @Req() req: any) {
+    return this.service.invalidate(id, dto.reason, req.user?.id, dto.reasonId);
   }
 
   // ─────────── Edición manual del oficio (coordinación) ───────────

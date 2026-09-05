@@ -6,7 +6,7 @@
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "node dist/src/main.js",
-    "test": "jest",
+    "test": "node --experimental-vm-modules ./jest-runner.js",
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "jest": {
@@ -49,6 +49,7 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.10.38",
     "pizzip": "^3.2.0",
     "process": "^0.11.10",
     "reflect-metadata": "^0.2.0",

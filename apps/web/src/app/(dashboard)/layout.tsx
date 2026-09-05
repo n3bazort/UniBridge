@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { useSidebarStore } from '@/store/sidebar'
+import { AvisoPeriodoCerrado } from '@/components/layout/periodo-cerrado-aviso'
 
 export default function DashboardLayout({
   children,
@@ -59,7 +60,7 @@ export default function DashboardLayout({
        so it never overlaps or floats incorrectly
      ───────────────────────────────────────────────────── */
   return (
-    <div className="h-screen overflow-hidden bg-[#f7f7f8]">
+    <div className="h-screen overflow-hidden bg-app">
       {/* Sidebar — fixed, out of flow */}
       <Sidebar />
 
@@ -81,8 +82,16 @@ export default function DashboardLayout({
         {/* Topbar: simple block element, no sticky/fixed needed */}
         <Topbar />
 
-        {/* Page content: fills remaining height, scrolls internally */}
-        <main className="flex-1 min-h-0 w-full relative overflow-auto">
+        {/* Page content: fills remaining height, scrolls internally.
+            El fondo del lienzo se pinta aquí, una sola vez. Antes lo ponía
+            cada página en su propio <div> envoltorio, con cuatro tonos
+            distintos y un min-h-[calc(100vh-72px)] que restaba 72px de un
+            topbar que mide 56 — de ahí la franja del color equivocado al pie
+            de las pantallas con poco contenido. */}
+        <main className="flex flex-col flex-1 min-h-0 w-full relative overflow-auto bg-app">
+          {/* La regla de «período cerrado = solo consulta» es del sistema, no de
+              una pantalla: se dice una vez aquí y vale para todas. */}
+          <AvisoPeriodoCerrado />
           {children}
         </main>
       </div>

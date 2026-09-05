@@ -4,6 +4,12 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import { RoleGate } from '@/components/shared/role-gate'
+import { Skeleton } from '@/components/ui/skeleton'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { toast } from 'sonner'
 import {
   UserCheck,
@@ -63,7 +69,7 @@ export default function UsersPage() {
   })
   const [lastResult, setLastResult] = useState<{ link?: string; temporaryPassword?: string; email?: string } | null>(null)
 
-  const { data: users = [] } = useQuery<UserItem[]>({
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery<UserItem[]>({
     queryKey: ['users'],
     queryFn: async () => (await api.get('/signatures/users')).data,
   })
@@ -75,7 +81,11 @@ export default function UsersPage() {
 
   const { data: faculties = [] } = useQuery<{ id: string; name: string }[]>({
     queryKey: ['faculties'],
-    queryFn: async () => (await api.get('/practices/faculties')).data,
+    // El listado de facultades vive en su propio módulo. Apuntaba a
+    // /practices/faculties, que no existe: NestJS lo resolvía contra
+    // @Get(':id') de prácticas e intentaba leer «faculties» como un UUID,
+    // devolviendo un 500 en cada carga de esta pantalla.
+    queryFn: async () => (await api.get('/faculties')).data,
   })
 
   // El coordinador se asigna a una CARRERA; la facultad se deriva del programa.
@@ -169,19 +179,12 @@ export default function UsersPage() {
 
   return (
     <RoleGate allowedRoles={['ADMIN']}>
-      <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8] pt-6 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-6xl mx-auto flex flex-col gap-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-[#eef2f7]">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-[12px] bg-white border border-[#eef2f7] flex items-center justify-center text-[#111827] shadow-sm">
-                <UserCheck className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <h1 className="text-[20px] font-bold text-[#111827]">Gestión de Usuarios</h1>
-                <p className="text-[13px] text-[#6b7280]">Crea cuentas e invitaciones para Administradores, Coordinadores y Autoridades.</p>
-              </div>
-            </div>
-          </div>
+      <div className="flex flex-col w-full flex-1">
+        <PageContainer variant="reading" className="flex flex-col gap-6">
+          <PageHeader
+            className="pb-3 border-b border-border"
+            description="Crea cuentas e invitaciones para administradores, coordinadores y autoridades."
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* ── Alta de usuarios ── */}
@@ -208,8 +211,8 @@ export default function UsersPage() {
               <div className="flex flex-col gap-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Rol</label>
-                    <select
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Rol</label>
+                    <Select
                       value={form.role}
                       onChange={(e) => setForm({ ...form, role: e.target.value as any })}
                       className={inputCls + ' cursor-pointer'}
@@ -217,27 +220,27 @@ export default function UsersPage() {
                       <option value="SIGNER">Firmante (Decano / Responsable)</option>
                       <option value="COORDINATOR">Coordinador de Facultad</option>
                       <option value="ADMIN">Administrador</option>
-                    </select>
+                    </Select>
                   </div>
                   
                   {form.role === 'SIGNER' && (
                     <>
                       <div className="col-span-2">
-                        <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Tipo de Autoridad</label>
-                        <select
+                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo de Autoridad</label>
+                        <Select
                           value={form.signerRole}
                           onChange={(e) => setForm({ ...form, signerRole: e.target.value as any })}
                           className={inputCls + ' cursor-pointer'}
                         >
                           <option value="DIRECTOR">Responsable de Prácticas (firma primero)</option>
                           <option value="DEAN">Decano (firma después)</option>
-                        </select>
+                        </Select>
                       </div>
                       <div className="col-span-2">
-                        <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">
+                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                           Facultad {form.signerRole === 'DEAN' ? '(requerida - solo 1 decano activo por facultad)' : '(opcional)'}
                         </label>
-                        <select
+                        <Select
                           value={form.facultyId}
                           onChange={(e) => setForm({ ...form, facultyId: e.target.value })}
                           className={inputCls + ' cursor-pointer'}
@@ -246,15 +249,15 @@ export default function UsersPage() {
                           {faculties.map((f) => (
                             <option key={f.id} value={f.id}>{f.name}</option>
                           ))}
-                        </select>
+                        </Select>
                       </div>
                     </>
                   )}
 
                   {form.role === 'COORDINATOR' && (
                     <div className="col-span-2">
-                      <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Carrera a coordinar</label>
-                      <select
+                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Carrera a coordinar</label>
+                      <Select
                         value={form.programId}
                         onChange={(e) => setForm({ ...form, programId: e.target.value })}
                         className={inputCls + ' cursor-pointer'}
@@ -263,9 +266,9 @@ export default function UsersPage() {
                         {programs.map((p) => (
                           <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
-                      </select>
+                      </Select>
                       {form.programId && (
-                        <p className="text-[11px] text-[#9ca3af] mt-1">
+                        <p className="text-[11px] text-muted-foreground mt-1">
                           Facultad: {faculties.find(f => f.id === facultyIdOfProgram(form.programId))?.name || '—'}
                         </p>
                       )}
@@ -274,10 +277,10 @@ export default function UsersPage() {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">
+                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                     Correo {mode === 'invite' && '(opcional: restringe la invitación)'}
                   </label>
-                  <input
+                  <Input
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -287,10 +290,10 @@ export default function UsersPage() {
                 </div>
                 {(mode === 'direct' || form.role === 'SIGNER') && (
                   <div>
-                    <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                       Nombre completo {mode === 'invite' && '(opcional)'}
                     </label>
-                    <input
+                    <Input
                       value={form.fullName}
                       onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                       placeholder="Nombre Apellido"
@@ -300,8 +303,8 @@ export default function UsersPage() {
                 )}
                 {mode === 'direct' && form.role === 'SIGNER' && (
                   <div>
-                    <label className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Cargo (opcional)</label>
-                    <input
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Cargo (opcional)</label>
+                    <Input
                       value={form.title}
                       onChange={(e) => setForm({ ...form, title: e.target.value })}
                       placeholder="Decano de la Facultad de..."
@@ -310,17 +313,17 @@ export default function UsersPage() {
                   </div>
                 )}
 
-                <button
+                <Button
                   onClick={() => (mode === 'direct' ? createUser.mutate() : createInvitation.mutate())}
                   disabled={isPending ||
                     (mode === 'direct' && (!form.email || (form.role === 'SIGNER' && (!form.fullName || (form.signerRole === 'DEAN' && !form.facultyId))) || (form.role === 'COORDINATOR' && !form.programId))) ||
                     (mode === 'invite' && ((form.role === 'SIGNER' && form.signerRole === 'DEAN' && !form.facultyId) || (form.role === 'COORDINATOR' && !form.programId)))
                   }
-                  className="w-full flex items-center justify-center gap-2 h-[42px] bg-[#111827] hover:bg-[#1f2937] rounded-[12px] text-[13px] font-semibold text-white shadow-sm transition-colors disabled:opacity-50"
+                  className="w-full h-[42px] gap-2 text-[13px] rounded-[12px] shadow-sm"
                 >
                   {isPending && <div className="w-4 h-4 rounded-full border-2 border-slate-500 border-t-white animate-spin" />}
                   {mode === 'direct' ? 'Crear Usuario' : 'Generar Link de Invitación'}
-                </button>
+                </Button>
 
                 {lastResult?.link && (
                   <div className="p-3.5 bg-emerald-50 border border-emerald-100 rounded-[12px]">
@@ -356,8 +359,20 @@ export default function UsersPage() {
             <div className="flex flex-col gap-6">
               <div className="bg-white rounded-[18px] border border-[#eef2f7] shadow-soft p-[24px]">
                 <h3 className="text-[14px] font-semibold text-[#111827] pb-3 border-b border-[#f3f4f6] mb-1">Usuarios Activos</h3>
-                {users.length === 0 ? (
-                  <p className="text-[13px] text-[#9ca3af] py-4">No hay usuarios registrados.</p>
+                {isLoadingUsers ? (
+                  <div className="flex flex-col gap-3 py-2">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                        <div className="flex flex-col gap-1.5 flex-1">
+                          <Skeleton className="h-3.5 w-40" />
+                          <Skeleton className="h-3 w-56" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : users.length === 0 ? (
+                  <p className="text-[13px] text-muted-foreground py-4">No hay usuarios registrados.</p>
                 ) : (
                   <div className="divide-y divide-[#f3f4f6]">
                     {users.map((u) => {
@@ -378,7 +393,7 @@ export default function UsersPage() {
                                 </span>
                               )}
                             </span>
-                            <span className="text-[11px] text-[#9ca3af] tracking-wide mt-0.5 flex items-center gap-1 truncate">
+                            <span className="text-[11px] text-muted-foreground tracking-wide mt-0.5 flex items-center gap-1 truncate">
                               <Mail className="w-3 h-3 shrink-0" /> {u.email}
                               {u.facultyName && ` · ${u.facultyName}`}
                             </span>
@@ -402,7 +417,7 @@ export default function UsersPage() {
                               }
                             }}
                             disabled={resetPassword.isPending}
-                            className="p-1.5 rounded-md text-[#9ca3af] hover:text-blue-600 hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40"
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-blue-600 hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40"
                             title="Restablecer contraseña"
                           >
                             <KeyRound className="w-3.5 h-3.5" />
@@ -414,7 +429,7 @@ export default function UsersPage() {
                             className={`p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40 ${
                               suspended
                                 ? 'text-emerald-600 hover:bg-emerald-50'
-                                : 'text-[#9ca3af] hover:text-amber-600 hover:bg-amber-50'
+                                : 'text-muted-foreground hover:text-amber-600 hover:bg-amber-50'
                             }`}
                             title={suspended ? 'Reactivar cuenta' : 'Inhabilitar cuenta'}
                           >
@@ -428,7 +443,7 @@ export default function UsersPage() {
                               }
                             }}
                             disabled={deleteUser.isPending}
-                            className="p-1.5 rounded-md text-[#9ca3af] hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40"
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40"
                             title="Eliminar cuenta definitivamente"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -444,7 +459,7 @@ export default function UsersPage() {
               <div className="bg-white rounded-[18px] border border-[#eef2f7] shadow-soft p-[24px]">
                 <h3 className="text-[14px] font-semibold text-[#111827] pb-3 border-b border-[#f3f4f6] mb-1">Invitaciones</h3>
                 {invitations.length === 0 ? (
-                  <p className="text-[13px] text-[#9ca3af] py-4">No hay invitaciones emitidas.</p>
+                  <p className="text-[13px] text-muted-foreground py-4">No hay invitaciones emitidas.</p>
                 ) : (
                   <div className="divide-y divide-[#f3f4f6]">
                     {invitations.slice(0, 8).map((inv) => {
@@ -455,7 +470,7 @@ export default function UsersPage() {
                         <div key={inv.id} className="py-3 flex items-center justify-between gap-2 group">
                           <div className="flex flex-col min-w-0">
                             <span className="text-[13px] font-semibold text-[#374151] truncate">{inv.email || 'Sin correo restringido'}</span>
-                            <span className="text-[11px] text-[#9ca3af] tracking-wide mt-0.5">
+                            <span className="text-[11px] text-muted-foreground tracking-wide mt-0.5">
                               {ROLE_LABEL[roleKey]} · {inv.usedAt ? 'usada' : expired ? 'expiró' : 'expira'} {new Date(inv.usedAt || inv.expiresAt).toLocaleDateString('es-ES')}
                             </span>
                           </div>
@@ -474,7 +489,7 @@ export default function UsersPage() {
                             {active && inv.link && (
                               <button
                                 onClick={() => copy(inv.link!)}
-                                className="p-1.5 rounded-md text-[#9ca3af] hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-blue-600 hover:bg-blue-50 transition-colors"
                                 title="Copiar link"
                               >
                                 <Copy className="w-3.5 h-3.5" />
@@ -486,7 +501,7 @@ export default function UsersPage() {
                                 if (confirm('¿Eliminar esta invitación?')) deleteInvitation.mutate(inv.id)
                               }}
                               disabled={deleteInvitation.isPending}
-                              className="p-1.5 rounded-md text-[#9ca3af] hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40"
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40"
                               title="Eliminar invitación"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -500,7 +515,7 @@ export default function UsersPage() {
               </div>
             </div>
           </div>
-        </div>
+        </PageContainer>
       </div>
 
       {/* Modal con la clave temporal tras un restablecimiento */}
@@ -534,12 +549,9 @@ export default function UsersPage() {
               Esta clave solo se muestra ahora. El usuario debe cambiarla al iniciar sesión. Sus sesiones abiertas ya se cerraron.
             </p>
 
-            <button
-              onClick={() => setResetResult(null)}
-              className="w-full py-2.5 text-[13px] font-semibold text-white bg-[#111827] hover:bg-[#1f2937] rounded-[10px] transition-colors"
-            >
+            <Button onClick={() => setResetResult(null)} className="w-full text-[13px] rounded-[10px]">
               Entendido
-            </button>
+            </Button>
           </div>
         </div>
       )}

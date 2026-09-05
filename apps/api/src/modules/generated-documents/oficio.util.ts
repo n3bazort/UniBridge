@@ -26,11 +26,6 @@ export type OficioScope = 'GRUPO' | 'ESTUDIANTE';
 
 export const OFICIO_SCOPES: OficioScope[] = ['GRUPO', 'ESTUDIANTE'];
 
-/** Nombre legible del alcance, para la interfaz y los mensajes. */
-export function nombreDelAlcance(scope: OficioScope): string {
-  return scope === 'ESTUDIANTE' ? 'uno por estudiante' : 'uno por empresa';
-}
-
 /**
  * ¿Es un oficio por lote? Importa porque invalidar, versionar o regenerar uno
  * de estos alcanza a TODAS las filas que comparten su código: es el mismo papel
@@ -43,6 +38,106 @@ export function esOficioGrupal(documentType?: string | null): documentType is Of
 /** Nombre legible del tipo, para mensajes de error dirigidos a la coordinación. */
 export function nombreDelOficio(kind: OficioKind): string {
   return kind === 'SOLICITUD' ? 'solicitud de prácticas' : 'designación de estudiantes';
+}
+
+// ─────────────────────── Orden del expediente ───────────────────────
+
+/**
+ * El recorrido documental de una práctica tiene un orden, y no es arbitrario:
+ *
+ *   SOLICITUD    pide las vacantes; sin ella la empresa no ha aceptado a nadie.
+ *   DESIGNACION  comunica a quién se designa; presupone que hay vacante concedida.
+ *   CERTIFICADO  acredita la culminación de lo que las dos anteriores abrieron.
+ *
+ * Emitir uno sin el anterior produce un papel que afirma algo que no ocurrió.
+ * Por eso el orden se comprueba en el servidor y no solo en la pantalla: la
+ * interfaz puede orientar, pero quien garantiza es esta regla.
+ */
+export const ORDEN_DOCUMENTAL = ['SOLICITUD', 'DESIGNACION', 'CERTIFICADO'] as const;
+
+export type TipoDocumento = (typeof ORDEN_DOCUMENTAL)[number];
+
+/** Nombre legible de cualquiera de los tres, para los mensajes. */
+export function nombreDelDocumento(tipo: string): string {
+  switch (tipo) {
+    case 'SOLICITUD': return 'la solicitud de prácticas';
+    case 'DESIGNACION': return 'la designación de estudiantes';
+    case 'CERTIFICADO': return 'el certificado';
+    default: return 'el documento';
+  }
+}
+
+/**
+ * Nombre para acompañar a una cantidad: «5 certificados», «1 designación».
+ * El de arriba lleva artículo y no compone detrás de un número.
+ */
+export function nombreContable(tipo: string, cantidad: number): string {
+  const uno = cantidad === 1;
+  switch (tipo) {
+    case 'SOLICITUD': return uno ? 'solicitud de prácticas' : 'solicitudes de prácticas';
+    case 'DESIGNACION': return uno ? 'designación de estudiantes' : 'designaciones de estudiantes';
+    case 'CERTIFICADO': return uno ? 'certificado' : 'certificados';
+    default: return uno ? 'documento' : 'documentos';
+  }
+}
+
+/**
+ * Qué documento exige cada uno para poder emitirse.
+ *
+ * NO es una cadena lineal, aunque el expediente se archive en ese orden.
+ *
+ * La SOLICITUD pide vacantes a la empresa para un grupo: es previa, colectiva
+ * y puede no existir, porque el cupo se acuerda a veces de palabra. Exigirla
+ * dejaba sin designación y sin certificado a estudiantes cuya práctica era
+ * perfectamente real, así que no bloquea a nadie.
+ *
+ * La DESIGNACIÓN sí precede al certificado. Es la que nombra a ESE estudiante,
+ * le asigna SU tutor y fija sus horas y su nivel: exactamente los datos que el
+ * certificado imprime. Certificar sin ella sería acreditar una práctica que
+ * nunca se asignó formalmente.
+ */
+const REQUISITOS: Record<TipoDocumento, TipoDocumento[]> = {
+  SOLICITUD: [],
+  DESIGNACION: [],
+  CERTIFICADO: ['DESIGNACION'],
+};
+
+/** Qué documentos deben estar vigentes antes de poder emitir `tipo`. */
+export function requisitosDe(tipo: string): TipoDocumento[] {
+  return REQUISITOS[tipo as TipoDocumento] ?? [];
+}
+
+/**
+ * Qué se cae al anular `tipo`.
+ *
+ * Ojo: esto NO es el inverso de `REQUISITOS`. Son dos relaciones distintas, y
+ * la diferencia importa.
+ *
+ * `REQUISITOS` rige el momento de EMITIR: no se expide un certificado sin una
+ * designación vigente. Este mapa rige lo que ocurre DESPUÉS, y ahí la regla es
+ * otra, porque un documento ya emitido acredita un hecho que ya pasó.
+ *
+ * La DESIGNACIÓN es la que manda en el trámite: anularla arrastra la SOLICITUD
+ * que la precedió —si la hubo—, porque esa solicitud pidió el cupo para una
+ * designación que ya no existe y se queda sin objeto.
+ *
+ * Pero NO arrastra el certificado. Si el certificado llegó a emitirse es
+ * porque se cargó el acta de calificaciones y el estudiante culminó su
+ * práctica: acredita horas efectivamente cumplidas y evaluadas por su docente.
+ * Ese hecho no se deshace porque se corrija un oficio administrativo anterior.
+ * Anular el certificado es una decisión aparte, y se toma sobre el certificado.
+ *
+ * La SOLICITUD no arrastra a nadie: puede no haber existido nunca y la
+ * designación se sostiene igual.
+ */
+const ANULACION_ARRASTRA: Record<TipoDocumento, TipoDocumento[]> = {
+  SOLICITUD: [],
+  DESIGNACION: ['SOLICITUD'],
+  CERTIFICADO: [],
+};
+
+export function dependientesDe(tipo: string): TipoDocumento[] {
+  return ANULACION_ARRASTRA[tipo as TipoDocumento] ?? [];
 }
 
 // ─────────────────────────── Numeración ───────────────────────────

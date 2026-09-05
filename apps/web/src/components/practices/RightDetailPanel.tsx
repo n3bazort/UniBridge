@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState } from 'react'
-import { FileText, Clock, Mail, Download, Trash2, X, Building2, ArrowLeftRight } from 'lucide-react'
+import { FileText, Clock, Mail, Download, Trash2, X, Building2, ArrowLeftRight, UserMinus } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '@/lib/axios'
 import type { Practice } from './EntityList'
 import { leerEstado } from './labels/types'
+import { Card } from '@/components/ui/card'
 
 interface RightDetailPanelProps {
   selectedCount: number
@@ -14,9 +15,11 @@ interface RightDetailPanelProps {
   onClearSelection?: () => void
   onGenerateCertificate?: (studentId: string) => void
   onReassign?: (p: Practice) => void
+  /** Dar de baja al estudiante con su motivo (RF-21) */
+  onClosePractice?: (p: Practice) => void
 }
 
-export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelection, onGenerateCertificate, onReassign }: RightDetailPanelProps) {
+export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelection, onGenerateCertificate, onReassign, onClosePractice }: RightDetailPanelProps) {
   const [showAllDocs, setShowAllDocs] = useState(false)
 
   const queryClient = useQueryClient()
@@ -62,7 +65,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
     return (
       <div className="sticky top-[80px] flex flex-col items-center justify-center gap-4 w-full h-[calc(100vh-100px)] bg-white rounded-[18px] border border-dashed border-[#eef2f7]">
         <FileText className="w-12 h-12 text-[#e5e7eb]" />
-        <p className="text-[#9ca3af] font-medium text-[14px]">Selecciona un registro para ver detalles</p>
+        <p className="text-muted-foreground font-medium text-[14px]">Selecciona un registro para ver detalles</p>
       </div>
     )
   }
@@ -89,7 +92,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
     <div className="sticky top-[80px] flex flex-col gap-3.5 w-full h-[calc(100vh-100px)] overflow-y-auto no-scrollbar pb-10">
       
       {/* Main Detail Card */}
-      <div className="relative flex flex-col p-[20px] bg-white rounded-[18px] shadow-soft gap-[24px]">
+      <Card variant="elevated" className="relative flex flex-col p-[20px] rounded-[18px] gap-[24px]">
         {/* Close Button */}
         <button
           onClick={onClearSelection}
@@ -111,7 +114,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
               <h2 className="text-[18px] font-semibold text-[#111827] leading-tight">{p.student.firstName} {p.student.lastName}</h2>
               <span className="text-[13px] font-medium text-[#6b7280] mt-1 leading-snug">
                 {p.academicLevel} <br/>
-                <span className="text-[11px] text-[#9ca3af]">DNI: {p.student.dni}</span>
+                <span className="text-[11px] text-muted-foreground">DNI: {p.student.dni}</span>
               </span>
             </div>
           </div>
@@ -125,10 +128,22 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
 
         <div className="h-[1px] w-full bg-[#f3f4f6]" />
 
+        {/* Una práctica dada de baja se dice, no se deduce: sin este aviso la
+            ficha se lee igual que la de un estudiante que sigue en curso. */}
+        {p.closedAt && (
+          <div className="mb-4 flex items-start gap-2 rounded-[12px] border border-red-200 bg-red-50 px-3.5 py-2.5">
+            <UserMinus className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+            <p className="text-[12.5px] leading-snug text-red-800">
+              Dado de baja el {new Date(p.closedAt).toLocaleDateString('es-EC')}.
+              Los documentos que ya salieron a firma conservan su validez en papel.
+            </p>
+          </div>
+        )}
+
         {/* Company Info */}
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col">
-            <span className="text-[12px] font-medium text-[#9ca3af] mb-2 flex items-center gap-2">
+            <span className="text-[12px] font-medium text-muted-foreground mb-2 flex items-center gap-2">
               Empresa / Institución
               {onReassign && (
                 <button
@@ -137,6 +152,15 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
                   title="Reasignar a otra empresa"
                 >
                   <ArrowLeftRight className="w-3 h-3" /> Reasignar
+                </button>
+              )}
+              {onClosePractice && !p.closedAt && (
+                <button
+                  onClick={() => onClosePractice(p)}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-red-500 hover:text-red-700 transition-colors"
+                  title="Dar de baja a este estudiante"
+                >
+                  <UserMinus className="w-3 h-3" /> Dar de baja
                 </button>
               )}
             </span>
@@ -153,7 +177,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="text-[12px] font-medium text-[#9ca3af] mb-2">Contacto Empresa</span>
+            <span className="text-[12px] font-medium text-muted-foreground mb-2">Contacto Empresa</span>
             {/* Nombre y cargo: son los dos que los oficios imprimen como
                 destinatario, así que conviene verlos antes de emitir. */}
             <span className="text-[13px] font-medium text-[#374151] max-w-[140px] truncate" title={p.company?.contactName}>
@@ -172,7 +196,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
           <div className="flex flex-col">
             {/* Es el tutor ACADÉMICO: el docente que la Facultad designa. El
                 contacto de la empresa es el de arriba, no este. */}
-            <span className="text-[12px] font-medium text-[#9ca3af] mb-2">Tutor Académico</span>
+            <span className="text-[12px] font-medium text-muted-foreground mb-2">Tutor Académico</span>
             <div className="flex items-center gap-2">
               <img src={`https://api.dicebear.com/9.x/notionists/svg?seed=${p.tutorName}`} className="w-[32px] h-[32px] rounded-full shrink-0" />
               <span className="text-[14px] font-medium text-[#111827] leading-tight max-w-[120px] truncate" title={p.tutorName}>
@@ -186,7 +210,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
                  decía «Contacto Tutor» y mostraba este mismo valor.
                  Y hoy funciona como identificador, no como canal: no se valida
                  su formato al importar ni se envía nada a esa dirección. */}
-             <span className="text-[12px] font-medium text-[#9ca3af] mb-2">Identificador de acceso</span>
+             <span className="text-[12px] font-medium text-muted-foreground mb-2">Identificador de acceso</span>
              <span
                className="text-[13px] font-medium text-[#374151] truncate max-w-[140px]"
                title={`${p.student.user?.email || ''}\nDistingue la cuenta al iniciar sesión. El sistema no verifica la dirección ni envía correos a ella.`}
@@ -196,14 +220,14 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
              </span>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Details Grid Card */}
-      <div className="flex flex-col p-[20px] bg-white rounded-[18px] shadow-soft">
+      <Card variant="elevated" className="flex flex-col p-[20px] rounded-[18px]">
         <h3 className="text-[14px] font-semibold text-[#111827] mb-4">Detalles de la práctica</h3>
         <div className="grid grid-cols-2 gap-y-5 gap-x-4">
           <div className="flex flex-col">
-            <span className="text-[12px] font-medium text-[#9ca3af]">Área / Departamento</span>
+            <span className="text-[12px] font-medium text-muted-foreground">Área / Departamento</span>
             <span className="text-[13px] font-medium text-[#374151] mt-1" title="La solicitud oficial la imprime: «en el área de: ___»">
               {p.workArea || 'Sin registrar'}
             </span>
@@ -211,15 +235,15 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
           <div className="flex flex-col">
             {/* Antes decía «Jornada», que no existe en ninguna parte del
                 sistema. El nivel académico sí, y no se veía en ningún lado. */}
-            <span className="text-[12px] font-medium text-[#9ca3af]">Nivel académico</span>
+            <span className="text-[12px] font-medium text-muted-foreground">Nivel académico</span>
             <span className="text-[13px] font-medium text-[#374151] mt-1">{p.academicLevel || 'Sin registrar'}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[12px] font-medium text-[#9ca3af]">Tipo de práctica</span>
+            <span className="text-[12px] font-medium text-muted-foreground">Tipo de práctica</span>
             <span className="text-[13px] font-medium text-[#374151] mt-1">{p.practiceLevel || 'N/A'}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[12px] font-medium text-[#9ca3af]">Total de horas</span>
+            <span className="text-[12px] font-medium text-muted-foreground">Total de horas</span>
             {/* Antes decía «120 / 120 h», que aparentaba un avance cumplido. El
                 sistema no lleva horas cumplidas: solo las que se asignaron. */}
             <div className="flex items-center gap-1.5 mt-1 text-[13px] font-semibold text-[#111827]">
@@ -228,14 +252,14 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="text-[12px] font-medium text-[#9ca3af]">Periodo académico</span>
+            <span className="text-[12px] font-medium text-muted-foreground">Periodo académico</span>
             <span className="text-[13px] font-medium text-[#374151] mt-1">{p.academicPeriod || 'Sin registrar'}</span>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Documents Card */}
-      <div className="flex flex-col p-[20px] bg-white rounded-[18px] shadow-soft">
+      <Card variant="elevated" className="flex flex-col p-[20px] rounded-[18px]">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[14px] font-semibold text-[#111827]">Documentos generados</h3>
           {validDocs.length > 4 && (
@@ -278,7 +302,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
                    )}
                  </div>
                  <span className="text-[11px] font-medium text-[#374151] text-center leading-tight line-clamp-2" title={doc.name}>{doc.name}</span>
-                 <span className="text-[10px] text-[#9ca3af]">{doc.type}</span>
+                 <span className="text-[10px] text-muted-foreground">{doc.type}</span>
                </motion.div>
              ))}
            </AnimatePresence>
@@ -299,7 +323,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
                 <Trash2 className="w-4 h-4" />
                 <span className="text-[13px] font-medium">Historial de versiones ({historyDocs.length})</span>
               </div>
-              <span className="text-[#9ca3af] text-[12px]">{showHistory ? 'Ocultar' : 'Mostrar'}</span>
+              <span className="text-muted-foreground text-[12px]">{showHistory ? 'Ocultar' : 'Mostrar'}</span>
             </button>
             
             <AnimatePresence>
@@ -334,13 +358,13 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-[12px] font-medium text-[#374151]">{doc.name}</span>
                             {doc.documentCode && (
-                              <span className="text-[10px] font-mono text-[#9ca3af]">{doc.documentCode}</span>
+                              <span className="text-[10px] font-mono text-muted-foreground">{doc.documentCode}</span>
                             )}
                           </div>
                           <span className="text-[10.5px] font-semibold text-amber-600 uppercase tracking-wide">
                             {doc.status === 'INVALIDATED' ? 'Invalidado' : 'Reemplazado'}
                             {doc.invalidatedAt && (
-                              <span className="font-normal normal-case tracking-normal text-[#9ca3af]">
+                              <span className="font-normal normal-case tracking-normal text-muted-foreground">
                                 {' · '}{new Date(doc.invalidatedAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                               </span>
                             )}
@@ -351,7 +375,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
                             </span>
                           )}
                           {doc.invalidatedByEmail && (
-                            <span className="text-[10.5px] text-[#9ca3af]">
+                            <span className="text-[10.5px] text-muted-foreground">
                               Por {doc.invalidatedByEmail}
                             </span>
                           )}
@@ -364,10 +388,10 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
             </AnimatePresence>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Timeline Card (Static Mock) */}
-      <div className="flex flex-col p-[20px] bg-white rounded-[18px] shadow-soft">
+      <Card variant="elevated" className="flex flex-col p-[20px] rounded-[18px]">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[14px] font-semibold text-[#111827]">Actividad reciente</h3>
           <button className="text-[13px] font-medium text-[#2563eb] hover:underline">Ver línea</button>
@@ -388,7 +412,7 @@ export function RightDetailPanel({ selectedCount, selectedPractice, onClearSelec
              </div>
           </div>
         </div>
-      </div>
+      </Card>
 
     </div>
   )

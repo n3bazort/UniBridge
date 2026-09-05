@@ -1,18 +1,48 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useDropzone } from 'react-dropzone'
 import * as XLSX from 'xlsx'
 import { api } from '@/lib/axios'
+import { cn } from '@/lib/utils'
 import { RoleGate } from '@/components/shared/role-gate'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
-import { FileSpreadsheet, UploadCloud, CheckCircle2, AlertCircle, Download, FlaskConical, Eye, EyeOff } from 'lucide-react'
+import { FileSpreadsheet, UploadCloud, CheckCircle2, AlertCircle, Download, FlaskConical, Eye, EyeOff, Ban, CalendarCheck, ShieldQuestion, Loader2, XCircle } from 'lucide-react'
+import { usePeriodStore } from '@/store/period'
 
 // Rutas de los archivos en /public/templates
 const BLANK_TEMPLATE_URL = '/templates/Plantilla Practicas - En Blanco.xlsx'
 const TEST_DATA_URL = '/templates/Datos de Prueba - Practicas.xlsx'
+
+interface AcademicPeriod {
+  id: string
+  code: string
+  name: string
+  isActive: boolean
+}
+
+/**
+ * Misma normalización que aplica el servidor (`period.util.ts`): «2025-I»,
+ * «2025 / 1» y «2025-1» son el mismo semestre. Se replica aquí para que el
+ * aviso salga antes de guardar y no después de un viaje al servidor.
+ *
+ * Si el texto no tiene forma de periodo se devuelve intacto: un valor raro
+ * debe verse en pantalla, no corregirse solo.
+ */
+function normalizarPeriodo(raw?: string | null): string {
+  const texto = (raw ?? '').trim()
+  if (!texto) return ''
+  const m = texto.match(/(\d{4})\s*[-/ ]\s*(II|I|1|2)\b/i)
+  if (!m) return texto
+  const semestre = m[2].toUpperCase() === 'II' ? '2' : m[2].toUpperCase() === 'I' ? '1' : m[2]
+  return `${m[1]}-${semestre}`
+}
 
 // Estructura que enviaremos al backend
 interface ParsedStudentRow {
@@ -38,11 +68,81 @@ interface ParsedStudentRow {
   workArea?: string
 }
 
+/** Lo que el servidor dice de cada fila antes de escribir nada (RF-26). */
+interface FilaRevisada {
+  indice: number
+  dni: string
+  nombre: string
+  empresa: string | null
+  tutor: string | null
+  severidad: 'ok' | 'aviso' | 'error'
+  errores: string[]
+  avisos: string[]
+  yaRegistrado: boolean
+  sobrescribePractica: boolean
+  empresaNueva: boolean
+}
+
+interface Revision {
+  academicPeriod: string
+  total: number
+  resumen: { ok: number; aviso: number; error: number }
+  filas: FilaRevisada[]
+}
+
 export default function ImportsPage() {
   const [parsedData, setParsedData] = useState<ParsedStudentRow[]>([])
+  const [revision, setRevision] = useState<Revision | null>(null)
+  const [revisando, setRevisando] = useState(false)
+  /** Índices de las filas marcadas para cargar. */
+  const [marcadas, setMarcadas] = useState<Set<number>>(new Set())
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isTestData, setIsTestData] = useState(false)
+  const { selectedPeriod } = usePeriodStore()
+
+  // Mismo queryKey que el selector del topbar: la lista ya viene en cache.
+  const { data: periods = [] } = useQuery<AcademicPeriod[]>({
+    queryKey: ['academic-periods'],
+    queryFn: async () => (await api.get('/academic-periods')).data,
+    staleTime: 5 * 60 * 1000,
+  })
+  const periodoActivo = periods.find((p) => p.isActive) ?? null
+
+  /**
+   * Reparte las filas leídas del Excel entre las que se van a cargar y las
+   * que no. El destino nunca es el periodo que el usuario está mirando:
+   * es siempre el periodo activo, porque un semestre cerrado no admite
+   * datos nuevos. Cuando el archivo declara otro periodo, la fila se aparta
+   * y se dice por qué, en vez de dejar que la llave foránea la rechace
+   * después con un error de base de datos.
+   */
+  const analisis = useMemo(() => {
+    const filas = parsedData.map((row) => {
+      const periodoFila = normalizarPeriodo(row.academicPeriod)
+      let motivo: string | null = null
+
+      if (!row.dni) {
+        motivo = 'Sin cédula'
+      } else if (!periodoActivo) {
+        motivo = 'No hay periodo abierto'
+      } else if (periodoFila && periodoFila !== periodoActivo.code) {
+        motivo = `Es del periodo ${periodoFila}`
+      }
+
+      return { row, periodoFila, motivo }
+    })
+
+    return {
+      filas,
+      validas: filas.filter((f) => !f.motivo).map((f) => f.row),
+      descartadas: filas.filter((f) => f.motivo),
+    }
+  }, [parsedData, periodoActivo])
+
+  // El usuario puede estar parado en un periodo cerrado mirando su historial.
+  // Si carga un archivo desde ahí, los datos NO entran donde está mirando.
+  const mirandoOtroPeriodo = !!periodoActivo && !!selectedPeriod && selectedPeriod !== periodoActivo.code
 
 
   // Estructura para empresas leídas de la hoja "Empresas"
@@ -417,21 +517,104 @@ export default function ImportsPage() {
     maxFiles: 1
   })
 
+  /**
+   * Pide al servidor la revisión de todo el archivo (RF-26).
+   *
+   * Lo que la pantalla no puede saber sola vive en la base: si el estudiante ya
+   * existe, si ya tiene práctica en el período, si al docente le queda cupo.
+   * Nada se escribe hasta que se pulsa Guardar.
+   */
+  const handleRevisar = async () => {
+    const aRevisar = analisis.validas
+    if (aRevisar.length === 0) return
+
+    setRevisando(true)
+    try {
+      const { data } = await api.post<Revision>('/practices/bulk-import/preview', {
+        programName: aRevisar[0]?.programName || 'Ingeniería de Software',
+        students: aRevisar,
+      })
+      setRevision(data)
+      // Entran marcadas todas las que se pueden cargar: desmarcar es la
+      // excepción, no la norma.
+      setMarcadas(new Set(data.filas.filter((f) => f.severidad !== 'error').map((f) => f.indice)))
+
+      if (data.resumen.error > 0) {
+        toast.warning(`${data.resumen.error} fila(s) no se pueden cargar. Mira el detalle de cada una.`)
+      }
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'No se pudo revisar el archivo')
+    } finally {
+      setRevisando(false)
+    }
+  }
+
+  /**
+   * Cada fila del archivo, ya cruzada con lo que dijo el servidor.
+   * Se calcula una vez y la usan las dos secciones, en vez de repetir el
+   * cruce dentro del render de cada tabla.
+   */
+  const filasPreview = useMemo(
+    () =>
+      analisis.filas.map(({ row, motivo }, i) => {
+        // La revisión numera solo las filas válidas, que son las que se le
+        // enviaron; las apartadas por periodo no están.
+        const posicion = analisis.validas.indexOf(row)
+        const r = revision && posicion >= 0 ? revision.filas[posicion] : undefined
+        return { key: i, row, motivo, r, bloqueada: !!motivo || r?.severidad === 'error' }
+      }),
+    [analisis, revision],
+  )
+
+  /** Lo que entra y lo que no, separado antes de pintar nada. */
+  const grupos = useMemo(
+    () => ({
+      disponibles: filasPreview.filter((f) => !f.bloqueada),
+      bloqueadas: filasPreview.filter((f) => f.bloqueada),
+    }),
+    [filasPreview],
+  )
+
+  const alternarFila = (indice: number) => {
+    setMarcadas((prev) => {
+      const s = new Set(prev)
+      if (s.has(indice)) s.delete(indice)
+      else s.add(indice)
+      return s
+    })
+  }
+
+  const alternarTodas = () => {
+    if (!revision) return
+    const cargables = revision.filas.filter((f) => f.severidad !== 'error').map((f) => f.indice)
+    setMarcadas((prev) => (prev.size === cargables.length ? new Set() : new Set(cargables)))
+  }
+
   const handleSaveToDatabase = async () => {
-    if (parsedData.length === 0) return
-    
+    // Con revisión hecha, solo viajan las filas marcadas. Sin ella, las que
+    // pasaron el análisis local: mandar las apartadas sería gastar el viaje
+    // para que el servidor devuelva el mismo aviso que ya está en pantalla.
+    const aCargar = revision
+      ? analisis.validas.filter((_, i) => marcadas.has(i))
+      : analisis.validas
+    if (aCargar.length === 0) return
+
     setIsSaving(true)
     try {
       const response = await api.post('/practices/bulk-import', {
-        programName: parsedData[0]?.programName || 'Ingeniería de Software',
-        students: parsedData
+        programName: aCargar[0]?.programName || 'Ingeniería de Software',
+        students: aCargar
       })
-      const { count, errors } = response.data
+      const { count, errors, periodo } = response.data
+      const destino = periodo ? ` en ${periodo}` : ''
       if (errors && errors.length > 0) {
-        toast.warning(`Se importaron ${count} registros. ${errors.length} filas tuvieron errores.`)
+        toast.warning(`Se importaron ${count} registros${destino}. ${errors.length} filas tuvieron errores.`)
         console.warn('Errores de importación:', errors)
       } else {
-        toast.success(`¡Éxito! ${count} registros importados correctamente.`)
+        toast.success(`¡Éxito! ${count} registros importados${destino}.`)
+      }
+      if (analisis.descartadas.length > 0) {
+        toast.info(`${analisis.descartadas.length} fila(s) se omitieron por no pertenecer al periodo abierto.`)
       }
       
       // Notificación urgente requerida por el usuario
@@ -442,6 +625,8 @@ export default function ImportsPage() {
 
       setParsedData([])
       setIsTestData(false)
+      setRevision(null)
+      setMarcadas(new Set())
     } catch (error: any) {
       const serverMessage = error?.response?.data?.message
       if (serverMessage) {
@@ -457,7 +642,10 @@ export default function ImportsPage() {
 
   return (
     <RoleGate allowedRoles={['ADMIN', 'COORDINATOR']}>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col w-full flex-1">
+        {/* `wide`, no `reading`: la vista previa es una tabla de datos con
+            varias columnas. En 1100px las celdas se parten en tres líneas. */}
+        <PageContainer variant="wide" className="flex flex-col gap-6">
         {/* Encabezado + pasos: contenido y centrado (~50% del ancho en escritorio) */}
         {!parsedData.length && (
           <div className="mx-auto w-full max-w-xl flex flex-col gap-6">
@@ -517,7 +705,7 @@ export default function ImportsPage() {
                   ${isDragActive ? 'border-sky-500 bg-sky-50' : 'border-[#cbd5e1] hover:border-sky-400 hover:bg-slate-50'}
                   ${isProcessing ? 'pointer-events-none opacity-60' : ''}`}
               >
-                <input {...getInputProps()} />
+                <Input {...getInputProps()} />
                 <div className={`mb-3 grid h-14 w-14 place-items-center rounded-full transition-colors ${isDragActive ? 'bg-sky-100' : 'bg-slate-100'}`}>
                   <UploadCloud className={`h-7 w-7 ${isDragActive ? 'text-sky-600' : 'text-slate-400'}`} />
                 </div>
@@ -529,7 +717,7 @@ export default function ImportsPage() {
                     o <span className="font-medium text-sky-600">haz clic para buscarlo</span> en tu equipo
                   </p>
                 )}
-                <div className="mt-4 flex items-center gap-1.5 text-[11px] text-[#94a3b8]">
+                <div className="mt-4 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                   <FileSpreadsheet className="h-3.5 w-3.5" />
                   <span>Formatos .xlsx y .xls · un archivo a la vez</span>
                 </div>
@@ -582,66 +770,313 @@ export default function ImportsPage() {
                       <span className="rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Datos de prueba</span>
                     )}
                   </div>
-                  <p className={`text-sm ${isTestData ? 'text-violet-700' : 'text-blue-700'}`}>Se detectaron y prepararon <strong>{parsedData.length} estudiantes</strong> listos para importar. Revísalos abajo antes de guardar.</p>
+                  <p className={`text-sm ${isTestData ? 'text-violet-700' : 'text-blue-700'}`}>
+                    Se leyeron <strong>{parsedData.length} filas</strong>. Se cargarán{' '}
+                    <strong>{analisis.validas.length}</strong>
+                    {periodoActivo
+                      ? <> en el periodo <strong>{periodoActivo.code}</strong>, el único abierto.</>
+                      : <> — pero no hay ningún periodo abierto.</>}
+                  </p>
                 </div>
               </div>
               <div className="flex shrink-0 gap-3">
-                <Button variant="outline" onClick={() => { setParsedData([]); setIsTestData(false) }} disabled={isSaving} className="flex-1 gap-2 sm:flex-none">
+                <Button
+                  variant="outline"
+                  onClick={() => { setParsedData([]); setIsTestData(false); setRevision(null); setMarcadas(new Set()) }}
+                  disabled={isSaving}
+                  className="flex-1 gap-2 sm:flex-none"
+                >
                   {isTestData ? <><EyeOff className="h-4 w-4" /> Ocultar</> : 'Cancelar'}
                 </Button>
-                <Button onClick={handleSaveToDatabase} disabled={isSaving} className="flex-1 sm:flex-none">
-                  {isSaving ? 'Guardando en BD...' : 'Confirmar y Guardar'}
-                </Button>
+
+                {/* Revisar es la acción principal, y va primero. Antes el
+                    botón grande y azul decía «Guardar 34 de 38» mientras
+                    «Revisar» era el gris de al lado: la pantalla invitaba a
+                    saltarse el único paso donde se puede elegir qué entra y
+                    ver qué choca. Ahora hasta que no se revisa no se guarda. */}
+                {!revision ? (
+                  <Button
+                    onClick={handleRevisar}
+                    disabled={revisando || analisis.validas.length === 0}
+                    className="flex-1 gap-2 sm:flex-none"
+                    title={analisis.validas.length === 0 ? 'Ninguna fila del archivo corresponde al periodo abierto' : undefined}
+                  >
+                    {revisando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldQuestion className="h-4 w-4" />}
+                    {revisando ? 'Revisando…' : `Revisar ${analisis.validas.length} fila${analisis.validas.length === 1 ? '' : 's'}`}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSaveToDatabase}
+                    disabled={isSaving || marcadas.size === 0}
+                    className="flex-1 gap-2 sm:flex-none"
+                  >
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                    {isSaving ? 'Guardando…' : `Guardar ${marcadas.size} de ${revision.total}`}
+                  </Button>
+                )}
               </div>
             </div>
 
-            <div className="rounded-md border bg-card overflow-hidden">
-              <div className="max-h-[500px] overflow-auto">
-                <Table>
-                  <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
-                    <TableRow>
-                      <TableHead>Cédula</TableHead>
-                      <TableHead>Estudiante</TableHead>
-                      <TableHead>Carrera</TableHead>
-                      <TableHead>Empresa Receptora</TableHead>
-                      <TableHead>Contacto / Destinatario</TableHead>
-                      <TableHead>Cargo del Contacto</TableHead>
-                      <TableHead>Tutor Académico</TableHead>
-                      <TableHead>Nivel y Tipo</TableHead>
-                      <TableHead className="text-center">Horas</TableHead>
-                      <TableHead className="text-center">Periodo</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {parsedData.map((row, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="font-mono text-xs">{row.dni}</TableCell>
-                        <TableCell>
-                          <div className="font-medium text-xs">{row.lastName} {row.firstName}</div>
-                          <div className="text-[10px] text-blue-600">{row.email}</div>
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-500">{row.programName}</TableCell>
-                        <TableCell>
-                          <div className="text-xs font-medium">{row.companyName}</div>
-                          <div className="text-[10px] text-slate-500">{row.companyEmail}{row.companyPhone ? ` | ${row.companyPhone}` : ''}</div>
-                        </TableCell>
-                        <TableCell className="text-xs">{row.companyContactName || row.companyTutor}</TableCell>
-                        <TableCell className="text-xs">{row.companyPosition || row.destinatarioOficio}</TableCell>
-                        <TableCell className="text-xs">{row.tutorName}</TableCell>
-                        <TableCell>
-                          <div className="text-xs">{row.practiceLevel}</div>
-                          <div className="text-[10px] text-gray-500">{row.academicLevel}</div>
-                        </TableCell>
-                        <TableCell className="text-center font-semibold text-xs">{row.totalHours}</TableCell>
-                        <TableCell className="text-center text-xs">{row.academicPeriod}</TableCell>
+            {mirandoOtroPeriodo && (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <CalendarCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                <p className="text-sm leading-relaxed text-amber-900">
+                  Estás viendo <strong>{selectedPeriod}</strong> en el selector de arriba, pero ese periodo
+                  está cerrado. Lo que cargues entrará en <strong>{periodoActivo?.code}</strong>, que es el
+                  periodo abierto. Los periodos anteriores se consultan, no reciben datos nuevos.
+                </p>
+              </div>
+            )}
+
+            {analisis.descartadas.length > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-start gap-3">
+                  <Ban className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-semibold text-amber-900">
+                      {analisis.descartadas.length} fila{analisis.descartadas.length === 1 ? '' : 's'} no se
+                      cargará{analisis.descartadas.length === 1 ? '' : 'n'}
+                    </h4>
+                    <p className="mt-0.5 text-sm text-amber-800">
+                      El resto sí se guarda. Corrige el archivo y vuelve a subirlo solo si necesitas estas filas.
+                    </p>
+                    <ul className="mt-2.5 space-y-1">
+                      {analisis.descartadas.slice(0, 8).map((f, i) => (
+                        <li key={i} className="flex flex-wrap items-baseline gap-x-2 text-[13px] text-amber-900">
+                          <span className="font-medium">{f.row.lastName} {f.row.firstName}</span>
+                          {f.row.dni && <span className="font-mono text-[11px] text-amber-700">{f.row.dni}</span>}
+                          <span className="text-amber-700">— {f.motivo}</span>
+                        </li>
+                      ))}
+                      {analisis.descartadas.length > 8 && (
+                        <li className="text-[13px] text-amber-700">
+                          y {analisis.descartadas.length - 8} más, marcadas abajo en la tabla.
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {revision && (
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[12px] font-semibold text-emerald-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> {revision.resumen.ok} sin novedad
+                </span>
+                {revision.resumen.aviso > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[12px] font-semibold text-amber-700">
+                    <AlertCircle className="h-3.5 w-3.5" /> {revision.resumen.aviso} con avisos
+                  </span>
+                )}
+                {revision.resumen.error > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-[12px] font-semibold text-red-700">
+                    <XCircle className="h-3.5 w-3.5" /> {revision.resumen.error} no se pueden cargar
+                  </span>
+                )}
+                <span className="ml-auto text-[12px] text-slate-500">
+                  Entrarán en <strong className="text-slate-700">{revision.academicPeriod}</strong>. Nada se escribe hasta que guardes.
+                </span>
+              </div>
+            )}
+
+            {/* ── Vista previa en dos secciones ──
+                Antes era una sola tabla donde lo que entra y lo que no entra
+                se distinguían por el color de fondo de la fila. Con 38 filas
+                eso obliga a recorrerlas una por una para saber qué se va a
+                guardar. Ahora son dos bloques con su propio recuento.
+
+                El alto se mide en vh y no en píxeles fijos: así el borde
+                inferior de cada bloque —y con él su barra de desplazamiento
+                horizontal— queda siempre dentro de la pantalla, sin tener que
+                bajar hasta el final del listado para alcanzarla. */}
+            {[
+              {
+                clave: 'disponibles',
+                titulo: revision ? 'Disponibles para cargar' : 'Se cargarán',
+                sub: revision
+                  ? 'Marca o desmarca las que quieras dejar fuera.'
+                  : 'Pulsa «Revisar» para comprobarlas contra la base antes de guardar.',
+                filas: grupos.disponibles,
+                tono: 'ok' as const,
+              },
+              {
+                clave: 'bloqueadas',
+                titulo: 'No se cargarán',
+                sub: 'Corrige el archivo y vuelve a subirlo solo si necesitas estas filas.',
+                filas: grupos.bloqueadas,
+                tono: 'malo' as const,
+              },
+            ].map((sec) => sec.filas.length === 0 ? null : (
+              <div key={sec.clave} className="overflow-hidden rounded-lg border border-border bg-card">
+                <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className={cn(
+                        'flex h-6 w-6 items-center justify-center rounded-full',
+                        sec.tono === 'ok' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive',
+                      )}
+                    >
+                      {sec.tono === 'ok' ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        {sec.titulo}
+                        <span className="ml-2 tabular-nums text-muted-foreground">{sec.filas.length}</span>
+                      </h3>
+                      <p className="text-xs text-muted-foreground">{sec.sub}</p>
+                    </div>
+                  </div>
+
+                  {/* Marcar todo / nada: solo tiene sentido donde hay casillas. */}
+                  {revision && sec.clave === 'disponibles' && (
+                    <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={marcadas.size > 0 && marcadas.size === grupos.disponibles.length}
+                        ref={(el) => {
+                          if (el) el.indeterminate = marcadas.size > 0 && marcadas.size < grupos.disponibles.length
+                        }}
+                        onChange={alternarTodas}
+                        className="h-4 w-4 rounded border-input"
+                      />
+                      {marcadas.size === grupos.disponibles.length ? 'Desmarcar todas' : 'Marcar todas'}
+                      <span className="tabular-nums">({marcadas.size} de {grupos.disponibles.length})</span>
+                    </label>
+                  )}
+                </header>
+
+                {/* Un solo contenedor de scroll, el de la propia tabla. El alto
+                    va en vh para que su borde inferior —y con él la barra
+                    horizontal, si hace falta— quede siempre en pantalla.
+                    El espaciado de celda baja de p-4 (16px) a px-3/py-2.5:
+                    con celdas de tres líneas, 16px arriba y abajo convertían
+                    cada fila en un bloque de 90px. */}
+                <Table
+                  containerClassName="max-h-[60vh] rounded-none border-0 border-t"
+                  className="[&_th]:h-10 [&_th]:px-3 [&_td]:px-3 [&_td]:py-2.5"
+                >
+                    <TableHeader className="sticky top-0 z-10 bg-muted/80 shadow-sm backdrop-blur">
+                      <TableRow>
+                        {revision && sec.clave === 'disponibles' && <TableHead className="w-10" />}
+                        <TableHead className="min-w-[240px]">Estudiante</TableHead>
+                        <TableHead className="min-w-[220px]">Empresa receptora</TableHead>
+                        <TableHead className="min-w-[170px]">Tutor académico</TableHead>
+                        <TableHead className="min-w-[150px]">Práctica</TableHead>
+                        <TableHead className="min-w-[110px] text-center">Período</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
+                    </TableHeader>
+                    <TableBody>
+                      {sec.filas.map(({ key, row, motivo, r, bloqueada }) => {
+                        const marcada = r ? marcadas.has(r.indice) : false
+                        return (
+                          <TableRow
+                            key={key}
+                            className={cn(
+                              bloqueada && 'bg-destructive/[0.03]',
+                              r && !bloqueada && !marcada && 'opacity-50',
+                            )}
+                          >
+                            {revision && sec.clave === 'disponibles' && (
+                              <TableCell className="align-top">
+                                {r && (
+                                  <input
+                                    type="checkbox"
+                                    checked={marcada}
+                                    onChange={() => alternarFila(r.indice)}
+                                    className="h-4 w-4 rounded border-input"
+                                    aria-label={`Cargar a ${r.nombre}`}
+                                  />
+                                )}
+                              </TableCell>
+                            )}
+
+                            {/* Estudiante: quién es y qué le pasa.
+                                Dos líneas, no cuatro: la cédula, la carrera y
+                                el correo caben en una sola línea secundaria y
+                                se recortan si no caben, en vez de partirse. */}
+                            <TableCell className="align-top">
+                              <div className="text-sm font-medium leading-tight text-foreground">
+                                {row.lastName} {row.firstName}
+                              </div>
+                              <div className="mt-0.5 truncate text-xs leading-tight text-muted-foreground">
+                                <span className="font-mono tabular-nums">{row.dni || '—'}</span>
+                                {row.programName && <> · {row.programName}</>}
+                                {row.email && <> · {row.email}</>}
+                              </div>
+                              {r && (r.errores.length > 0 || r.avisos.length > 0) && (
+                                <ul className="mt-1.5 space-y-1">
+                                  {r.errores.map((e, k) => (
+                                    <li key={`e${k}`} className="flex items-start gap-1.5 text-xs leading-snug text-destructive">
+                                      <XCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                                      <span>{e}</span>
+                                    </li>
+                                  ))}
+                                  {r.avisos.map((a, k) => (
+                                    <li key={`a${k}`} className="flex items-start gap-1.5 text-xs leading-snug text-warning">
+                                      <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                                      <span>{a}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </TableCell>
+
+                            {/* Empresa: nombre arriba, contacto y cargo debajo.
+                                El correo y el teléfono solo se muestran en el
+                                title: son datos de respaldo, no de lectura. */}
+                            <TableCell className="align-top">
+                              <div
+                                className="truncate text-sm leading-tight text-foreground"
+                                title={[row.companyEmail, row.companyPhone].filter(Boolean).join(' · ') || undefined}
+                              >
+                                {row.companyName || '—'}
+                              </div>
+                              {(row.companyContactName || row.companyTutor) && (
+                                <div className="mt-0.5 truncate text-xs leading-tight text-muted-foreground">
+                                  {row.companyContactName || row.companyTutor}
+                                  {(row.companyPosition || row.destinatarioOficio) && (
+                                    <> · {row.companyPosition || row.destinatarioOficio}</>
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
+
+                            <TableCell className="align-top text-sm leading-tight text-foreground">
+                              {row.tutorName || <span className="text-muted-foreground">Sin asignar</span>}
+                            </TableCell>
+
+                            <TableCell className="align-top">
+                              <div className="text-sm leading-tight text-foreground">{row.practiceLevel || '—'}</div>
+                              <div className="mt-0.5 text-xs leading-tight text-muted-foreground">
+                                {[row.academicLevel, row.totalHours ? `${row.totalHours} h` : null]
+                                  .filter(Boolean)
+                                  .join(' · ')}
+                              </div>
+                            </TableCell>
+
+                            <TableCell className="align-top text-center">
+                              {motivo ? (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                                  <Ban className="h-3 w-3" />
+                                  {motivo}
+                                </span>
+                              ) : (
+                                <span className="text-sm tabular-nums text-muted-foreground">
+                                  {periodoActivo?.code ?? row.academicPeriod}
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
                 </Table>
               </div>
-            </div>
+            ))}
           </div>
         )}
+        </PageContainer>
       </div>
     </RoleGate>
   )

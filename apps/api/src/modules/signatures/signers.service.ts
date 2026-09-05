@@ -60,6 +60,8 @@ export class SignersService {
     role: Role;
     facultyId?: string;
     programId?: string;
+    dni?: string;
+    phone?: string;
   }, actorId?: string) {
     await this.assertCanGrantRole(actorId, dto.role);
 
@@ -107,6 +109,8 @@ export class SignersService {
           signerRole: dto.signerRole,
           fullName: dto.fullName,
           title: dto.title,
+          dni: dto.dni,
+          phone: dto.phone,
           facultyId: dto.facultyId || null,
         },
       };
@@ -135,6 +139,9 @@ export class SignersService {
       role: user.role,
       signerRole: user.signerProfile?.signerRole,
       fullName: user.signerProfile?.fullName,
+      dni: user.signerProfile?.dni,
+      phone: user.signerProfile?.phone,
+      title: user.signerProfile?.title,
       facultyId: user.coordinator?.facultyId || user.signerProfile?.facultyId,
       facultyName: user.coordinator?.faculty?.name || user.signerProfile?.faculty?.name,
       temporaryPassword: dto.password ? undefined : tempPassword,
@@ -157,9 +164,37 @@ export class SignersService {
       signerRole: user.signerProfile?.signerRole,
       fullName: user.signerProfile?.fullName || user.email.split('@')[0],
       title: user.signerProfile?.title,
+      dni: user.signerProfile?.dni,
+      phone: user.signerProfile?.phone,
       facultyId: user.coordinator?.facultyId || user.signerProfile?.facultyId,
       facultyName: user.coordinator?.faculty?.name || user.signerProfile?.faculty?.name,
     }));
+  }
+
+  async updateSigner(userId: string, dto: { fullName?: string; title?: string; dni?: string; phone?: string; email?: string }) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { signerProfile: true } });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    if (dto.email && dto.email !== user.email) {
+      await this.prisma.user.update({ where: { id: userId }, data: { email: dto.email } });
+    }
+
+    if (user.signerProfile) {
+      await this.prisma.signerProfile.update({
+        where: { userId },
+        data: {
+          ...(dto.fullName ? { fullName: dto.fullName } : {}),
+          ...(dto.title !== undefined ? { title: dto.title } : {}),
+          ...(dto.dni !== undefined ? { dni: dto.dni } : {}),
+          ...(dto.phone !== undefined ? { phone: dto.phone } : {}),
+        },
+      });
+    }
+
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { signerProfile: true, coordinator: true },
+    });
   }
 
   async setSuspended(userId: string, suspended: boolean, actorId?: string) {

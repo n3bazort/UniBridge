@@ -2,11 +2,6 @@ import { IsString, IsUUID, IsOptional, IsEmail } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateStudentDto {
-  @ApiProperty({ example: 'uuid-user', required: false })
-  @IsUUID()
-  @IsOptional()
-  userId?: string;
-
   @ApiProperty({ example: 'uuid-program' })
   @IsUUID()
   programId!: string;

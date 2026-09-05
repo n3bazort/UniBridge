@@ -42,7 +42,7 @@ export class ReportsService {
       this.prisma.practice.findMany({
         where,
         include: {
-          student: { include: { program: true, user: { select: { email: true } } } },
+          student: { include: { program: true } },
           company: true,
         },
         orderBy: { createdAt: 'desc' },

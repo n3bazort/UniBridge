@@ -4,6 +4,8 @@ import React, { useState } from 'react'
 import { X, Building2, User, Mail, Phone, MapPin, Briefcase, Loader2, Check } from 'lucide-react'
 import { api } from '@/lib/axios'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 interface InlineCompanyModalProps {
   isOpen: boolean
@@ -82,13 +84,13 @@ export function InlineCompanyModal({ isOpen, onClose, onCreated }: InlineCompany
             </label>
             <div className="relative">
               <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
+              <Input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ej. EPAM E.P. Manta"
-                className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-900"
+                className="w-full pl-9 pr-3"
               />
             </div>
           </div>
@@ -100,13 +102,13 @@ export function InlineCompanyModal({ isOpen, onClose, onCreated }: InlineCompany
             </label>
             <div className="relative">
               <Briefcase className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
+              <Input
                 type="text"
                 required
                 value={recipientName}
                 onChange={(e) => setRecipientName(e.target.value)}
                 placeholder="Ej. Ing. Juan Pérez - Gerente de Talento Humano"
-                className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-900"
+                className="w-full pl-9 pr-3"
               />
             </div>
             <p className="text-[11px] text-slate-400 mt-1">Este texto se imprime en las solicitudes institucionales (PAP-001).</p>
@@ -120,13 +122,13 @@ export function InlineCompanyModal({ isOpen, onClose, onCreated }: InlineCompany
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <Input
                   type="text"
                   required
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
                   placeholder="Ej. Lcda. María López"
-                  className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-900"
+                  className="w-full pl-9 pr-3"
                 />
               </div>
             </div>
@@ -137,13 +139,13 @@ export function InlineCompanyModal({ isOpen, onClose, onCreated }: InlineCompany
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <Input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="contacto@empresa.gob.ec"
-                  className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-900"
+                  className="w-full pl-9 pr-3"
                 />
               </div>
             </div>
@@ -157,12 +159,12 @@ export function InlineCompanyModal({ isOpen, onClose, onCreated }: InlineCompany
               </label>
               <div className="relative">
                 <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <Input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Av. 4 de Noviembre, Manta"
-                  className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-900"
+                  className="w-full pl-9 pr-3"
                 />
               </div>
             </div>
@@ -173,12 +175,12 @@ export function InlineCompanyModal({ isOpen, onClose, onCreated }: InlineCompany
               </label>
               <div className="relative">
                 <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <Input
                   type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="052620000"
-                  className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-900"
+                  className="w-full pl-9 pr-3"
                 />
               </div>
             </div>
@@ -186,18 +188,10 @@ export function InlineCompanyModal({ isOpen, onClose, onCreated }: InlineCompany
 
           {/* Footer Buttons */}
           <div className="flex items-center justify-end gap-2.5 pt-4 mt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
-            >
+            <Button type="button" variant="ghost" onClick={onClose} className="text-xs rounded-xl">
               Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" disabled={isSubmitting} className="text-xs gap-2 rounded-xl shadow-md">
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -209,7 +203,7 @@ export function InlineCompanyModal({ isOpen, onClose, onCreated }: InlineCompany
                   <span>Guardar y Seleccionar</span>
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

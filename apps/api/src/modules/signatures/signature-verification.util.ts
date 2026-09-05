@@ -4,12 +4,46 @@
  */
 
 /**
- * Extrae el documentCode del nombre de archivo. Tolera los sufijos que
- * añaden FirmaEC/Adobe al firmar (ej. "CERT-2026-1-00042-signed.pdf").
+ * ¿A cuál de los documentos del lote corresponde el archivo que subió el
+ * firmante?
+ *
+ * Antes esto se resolvía adivinando el código con una expresión regular fija
+ * («CERT-…-00042»). Eso ataba el circuito de firma a un formato de numeración
+ * concreto, y la numeración es justamente lo que cada Facultad configura por
+ * plantilla: en cuanto el patrón real pasó a ser «00042-TI-CERT-2025-2», la
+ * expresión dejó de reconocer nada y no se podía subir ni una sola firma.
+ * Ningún patrón fijo podía ser correcto, porque el patrón es un dato.
+ *
+ * Así que no se adivina: se compara con los códigos que ESE lote contiene. El
+ * firmante sube el archivo con el nombre que traía el ZIP, quizá con los
+ * añadidos de FirmaEC o del navegador («-signed», «(1)», «firmado …»), y basta
+ * con que el código siga dentro.
+ *
+ * @param filename       nombre del archivo subido
+ * @param codigosDelLote documentCode de los ítems vigentes del lote
+ * @returns el código que corresponde, o null si el archivo no es de este lote
  */
-export function extractDocumentCode(filename: string): string | null {
-  const match = filename.match(/(CERT|OFIC|SOLICITUD)-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*?-\d{3,5}/i);
-  return match ? match[0].toUpperCase() : null;
+export function matchDocumentCode(filename: string, codigosDelLote: string[]): string | null {
+  const sinExtension = filename.replace(/\.[A-Za-z0-9]+$/, '').toUpperCase();
+  // Los más largos primero: si un código es subcadena de otro, gana el preciso
+  const candidatos = codigosDelLote
+    .filter((c): c is string => !!c)
+    .sort((a, b) => b.length - a.length);
+
+  // 1ª pasada: el código tal cual, con sus separadores
+  for (const codigo of candidatos) {
+    if (sinExtension.includes(codigo.toUpperCase())) return codigo;
+  }
+
+  // 2ª pasada: ignorando guiones, espacios y puntos, por si al archivo le
+  // cambiaron los separadores al pasar por otra herramienta
+  const soloAlfanumerico = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const nombrePlano = soloAlfanumerico(sinExtension);
+  for (const codigo of candidatos) {
+    if (nombrePlano.includes(soloAlfanumerico(codigo))) return codigo;
+  }
+
+  return null;
 }
 
 /**

@@ -56,16 +56,16 @@ export function derivePracticeStatus(
   // Las decisiones humanas mandan sobre cualquier derivación
   if (MANUAL_STATUSES.includes(practice.status)) return practice.status;
 
-  const vigente = (tipo: string) =>
-    docs.some((d) => d.documentType === tipo && d.status === 'VALID');
-
   const certificadoFirmado = docs.some(
     (d) => d.documentType === 'CERTIFICADO' && d.status === 'VALID' && d.signatureStatus === 'SIGNED',
   );
 
-  // Finalizado exige el expediente completo, no solo el certificado: sin la
-  // designación el recorrido tiene un hueco aunque el certificado esté firmado.
-  if (vigente('SOLICITUD') && vigente('DESIGNACION') && certificadoFirmado) return 'COMPLETED';
+  // Finalizado es tener el certificado firmado, y nada más. Antes exigía además
+  // solicitud y designación vigentes, con lo que una práctica ya certificada y
+  // firmada se quedaba en «En proceso» para siempre si la empresa nunca recibió
+  // una solicitud. El certificado se emite contra el acta del docente; si está
+  // firmado, la práctica culminó.
+  if (certificadoFirmado) return 'COMPLETED';
 
   // Basta con que se haya generado algún documento, aunque después se anulara:
   // una práctica cuya solicitud se invalidó ya arrancó, y lo que necesita es
@@ -77,12 +77,25 @@ export function derivePracticeStatus(
 
 /**
  * ¿Se puede emitir el certificado de culminación?
- * Requiere solicitud vigente (el proceso arrancó formalmente) y los datos
- * que se imprimen en el documento. NO exige status COMPLETED: ese estado
- * es justamente la consecuencia de tener el certificado ya firmado.
+ *
+ * Requiere la designación vigente, el acta del docente y los datos que el
+ * documento imprime. NO exige la solicitud: es un trámite previo y colectivo
+ * que puede no existir. NO exige status COMPLETED: ese estado es justamente la
+ * consecuencia de tener el certificado ya firmado.
  */
 export function canIssueCertificate(
-  practice: { totalHours: number; tutorName?: string | null; practiceLevel?: string | null; academicLevel?: string | null; status: PracticeStatus },
+  practice: {
+    totalHours: number;
+    tutorName?: string | null;
+    practiceLevel?: string | null;
+    academicLevel?: string | null;
+    status: PracticeStatus;
+    // Aprobacion del tutor por acta de calificaciones (RF-18). Es opcional en
+    // el tipo para que los llamadores antiguos sigan compilando, pero quien no
+    // la seleccione recibira el rechazo: se comprueba abajo igual.
+    tutorApprovedAt?: Date | null;
+    closedAt?: Date | null;
+  },
   docs: StatusRelevantDoc[],
 ): { ok: boolean; missing: string[] } {
   const missing: string[] = [];
@@ -102,14 +115,34 @@ export function canIssueCertificate(
     return { ok: false, missing };
   }
 
-  const hasValidSolicitud = docs.some(
-    (d) => d.documentType === 'SOLICITUD' && d.status === 'VALID',
+  // La DESIGNACIÓN es obligatoria; la SOLICITUD no.
+  //
+  // Los dos son oficios de la etapa de planificación del PAP-01, pero no
+  // acreditan lo mismo. La solicitud pide vacantes a la empresa para un grupo:
+  // es previa, colectiva, y puede no existir, porque el cupo se acuerda a
+  // veces de palabra. Bloquear por ella dejaba sin certificado a estudiantes
+  // que sí habían culminado, y por eso se dejó de exigir.
+  //
+  // La designación es otra cosa: es la que nombra A ESTE estudiante, le asigna
+  // SU tutor y fija sus horas y su nivel. Es el acto por el que la práctica
+  // existe a nombre de alguien. Certificar sin ella sería acreditar una
+  // práctica que nunca se asignó formalmente, y además el certificado imprime
+  // tutor, horas y nivel: justo lo que la designación establece.
+  const tieneDesignacion = docs.some(
+    (d) => d.documentType === 'DESIGNACION' && d.status === 'VALID',
   );
-  if (!hasValidSolicitud) missing.push('solicitud de prácticas vigente');
+  if (!tieneDesignacion) missing.push('la designación de estudiante y tutor');
+
   if (!practice.totalHours || practice.totalHours <= 0) missing.push('horas totales (> 0)');
   if (!practice.tutorName?.trim()) missing.push('tutor asignado');
   if (!practice.practiceLevel?.trim()) missing.push('nivel de práctica');
   if (!practice.academicLevel?.trim()) missing.push('nivel académico');
+
+  // El certificado acredita que la práctica se culminó, y quien lo sabe es el
+  // docente que la calificó. La marca viene del acta de calificaciones que la
+  // coordinación carga al cerrar el período: sin ella el sistema estaría
+  // certificando por su cuenta algo que nadie evaluó.
+  if (!practice.tutorApprovedAt) missing.push('la aprobación del tutor (acta de calificaciones)');
 
   return { ok: missing.length === 0, missing };
 }

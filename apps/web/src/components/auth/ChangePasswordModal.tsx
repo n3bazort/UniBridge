@@ -5,6 +5,8 @@ import { api } from '@/lib/axios'
 import { toast } from 'sonner'
 import { X, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   const [currentPassword, setCurrentPassword] = useState('')
@@ -76,11 +78,11 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
           <div>
             <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Contraseña actual</label>
             <div className="relative">
-              <input
+              <Input
                 type={showCurrent ? 'text' : 'password'}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full pl-3 pr-10 py-2.5 bg-white border border-[#cbd5e1] rounded-[10px] text-[13.5px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-[#333]"
+                className="w-full pl-3 pr-10"
                 required
               />
               <button
@@ -96,11 +98,11 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
           <div>
             <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Nueva contraseña</label>
             <div className="relative">
-              <input
+              <Input
                 type={showNew ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full pl-3 pr-10 py-2.5 bg-white border border-[#cbd5e1] rounded-[10px] text-[13.5px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-[#333]"
+                className="w-full pl-3 pr-10"
                 required
               />
               <button
@@ -129,11 +131,11 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
           <div>
             <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Confirmar nueva contraseña</label>
             <div className="relative">
-              <input
+              <Input
                 type={showConfirm ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full pl-3 pr-10 py-2.5 bg-white border border-[#cbd5e1] rounded-[10px] text-[13.5px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-[#333]"
+                className="w-full pl-3 pr-10"
                 required
               />
               <button
@@ -150,21 +152,13 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="flex justify-end gap-2 mt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 text-[13px] font-semibold text-[#64748b] bg-slate-100 hover:bg-slate-200 rounded-[10px] transition-colors"
-            >
+            <Button type="button" variant="secondary" onClick={onClose} className="text-[13px] rounded-[10px]">
               Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={!isValid || isLoading}
-              className="px-4 py-2.5 flex items-center gap-2 text-[13px] font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-[10px] transition-colors"
-            >
+            </Button>
+            <Button type="submit" disabled={!isValid || isLoading} className="text-[13px] gap-2 rounded-[10px]">
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               {isLoading ? 'Guardando...' : 'Cambiar Contraseña'}
-            </button>
+            </Button>
           </div>
         </form>
       </motion.div>

@@ -14,6 +14,7 @@ const PROTECTED_ROUTES: { path: string; roles: string[] }[] = [
   { path: '/documents', roles: ['ADMIN', 'COORDINATOR'] },
   { path: '/certificates', roles: ['ADMIN', 'COORDINATOR'] },
   { path: '/imports', roles: ['ADMIN', 'COORDINATOR'] },
+  { path: '/completion-records', roles: ['ADMIN', 'COORDINATOR'] },
   { path: '/settings', roles: ['ADMIN', 'COORDINATOR'] },
   { path: '/signer-dashboard', roles: ['SIGNER'] },
   { path: '/users', roles: ['ADMIN'] },

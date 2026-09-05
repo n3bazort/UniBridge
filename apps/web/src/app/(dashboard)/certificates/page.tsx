@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect, useRef, Suspense } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/axios'
 import { RoleGate } from '@/components/shared/role-gate'
@@ -23,11 +23,22 @@ import {
   Loader2,
   ChevronDown,
   ChevronRight,
+  AlertTriangle,
+  Eye,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSearchStore } from '@/store/search'
+import { usePeriodStore } from '@/store/period'
+import { usePeriodoCerrado } from '@/components/layout/periodo-cerrado-aviso'
 import { cn } from '@/lib/utils'
+import { Badge, type BadgeProps } from '@/components/ui/badge'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { DocxPreviewModal } from '@/components/shared/DocxPreviewModal'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 
 interface GeneratedDocument {
   id: string
@@ -75,42 +86,45 @@ interface SignatureBatch {
   createdAt: string
   deanSignedAt?: string | null
   directorSignedAt?: string | null
-  createdBy?: { email: string }
+  createdBy?: { email: string; firstName?: string | null; lastName?: string | null }
   items: SignatureBatchItem[]
 }
 
-const BATCH_STATUS_META: Record<SignatureBatch['status'], { label: string; cls: string }> = {
-  PENDING_DIRECTOR: { label: 'Esperando Responsable de Prácticas (1 de 2)', cls: 'text-amber-700 bg-amber-50 border-amber-200' },
-  PENDING_DEAN: { label: 'Responsable ✓ · Esperando Decano (2 de 2)', cls: 'text-blue-700 bg-blue-50 border-blue-200' },
-  COMPLETED: { label: 'Firmado y publicado', cls: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-  CANCELLED: { label: 'Cancelado', cls: 'text-slate-500 bg-slate-100 border-slate-200' },
+// Colores de las 3 tablas de estado de esta página consolidados sobre los
+// tokens semánticos (--warning/--info/--success/--destructive/--muted) en
+// vez de tonos Tailwind sueltos: es la misma fuente que ahora usa <Badge>.
+const BATCH_STATUS_META: Record<SignatureBatch['status'], { label: string; variant: BadgeProps['variant'] }> = {
+  PENDING_DIRECTOR: { label: 'Esperando Responsable de Prácticas (1 de 2)', variant: 'warning' },
+  PENDING_DEAN: { label: 'Responsable ✓ · Esperando Decano (2 de 2)', variant: 'info' },
+  COMPLETED: { label: 'Firmado y publicado', variant: 'success' },
+  CANCELLED: { label: 'Cancelado', variant: 'neutral' },
 }
 
-const BATCH_ITEM_BADGE: Record<SignatureBatchItem['status'], { label: string; cls: string }> = {
-  PENDING: { label: 'Sin firmas', cls: 'text-amber-600 bg-amber-50 border-amber-100' },
-  SIGNED_BY_DIRECTOR: { label: 'Responsable ✓', cls: 'text-blue-600 bg-blue-50 border-blue-100' },
-  SIGNED_BY_DEAN: { label: 'Decano ✓', cls: 'text-blue-600 bg-blue-50 border-blue-100' },
-  SIGNED: { label: 'Firmado ✓✓', cls: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
-  REJECTED: { label: 'Rechazado', cls: 'text-red-600 bg-red-50 border-red-100' },
+const BATCH_ITEM_BADGE: Record<SignatureBatchItem['status'], { label: string; variant: BadgeProps['variant'] }> = {
+  PENDING: { label: 'Sin firmas', variant: 'warning' },
+  SIGNED_BY_DIRECTOR: { label: 'Responsable ✓', variant: 'info' },
+  SIGNED_BY_DEAN: { label: 'Decano ✓', variant: 'info' },
+  SIGNED: { label: 'Firmado ✓✓', variant: 'success' },
+  REJECTED: { label: 'Rechazado', variant: 'danger' },
 }
 
 /**
  * Estado único por documento: fusiona vigencia + etapa de firma en una sola
  * píldora, en vez de apilar 2-3 badges que decían lo mismo de otra forma.
  */
-function docState(doc: GeneratedDocument): { label: string; cls: string; dot: string } {
-  if (doc.status === 'INVALIDATED') return { label: 'Invalidado', cls: 'text-red-700 bg-red-50 border-red-100', dot: 'bg-red-500' }
-  if (doc.status === 'SUPERSEDED') return { label: 'Reemplazado', cls: 'text-slate-500 bg-slate-100 border-slate-200', dot: 'bg-slate-400' }
+function docState(doc: GeneratedDocument): { label: string; variant: BadgeProps['variant'] } {
+  if (doc.status === 'INVALIDATED') return { label: 'Invalidado', variant: 'danger' }
+  if (doc.status === 'SUPERSEDED') return { label: 'Reemplazado', variant: 'neutral' }
   // La solicitud no entra al circuito de firma: su único estado útil es vigente
   if (doc.documentType !== 'CERTIFICADO') {
-    return { label: 'Vigente', cls: 'text-emerald-700 bg-emerald-50 border-emerald-100', dot: 'bg-emerald-500' }
+    return { label: 'Vigente', variant: 'success' }
   }
   switch (doc.signatureStatus) {
-    case 'IN_SIGNING': return { label: 'Esperando Responsable de Prácticas', cls: 'text-amber-700 bg-amber-50 border-amber-100', dot: 'bg-amber-500' }
-    case 'PARTIALLY_SIGNED': return { label: 'Esperando Decano', cls: 'text-blue-700 bg-blue-50 border-blue-100', dot: 'bg-blue-500' }
-    case 'SIGNED': return { label: 'Firmado ✓✓', cls: 'text-emerald-700 bg-emerald-50 border-emerald-100', dot: 'bg-emerald-500' }
-    case 'REJECTED': return { label: 'Firma rechazada', cls: 'text-red-700 bg-red-50 border-red-100', dot: 'bg-red-500' }
-    default: return { label: 'Listo para enviar', cls: 'text-slate-600 bg-slate-50 border-slate-200', dot: 'bg-slate-300' }
+    case 'IN_SIGNING': return { label: 'Esperando Responsable de Prácticas', variant: 'warning' }
+    case 'PARTIALLY_SIGNED': return { label: 'Esperando Decano', variant: 'info' }
+    case 'SIGNED': return { label: 'Firmado ✓✓', variant: 'success' }
+    case 'REJECTED': return { label: 'Firma rechazada', variant: 'danger' }
+    default: return { label: 'Listo para enviar', variant: 'neutral' }
   }
 }
 
@@ -207,7 +221,17 @@ function CertificatesPageInner() {
 
   const { searchQuery } = useSearchStore()
   const [localSearch, setLocalSearch] = useState('')
-  const [filterState, setFilterState] = useState<'ALL' | 'READY' | 'IN_SIGNATURE' | 'SIGNED' | 'ARCHIVED'>('ALL')
+  /**
+   * Estado del filtro rápido. `AWAITING_DEAN` y `AWAITING_DIRECTOR` existen por
+   * separado porque son dos tarjetas distintas: antes ambas apuntaban a
+   * `IN_SIGNATURE`, así que pulsar una encendía las dos y devolvía la misma
+   * lista. `REJECTED` tampoco existía: la tarjeta de rechazados llevaba
+   * `'ALL'`, de modo que pulsarla quitaba el filtro en vez de mostrar lo
+   * único que de verdad hay que rehacer.
+   */
+  const [filterState, setFilterState] = useState<
+    'ALL' | 'READY' | 'IN_SIGNATURE' | 'AWAITING_DEAN' | 'AWAITING_DIRECTOR' | 'SIGNED' | 'REJECTED' | 'ARCHIVED'
+  >('ALL')
   const [viewMode, setViewMode] = useState<'documents' | 'batches'>('documents')
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
   const [groupBy, setGroupBy] = useState<'COMPANY' | 'STUDENT'>('COMPANY')
@@ -215,6 +239,27 @@ function CertificatesPageInner() {
   const [showInvalidateModal, setShowInvalidateModal] = useState(false)
   const [docToInvalidate, setDocToInvalidate] = useState<string | null>(null)
   const [invalidateReason, setInvalidateReason] = useState('')
+  const [invalidateReasonId, setInvalidateReasonId] = useState('')
+  const [invalidating, setInvalidating] = useState(false)
+
+  const queryClient = useQueryClient()
+
+  /** Catálogo de motivos (RF-24): el texto libre pasa a ser la nota. */
+  const { data: motivos = [] } = useQuery<Array<{ id: string; code: string; label: string }>>({
+    queryKey: ['reasons', 'DOCUMENT'],
+    queryFn: async () => (await api.get('/reasons', { params: { scope: 'DOCUMENT' } })).data,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  /** Lo que se anularía en cascada, consultado al servidor antes de confirmar. */
+  const { data: invalidationImpact } = useQuery<{
+    students: number
+    cascade: { documentType: string; nombre: string; count: number }[]
+  }>({
+    queryKey: ['invalidation-impact', docToInvalidate],
+    queryFn: async () => (await api.get(`/generated-documents/${docToInvalidate}/invalidation-impact`)).data,
+    enabled: !!docToInvalidate && showInvalidateModal,
+  })
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sendingToSignature, setSendingToSignature] = useState(false)
@@ -273,10 +318,38 @@ function CertificatesPageInner() {
     })
   }
 
-  const { data: documents = [], isLoading, refetch } = useQuery<GeneratedDocument[]>({
-    queryKey: ['generated-documents-all'],
-    queryFn: async () => (await api.get('/generated-documents')).data || [],
+  // Acotado al periodo del selector global — mismo criterio que /practices:
+  // el queryKey lleva el periodo para que React Query cachee por separado y
+  // solo pida de nuevo cuando cambia, en vez de traer todos los documentos
+  // que se han emitido desde que existe el sistema.
+  const { selectedPeriod } = usePeriodStore()
+  // Período cerrado = solo consulta. El aviso lo pinta el layout; aquí sirve
+  // para no ofrecer acciones que el servidor va a rechazar por período.
+  const { soloLectura } = usePeriodoCerrado()
+  const { data: documents = [], isPending, isFetching, refetch } = useQuery<GeneratedDocument[]>({
+    queryKey: ['generated-documents-all', selectedPeriod],
+    queryFn: async () => (await api.get('/generated-documents', {
+      params: { academicPeriod: selectedPeriod || undefined },
+    })).data || [],
+    enabled: !!selectedPeriod,
   })
+
+  /**
+   * Cuándo mostrar el cargador en lugar de la lista.
+   *
+   * El periodo sale de un store persistido que se rehidrata después del primer
+   * render. Hasta entonces la consulta está deshabilitada y, con la consulta
+   * deshabilitada, `isLoading` vale false: la pantalla anunciaba «No hay
+   * documentos» antes siquiera de haber preguntado.
+   *
+   * El segundo caso es la llegada desde Prácticas con ?highlight=<id> recién
+   * emitido. Si la lista viene de caché y el documento aún no figura en ella,
+   * se espera al refetch en curso antes de pintar, para no mostrar un
+   * repositorio en el que falta justamente el documento que se vino a ver.
+   */
+  const esperandoDestacado =
+    !!highlightId && isFetching && !documents.some(d => d.id === highlightId)
+  const cargandoDocumentos = !selectedPeriod || isPending || esperandoDestacado
 
   const { data: batches = [], isLoading: isLoadingBatches, refetch: refetchBatches } = useQuery<SignatureBatch[]>({
     queryKey: ['signature-batches'],
@@ -337,11 +410,20 @@ function CertificatesPageInner() {
     })
   }
 
+  /**
+   * Envía al circuito solo los certificados que todavía pueden entrar. La
+   * selección admite también los ya firmados, porque son los que se exportan;
+   * mandarlos de nuevo a firma sería un error que el servidor rechazaría.
+   */
   const handleSendToSignature = async () => {
-    if (selectedIds.size === 0) return
+    const firmables = documents.filter((d) => selectedIds.has(d.id) && isSignable(d))
+    if (firmables.length === 0) {
+      toast.error('Ninguno de los certificados seleccionados puede entrar al circuito de firma')
+      return
+    }
     setSendingToSignature(true)
     try {
-      const res = await api.post('/signatures/batches', { documentIds: Array.from(selectedIds) })
+      const res = await api.post('/signatures/batches', { documentIds: firmables.map((d) => d.id) })
       toast.success(`Lote ${res.data.code} enviado al circuito de firma (Responsable de Prácticas → Decano)`)
       setSelectedIds(new Set())
       setViewMode('batches')
@@ -352,6 +434,44 @@ function CertificatesPageInner() {
     } finally {
       setSendingToSignature(false)
     }
+  }
+
+  /**
+   * Exporta los certificados marcados en un ZIP con nombres legibles.
+   *
+   * Es la salida del circuito: lo que se entrega al estudiante. Por eso admite
+   * cualquier certificado vigente, esté firmado o no, y por eso el archivo se
+   * llama por el período y no por un lote interno.
+   */
+  const [exportando, setExportando] = useState(false)
+  const handleExportarZip = async () => {
+    if (selectedIds.size === 0) return
+    setExportando(true)
+    try {
+      const res = await api.post(
+        '/generated-documents/export-certificados-zip',
+        { documentIds: Array.from(selectedIds), academicPeriod: selectedPeriod || undefined },
+        { responseType: 'blob' },
+      )
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Certificados Practicas ${selectedPeriod || ''}`.trim() + '.zip'
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success(`${selectedIds.size} certificado(s) exportados`)
+    } catch {
+      toast.error('No se pudo exportar el ZIP de certificados')
+    } finally {
+      setExportando(false)
+    }
+  }
+
+  /** Marca todos los certificados vigentes que la vista está mostrando. */
+  const seleccionarTodos = () => {
+    const todos = filteredDocuments.filter(isSelectable)
+    const yaTodos = todos.length > 0 && todos.every((d) => selectedIds.has(d.id))
+    setSelectedIds(yaTodos ? new Set() : new Set(todos.map((d) => d.id)))
   }
 
   // Los KPIs miden el circuito de firma, así que solo cuentan CERTIFICADOS:
@@ -386,7 +506,10 @@ function CertificatesPageInner() {
       switch (filterState) {
         case 'READY': return isCert && doc.status === 'VALID' && (!doc.signatureStatus || doc.signatureStatus === 'NONE')
         case 'IN_SIGNATURE': return isCert && doc.status === 'VALID' && (doc.signatureStatus === 'IN_SIGNING' || doc.signatureStatus === 'PARTIALLY_SIGNED')
+        case 'AWAITING_DEAN': return isCert && doc.status === 'VALID' && doc.signatureStatus === 'IN_SIGNING'
+        case 'AWAITING_DIRECTOR': return isCert && doc.status === 'VALID' && doc.signatureStatus === 'PARTIALLY_SIGNED'
         case 'SIGNED': return isCert && doc.status === 'VALID' && doc.signatureStatus === 'SIGNED'
+        case 'REJECTED': return isCert && doc.status === 'VALID' && doc.signatureStatus === 'REJECTED'
         case 'ARCHIVED': return doc.status !== 'VALID'
         // Por defecto solo lo vigente: las versiones invalidadas o reemplazadas
         // estorban en la agrupación por empresa y ya tienen su propia vista
@@ -420,12 +543,23 @@ function CertificatesPageInner() {
    * Solo los CERTIFICADOS entran al circuito de firma: la solicitud es un
    * oficio dirigido a la empresa, no lleva firma digital de las autoridades.
    */
+  /**
+   * Qué puede marcarse: cualquier certificado vigente.
+   *
+   * Antes solo se podían marcar los que aún no habían entrado al circuito, y
+   * eso dejaba fuera precisamente a los ya firmados, que son los que se
+   * exportan para entregar. La casilla habilita ahora la selección y es cada
+   * acción la que decide sobre qué parte de lo marcado actúa.
+   */
+  const isSelectable = (d: GeneratedDocument) =>
+    d.documentType === 'CERTIFICADO' && d.status === 'VALID'
+
+  /** De lo marcado, lo que todavía puede entrar al circuito de firma. */
   const isSignable = (d: GeneratedDocument) =>
-    d.documentType === 'CERTIFICADO' &&
-    d.status === 'VALID' &&
+    isSelectable(d) &&
     (!d.signatureStatus || d.signatureStatus === 'NONE' || d.signatureStatus === 'REJECTED')
 
-  const selectableInGroup = (docs: GeneratedDocument[]) => docs.filter(isSignable)
+  const selectableInGroup = (docs: GeneratedDocument[]) => docs.filter(isSelectable)
 
   const toggleGroup = (docs: GeneratedDocument[]) => {
     const selectable = selectableInGroup(docs)
@@ -453,6 +587,29 @@ function CertificatesPageInner() {
       window.open(res.data.url, '_blank')
     } catch {
       toast.error('No se pudo previsualizar el archivo')
+    }
+  }
+
+  /**
+   * Abrir un documento: PDF en pestaña nueva, Word en el visor de la propia
+   * app (docx-preview lo renderiza en el navegador).
+   *
+   * Antes un DOCX solo se podía descargar — para mirar un oficio había que
+   * bajar el archivo, abrirlo en Word y luego borrarlo. Con el visor se
+   * revisa sin dejar copias sueltas en el disco de quien lo consulta.
+   * La descarga sigue disponible en su propio botón, para cuando de verdad
+   * se quiere el archivo.
+   */
+  const [docxPreview, setDocxPreview] = useState<{ url: string; title: string } | null>(null)
+
+  const handleOpenDoc = async (doc: GeneratedDocument) => {
+    const esDocx = (doc.signedFileKey || doc.fileUrl || '').toLowerCase().endsWith('.docx')
+    if (!esDocx) return handleView(doc.id)
+    try {
+      const res = await api.get(`/generated-documents/${doc.id}/view`)
+      setDocxPreview({ url: res.data.url, title: doc.documentCode || 'Documento' })
+    } catch {
+      toast.error('No se pudo abrir la vista previa del Word')
     }
   }
 
@@ -523,16 +680,42 @@ function CertificatesPageInner() {
   }
 
   const handleInvalidate = async () => {
-    if (!docToInvalidate || !invalidateReason.trim()) return
+    if (!docToInvalidate || !invalidateReasonId) return
+    setInvalidating(true)
     try {
-      await api.patch(`/generated-documents/${docToInvalidate}/invalidate`, { reason: invalidateReason })
-      toast.success('Documento invalidado correctamente')
+      const { data } = await api.patch(`/generated-documents/${docToInvalidate}/invalidate`, {
+        reasonId: invalidateReasonId,
+        reason: invalidateReason.trim() || undefined,
+      })
+
       setShowInvalidateModal(false)
       setDocToInvalidate(null)
       setInvalidateReason('')
-      refetch()
-    } catch {
-      toast.error('Error al invalidar documento')
+      setInvalidateReasonId('')
+
+      // Invalidar un documento cambia el estado de la práctica y del expediente
+      // del estudiante, no solo esta lista. Antes solo se refrescaba la de aquí
+      // y el resto de la aplicación seguía mostrando el documento como vigente
+      // hasta que alguien recargaba la página entera.
+      await Promise.all([
+        refetch(),
+        queryClient.invalidateQueries({ queryKey: ['practices-all'] }),
+        queryClient.invalidateQueries({ queryKey: ['generated-documents'] }),
+        queryClient.invalidateQueries({ queryKey: ['generated-documents-all'] }),
+        queryClient.invalidateQueries({ queryKey: ['students-all'] }),
+      ])
+
+      const arrastrados = (data?.cascade ?? []).reduce((n: number, c: any) => n + (c.cuantos ?? 0), 0)
+      toast.success(
+        arrastrados > 0
+          ? `Documento invalidado. Se anularon también ${arrastrados} documento(s) que quedaron sin objeto.`
+          : 'Documento invalidado.',
+        { duration: 8000 },
+      )
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Error al invalidar documento')
+    } finally {
+      setInvalidating(false)
     }
   }
 
@@ -550,9 +733,10 @@ function CertificatesPageInner() {
 
   const renderDocRow = (doc: GeneratedDocument) => {
     const state = docState(doc)
+    const esDocx = (doc.signedFileKey || doc.fileUrl || '').toLowerCase().endsWith('.docx')
     const isPdf = doc.template?.type === 'PDF'
     const isSolicitud = doc.documentType !== 'CERTIFICADO'
-    const selectable = isSignable(doc)
+    const selectable = isSelectable(doc)
     const isHighlighted = highlightId === doc.id
 
     return (
@@ -581,7 +765,13 @@ function CertificatesPageInner() {
             disabled={!selectable}
             onChange={() => toggleSelected(doc.id)}
             className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-25 cursor-pointer shrink-0"
-            title={selectable ? 'Seleccionar para enviar a firma' : 'Ya está en el circuito de firma'}
+            title={
+              !selectable
+                ? 'Este documento no está vigente'
+                : isSignable(doc)
+                  ? 'Seleccionar para enviar a firma o exportar'
+                  : 'Seleccionar para exportar (ya pasó por el circuito de firma)'
+            }
           />
         )}
 
@@ -594,10 +784,21 @@ function CertificatesPageInner() {
             : isDesignacion
             ? 'bg-violet-50 text-violet-600'
             : 'bg-blue-50 text-blue-500'
+          // El ícono es el acceso rápido a abrir el documento: el Word se ve en
+          // el visor de la propia app, el PDF lo abre el navegador en una
+          // pestaña. Los botones de la derecha conservan sus funciones.
           return (
-            <div className={cn('w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0', iconBoxCls)}>
+            <button
+              type="button"
+              onClick={() => handleOpenDoc(doc)}
+              title={esDocx ? 'Ver el Word aquí mismo, sin descargarlo' : 'Abrir el documento'}
+              className={cn(
+                'w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0 transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400',
+                iconBoxCls,
+              )}
+            >
               {isDesignacion ? <UserCheck className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-            </div>
+            </button>
           )
         })()}
 
@@ -608,29 +809,40 @@ function CertificatesPageInner() {
             </span>
             <span className="text-[10.5px] font-bold text-slate-400 font-mono shrink-0">{doc.documentCode}</span>
           </div>
-          <span className="text-[11.5px] text-[#9ca3af] truncate">
+          <span className="text-[11.5px] text-muted-foreground truncate">
             {getDocTypeName(doc.documentType)} · {formatDate(doc.createdAt)}
             {doc.invalidReason && <span className="text-amber-600"> · {doc.invalidReason}</span>}
           </span>
         </div>
 
         {/* Estado único (vigencia + firma fusionados) */}
-        <span className={cn('flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border shrink-0', state.cls)}>
-          <span className={cn('w-1.5 h-1.5 rounded-full', state.dot)} />
+        <Badge variant={state.variant} dot className="text-[11px] px-2.5 py-1 shrink-0">
           {state.label}
-        </span>
+        </Badge>
 
-        {/* Acciones: nada se descarga solo — todo se VISUALIZA en pestaña
-            nueva, salvo los DOCX (el navegador no puede mostrarlos) */}
+        {/* Acciones. Nada se descarga solo: el botón principal ABRE el
+            documento — el PDF en pestaña nueva y el Word en el visor de la
+            propia app. La descarga es un botón aparte, para cuando de verdad
+            se quiere el archivo en el disco. Antes el Word solo se podía
+            descargar, así que revisar un oficio obligaba a bajarlo. */}
         <div className="flex items-center gap-1 shrink-0">
-          {(doc.signedFileKey || doc.fileUrl || '').endsWith('.docx') ? (
-            <button
-              onClick={() => handleDownload(doc.id)}
-              className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-              title="Descargar DOCX (Word no se visualiza en el navegador)"
-            >
-              <Download className="w-4 h-4" />
-            </button>
+          {esDocx ? (
+            <>
+              <button
+                onClick={() => handleOpenDoc(doc)}
+                className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                title="Ver el Word aquí mismo, sin descargarlo"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleDownload(doc.id)}
+                className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                title="Descargar el archivo Word"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+            </>
           ) : (
             <button
               onClick={() => handleView(doc.id)}
@@ -674,7 +886,7 @@ function CertificatesPageInner() {
               </button>
             </>
           )}
-          {doc.status === 'VALID' && (
+          {doc.status === 'VALID' && !soloLectura && (
             <button
               onClick={() => { setDocToInvalidate(doc.id); setShowInvalidateModal(true) }}
               className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-300 hover:bg-red-50 hover:text-red-600 transition-colors"
@@ -731,12 +943,17 @@ function CertificatesPageInner() {
         {(() => {
           const isDesignacion = doc.documentType === 'DESIGNACION'
           return (
-            <div className="relative shrink-0 w-9 h-8">
+            <button
+              type="button"
+              onClick={() => handleOpenDoc(doc)}
+              title={isDocxFile ? 'Ver el Word aquí mismo, sin descargarlo' : 'Abrir el oficio'}
+              className="relative shrink-0 w-9 h-8 transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded-[9px]"
+            >
               <div className={cn('absolute left-1.5 top-0 w-8 h-8 rounded-[9px] rotate-3', isDesignacion ? 'bg-violet-100/70' : 'bg-blue-100/70')} />
               <div className={cn('absolute left-0 top-0 w-8 h-8 rounded-[9px] flex items-center justify-center border', isDesignacion ? 'bg-violet-50 text-violet-600 border-violet-100' : 'bg-blue-50 text-blue-500 border-blue-100')}>
                 {isDesignacion ? <UserCheck className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
               </div>
-            </div>
+            </button>
           )
         })()}
 
@@ -749,17 +966,16 @@ function CertificatesPageInner() {
             </span>
           </div>
           {/* Los dueños del documento, en una línea */}
-          <span className="text-[11.5px] text-[#9ca3af] truncate">
+          <span className="text-[11.5px] text-muted-foreground truncate">
             {cluster.map(d => `${d.student?.firstName?.split(' ')[0]} ${d.student?.lastName?.split(' ')[0]}`).join(' · ')}
-            <span className="text-[#d1d5db]"> — {formatDate(doc.createdAt)}</span>
+            <span className="text-muted-foreground"> — {formatDate(doc.createdAt)}</span>
           </span>
         </div>
 
         {/* UN estado y UN juego de acciones para todo el grupo */}
-        <span className={cn('flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border shrink-0', state.cls)}>
-          <span className={cn('w-1.5 h-1.5 rounded-full', state.dot)} />
+        <Badge variant={state.variant} dot className="text-[11px] px-2.5 py-1 shrink-0">
           {state.label}
-        </span>
+        </Badge>
 
         <div className="flex items-center gap-1 shrink-0">
           {isDocxFile ? (
@@ -816,7 +1032,7 @@ function CertificatesPageInner() {
               </button>
             </>
           )}
-          {doc.status === 'VALID' && (
+          {doc.status === 'VALID' && !soloLectura && (
             <button
               onClick={() => { setDocToInvalidate(doc.id); setShowInvalidateModal(true) }}
               className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-300 hover:bg-red-50 hover:text-red-600 transition-colors"
@@ -837,14 +1053,14 @@ function CertificatesPageInner() {
   const renderDocCard = (doc: GeneratedDocument) => {
     const state = docState(doc)
     const isDocxFile = (doc.signedFileKey || doc.fileUrl || '').endsWith('.docx')
-    const selectable = isSignable(doc)
+    const selectable = isSelectable(doc)
     const isHighlighted = highlightId === doc.id
 
     return (
       <div
         key={doc.id}
         id={`doc-${doc.id}`}
-        onClick={() => (isDocxFile ? handleDownload(doc.id) : handleView(doc.id))}
+        onClick={() => handleOpenDoc(doc)}
         className={cn(
           'relative flex flex-col items-center gap-1.5 p-3 rounded-[12px] border border-transparent cursor-pointer transition-colors hover:bg-slate-50 hover:border-[#eef2f7] group',
           isHighlighted && 'ring-2 ring-blue-400 bg-blue-50/50'
@@ -890,10 +1106,9 @@ function CertificatesPageInner() {
         <span className="text-[9.5px] font-mono text-slate-400 truncate" style={{ maxWidth: iconSize + 24 }}>
           {doc.documentCode}
         </span>
-        <span className={cn('flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full border', state.cls)}>
-          <span className={cn('w-1 h-1 rounded-full', state.dot)} />
+        <Badge variant={state.variant} dot className="text-[9px] px-1.5 py-0.5">
           {state.label}
-        </span>
+        </Badge>
       </div>
     )
   }
@@ -911,49 +1126,71 @@ function CertificatesPageInner() {
         hidden
         onChange={onReplaceSelected}
       />
-      <div className="flex flex-col w-full min-h-[calc(100vh-72px)] bg-[#f7f7f8] pt-6 pb-12 px-4 lg:px-8">
-        <div className="w-full max-w-[1200px] mx-auto flex flex-col gap-5">
+      <div className="flex flex-col w-full flex-1">
+        <PageContainer variant="wide" className="flex flex-col gap-5">
 
           {/* Header */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-[12px] bg-white border border-[#eef2f7] flex items-center justify-center shadow-sm">
-                <FileText className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <h1 className="text-[19px] font-bold text-[#111827] leading-tight">Documentos y Firmas</h1>
-                <p className="text-[12.5px] text-[#6b7280]">Bandeja de certificados y oficios generados, y su avance en el circuito de firma.</p>
-              </div>
-            </div>
-            <button
-              onClick={() => { refetch(); refetchBatches() }}
-              className="h-[36px] px-3.5 bg-white hover:bg-slate-50 border border-[#eef2f7] rounded-[10px] text-[12.5px] font-semibold text-[#475569] shadow-sm transition-colors shrink-0"
-            >
-              Actualizar
-            </button>
-          </div>
+          <PageHeader
+            description="Bandeja de certificados y oficios generados, y su avance en el circuito de firma."
+            actions={
+              <button
+                onClick={() => { refetch(); refetchBatches() }}
+                className="h-9 px-3.5 bg-card hover:bg-muted/60 border border-border rounded-md text-xs font-semibold text-foreground transition-colors shrink-0"
+              >
+                Actualizar
+              </button>
+            }
+          />
 
-          {/* KPIs — también funcionan como filtro rápido */}
+          {/* KPIs — y ÚNICO filtro rápido. Antes había dos controles para lo
+              mismo: estas 5 tarjetas Y una fila de chips "Todos/Sin
+              enviar/En firma/..." debajo, con etiquetas casi idénticas,
+              cambiando el mismo filterState. Se quitó la fila de chips —
+              estas tarjetas ya dicen lo mismo con más información (el
+              número real). El anillo azul marca cuál está activo como
+              filtro; tocar la misma lo apaga (vuelve a "Todos"). */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
             {[
-              { label: 'Sin enviar', value: kpis.notSent, cls: 'text-slate-700', dot: 'bg-slate-300', filter: 'READY' as const },
-              { label: 'Esperando Decano', value: kpis.awaitingDean, cls: 'text-amber-600', dot: 'bg-amber-400', filter: 'IN_SIGNATURE' as const },
-              { label: 'Esperando Responsable', value: kpis.awaitingDirector, cls: 'text-blue-600', dot: 'bg-blue-500', filter: 'IN_SIGNATURE' as const },
-              { label: 'Firmados', value: kpis.signed, cls: 'text-emerald-600', dot: 'bg-emerald-500', filter: 'SIGNED' as const },
-              { label: 'Rechazados', value: kpis.rejected, cls: 'text-red-600', dot: 'bg-red-500', filter: 'ALL' as const },
-            ].map((kpi) => (
-              <button
-                key={kpi.label}
-                onClick={() => { setViewMode('documents'); setFilterState(kpi.filter) }}
-                className="bg-white rounded-[12px] border border-[#eef2f7] shadow-soft px-3.5 py-2.5 flex flex-col gap-0.5 text-left hover:border-slate-300 transition-colors"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full ${kpi.dot}`} />
-                  <span className="text-[10.5px] font-bold text-[#9ca3af] uppercase tracking-wider truncate">{kpi.label}</span>
-                </div>
-                <span className={`text-[21px] font-bold leading-none ${kpi.cls}`}>{kpi.value}</span>
-              </button>
-            ))}
+              { label: 'Sin enviar', value: kpis.notSent, tone: 'info' as const, filter: 'READY' as const },
+              { label: 'Esperando Decano', value: kpis.awaitingDean, tone: 'warning' as const, filter: 'AWAITING_DEAN' as const },
+              { label: 'Esperando Responsable', value: kpis.awaitingDirector, tone: 'warning' as const, filter: 'AWAITING_DIRECTOR' as const },
+              { label: 'Firmados', value: kpis.signed, tone: 'success' as const, filter: 'SIGNED' as const },
+              { label: 'Rechazados', value: kpis.rejected, tone: 'danger' as const, filter: 'REJECTED' as const },
+            ].map((kpi) => {
+              const active = kpi.value > 0
+              const isSelected = viewMode === 'documents' && filterState === kpi.filter
+              const toneCls = {
+                info: { border: 'border-info/25', text: 'text-info', dot: 'bg-info', ring: 'ring-info/40' },
+                warning: { border: 'border-warning/25', text: 'text-warning', dot: 'bg-warning', ring: 'ring-warning/40' },
+                success: { border: 'border-success/25', text: 'text-success', dot: 'bg-success', ring: 'ring-success/40' },
+                danger: { border: 'border-destructive/25', text: 'text-destructive', dot: 'bg-destructive', ring: 'ring-destructive/40' },
+              }[kpi.tone]
+              return (
+                // Una sola línea (etiqueta + número), no dos apiladas: eran
+                // tarjetas de 60px+ de alto para mostrar dos palabras y un
+                // número — demasiado peso para tan poca información.
+                <button
+                  key={kpi.label}
+                  onClick={() => {
+                    setViewMode('documents')
+                    setFilterState((prev) => (prev === kpi.filter ? 'ALL' : kpi.filter))
+                  }}
+                  className={cn(
+                    'rounded-[10px] border px-2.5 py-1.5 flex items-center justify-between gap-2 text-left transition-colors',
+                    isSelected && cn('ring-2', toneCls.ring),
+                    active
+                      ? cn('bg-white shadow-soft hover:border-slate-300', toneCls.border)
+                      : 'bg-muted/40 border-transparent hover:border-border',
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', active ? toneCls.dot : 'bg-muted-foreground/30')} />
+                    <span className={cn('text-[10px] font-bold uppercase tracking-wider truncate', active ? 'text-muted-foreground' : 'text-muted-foreground/50')}>{kpi.label}</span>
+                  </div>
+                  <span className={cn('text-[15px] font-bold leading-none shrink-0', active ? toneCls.text : 'text-muted-foreground/40')}>{kpi.value}</span>
+                </button>
+              )
+            })}
           </div>
 
           {/* Tabs */}
@@ -981,55 +1218,54 @@ function CertificatesPageInner() {
             {viewMode === 'documents' && (
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="relative w-full sm:w-[260px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af]" />
-                  <input
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input
                     type="text"
                     placeholder="Estudiante, código o empresa..."
                     value={localSearch}
                     onChange={(e) => setLocalSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-white border border-[#eef2f7] rounded-[10px] text-[12.5px] font-medium placeholder-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-[#374151] shadow-sm"
+                    className="w-full pl-9 pr-3"
                   />
                 </div>
-                <div className="flex items-center gap-1 bg-[#f1f5f9] p-1 rounded-[10px]">
-                  {([
-                    { v: 'ALL', l: 'Todos' },
-                    { v: 'READY', l: 'Sin enviar' },
-                    { v: 'IN_SIGNATURE', l: 'En firma' },
-                    { v: 'SIGNED', l: 'Firmados' },
-                    { v: 'ARCHIVED', l: 'Archivados' },
-                  ] as const).map(opt => (
-                    <button
-                      key={opt.v}
-                      onClick={() => setFilterState(opt.v)}
-                      className={`px-2.5 py-1.5 rounded-[8px] text-[11.5px] font-bold transition-all ${filterState === opt.v ? 'bg-white text-[#111827] shadow-sm' : 'text-[#64748b] hover:text-[#111827]'}`}
-                    >
-                      {opt.l}
-                    </button>
-                  ))}
-                </div>
+                {/* "Archivados" es el único valor que las tarjetas KPI de
+                    arriba no cubren (no hay un conteo de archivados que
+                    tenga sentido mostrar como KPI) — por eso es el único
+                    que sigue viviendo aquí, como un toggle suelto en vez de
+                    una fila entera de chips repitiendo lo que ya dicen las
+                    tarjetas. */}
+                <button
+                  onClick={() => setFilterState((prev) => (prev === 'ARCHIVED' ? 'ALL' : 'ARCHIVED'))}
+                  className={cn(
+                    'h-9 px-3 rounded-[10px] text-[11.5px] font-bold transition-all border shrink-0',
+                    filterState === 'ARCHIVED'
+                      ? 'bg-white border-border shadow-sm text-foreground'
+                      : 'bg-transparent border-transparent text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  Archivados
+                </button>
 
-                {/* Agrupar por */}
-                <div className="flex items-center gap-2 bg-[#f1f5f9] p-1 rounded-[10px] pr-2">
-                  <span className="text-[11.5px] font-medium text-[#64748b] pl-2 hidden sm:inline">Agrupar por:</span>
-                  <div className="relative flex items-center">
-                    <select
-                      value={groupBy}
-                      onChange={(e) => setGroupBy(e.target.value as any)}
-                      className="appearance-none bg-white border border-[#eef2f7] rounded-[8px] pl-8 pr-7 py-1.5 text-[11.5px] font-bold text-[#374151] focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-pointer shadow-sm hover:border-[#cbd5e1] transition-colors"
-                    >
-                      <option value="COMPANY">Empresa</option>
-                      <option value="STUDENT">Estudiante</option>
-                    </select>
-                    <div className="absolute left-2.5 text-blue-600 pointer-events-none">
-                      {groupBy === 'COMPANY' && <Building2 className="w-3.5 h-3.5" />}
-                      {groupBy === 'STUDENT' && <UserCheck className="w-3.5 h-3.5" />}
-                    </div>
-                    <ChevronDown className="w-3.5 h-3.5 absolute right-2 text-slate-400 pointer-events-none" />
-                  </div>
-                </div>
 
-                {/* Lista / cuadrícula + tamaño de ícono */}
-                <div className="flex items-center gap-1.5 bg-[#f1f5f9] p-1 rounded-[10px]">
+                {/* Preferencias de visualización: agrupar + lista/cuadrícula
+                    comparten UNA sola caja con divisor interno — antes eran
+                    2 cajas grises separadas, del mismo peso que "buscar" y
+                    "filtro de estado" (que sí cambian QUÉ se ve, no CÓMO).
+                    El margen extra a la izquierda marca la frontera entre
+                    ambos grupos de intención. */}
+                <div className="flex items-center gap-1 bg-[#f1f5f9] p-1 rounded-[10px] ml-1 pl-1">
+                  <Select
+                    value={groupBy}
+                    onChange={(e) => setGroupBy(e.target.value as any)}
+                    className="w-40"
+                    title="Agrupar por"
+                    icon={groupBy === 'COMPANY' ? <Building2 className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                  >
+                    <option value="COMPANY">Empresa</option>
+                    <option value="STUDENT">Estudiante</option>
+                  </Select>
+
+                  <div className="w-px h-5 bg-[#e2e8f0] mx-0.5" />
+
                   <button
                     onClick={() => changeLayout('list')}
                     className={`p-1.5 rounded-[8px] transition-all ${layout === 'list' ? 'bg-white text-[#111827] shadow-sm' : 'text-[#64748b] hover:text-[#111827]'}`}
@@ -1045,14 +1281,14 @@ function CertificatesPageInner() {
                     <LayoutGrid className="w-4 h-4" />
                   </button>
                   {layout === 'grid' && (
-                    <input
+                    <Input
                       type="range"
                       min={64}
                       max={160}
                       step={8}
                       value={iconSize}
                       onChange={(e) => changeIconSize(Number(e.target.value))}
-                      className="w-[90px] accent-[#111827] cursor-pointer"
+                      className="w-[90px]"
                       title={`Tamaño de ícono: ${iconSize}px`}
                     />
                   )}
@@ -1069,25 +1305,41 @@ function CertificatesPageInner() {
                 animate={{ y: barHidden ? -80 : 0, opacity: barHidden ? 0 : 1 }}
                 exit={{ y: -70, opacity: 0 }}
                 transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-                className="sticky top-[84px] z-[60] mx-auto w-fit"
+                className="sticky top-[84px] z-30 mx-auto w-fit"
               >
-                <div className="flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-[14px] shadow-xl border border-white/10 bg-[#111827]/95 backdrop-blur-md">
+                <div className="flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-[14px] shadow-xl border border-white/10 bg-primary/95 backdrop-blur-md">
                   <div className="flex items-center gap-2.5">
                     <span className="flex items-center justify-center min-w-[26px] h-[26px] px-2 rounded-full bg-white text-[#111827] text-[13px] font-bold">
                       {selectedIds.size}
                     </span>
                     <span className="text-[13px] font-semibold text-white whitespace-nowrap">
-                      documento{selectedIds.size > 1 ? 's' : ''} listo{selectedIds.size > 1 ? 's' : ''} para firma
+                      certificado{selectedIds.size > 1 ? 's' : ''} seleccionado{selectedIds.size > 1 ? 's' : ''}
                     </span>
                   </div>
                   <div className="w-[1px] h-6 bg-white/15" />
+                  {/* Enviar a firma solo aparece si algo de lo marcado puede
+                      entrar al circuito; con certificados ya firmados el botón
+                      no tendría a qué aplicarse. */}
+                  {!soloLectura && documents.some((d) => selectedIds.has(d.id) && isSignable(d)) && (
+                    <button
+                      onClick={handleSendToSignature}
+                      disabled={sendingToSignature}
+                      className="h-[34px] px-4 flex items-center gap-2 rounded-[10px] bg-white hover:bg-slate-100 text-[#111827] text-[12.5px] font-bold transition-colors disabled:opacity-60 whitespace-nowrap"
+                    >
+                      <PenLine className="w-4 h-4 text-blue-600" />
+                      {sendingToSignature ? 'Enviando...' : 'Enviar a firma'}
+                    </button>
+                  )}
                   <button
-                    onClick={handleSendToSignature}
-                    disabled={sendingToSignature}
-                    className="h-[34px] px-4 flex items-center gap-2 rounded-[10px] bg-white hover:bg-slate-100 text-[#111827] text-[12.5px] font-bold transition-colors disabled:opacity-60 whitespace-nowrap"
+                    onClick={handleExportarZip}
+                    disabled={exportando}
+                    className="h-[34px] px-4 flex items-center gap-2 rounded-[10px] bg-emerald-500 hover:bg-emerald-600 text-white text-[12.5px] font-bold transition-colors disabled:opacity-60 whitespace-nowrap"
+                    title={`Descarga los certificados en un ZIP: «Certificados Practicas ${selectedPeriod || ''}»`}
                   >
-                    <PenLine className="w-4 h-4 text-blue-600" />
-                    {sendingToSignature ? 'Enviando...' : 'Enviar a firma'}
+                    {exportando
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Download className="w-4 h-4" />}
+                    {exportando ? 'Preparando...' : 'Exportar ZIP'}
                   </button>
                   <button
                     onClick={() => handlePrint(Array.from(selectedIds))}
@@ -1113,10 +1365,12 @@ function CertificatesPageInner() {
           </AnimatePresence>
 
           {viewMode === 'documents' && (
-            isLoading ? (
+            cargandoDocumentos ? (
               <div className="bg-white rounded-[16px] border border-[#eef2f7] shadow-soft flex flex-col items-center justify-center py-20 gap-3">
                 <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin" />
-                <span className="text-[13px] font-medium text-slate-500">Cargando documentos...</span>
+                <span className="text-[13px] font-medium text-slate-500">
+                  {highlightId ? 'Buscando el documento…' : 'Cargando documentos...'}
+                </span>
               </div>
             ) : filteredDocuments.length === 0 ? (
               <div className="bg-white rounded-[16px] border border-[#eef2f7] shadow-soft flex flex-col items-center justify-center py-20 px-4 text-center">
@@ -1132,9 +1386,37 @@ function CertificatesPageInner() {
               </div>
             ) : (
               <div className="flex flex-col gap-3">
+
+                {/* Casilla maestra. Va aquí, en la misma columna que las de cada
+                    grupo, porque es la lectura natural: una casilla que manda
+                    sobre las de abajo. */}
+                {(() => {
+                  const marcables = filteredDocuments.filter(isSelectable)
+                  if (marcables.length === 0) return null
+                  const todosMarcados = marcables.every((d) => selectedIds.has(d.id))
+                  return (
+                    <label className="flex items-center gap-3 px-4 py-2.5 cursor-pointer select-none group">
+                      <input
+                        type="checkbox"
+                        checked={todosMarcados}
+                        onChange={seleccionarTodos}
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                      />
+                      <span className="text-[12.5px] font-semibold text-[#64748b] group-hover:text-[#111827] transition-colors">
+                        {todosMarcados
+                          ? `Quitar la selección de los ${marcables.length} certificados`
+                          : `Seleccionar los ${marcables.length} certificados`}
+                      </span>
+                    </label>
+                  )
+                })()}
+
                 {groupedDocuments.map(([groupName, docs]) => {
                   const selectable = selectableInGroup(docs)
                   const allSelected = selectable.length > 0 && selectable.every(d => selectedIds.has(d.id))
+                  // El oficio grupal es un solo documento para varios estudiantes:
+                  // se cuentan los documentos, no las filas que cada uno ampara.
+                  const docCount = clusterDocs(docs).length
                   return (
                     <div key={groupName} className="bg-white rounded-[16px] border border-[#eef2f7] shadow-soft overflow-hidden">
                       {/* Cabecera de grupo */}
@@ -1159,7 +1441,7 @@ function CertificatesPageInner() {
                           {groupBy === 'STUDENT' && <UserCheck className="w-3.5 h-3.5" />}
                         </div>
                         <span className="text-[13.5px] font-bold text-[#111827] truncate select-none">{groupName}</span>
-                        <span className="text-[11.5px] font-medium text-[#9ca3af] select-none">{docs.length} doc{docs.length > 1 ? 's' : ''}</span>
+                        <span className="text-[11.5px] font-medium text-muted-foreground select-none">{docCount} doc{docCount > 1 ? 's' : ''}</span>
                         
                         <div className="ml-auto text-slate-400">
                           {collapsedGroups[groupName] ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -1188,7 +1470,7 @@ function CertificatesPageInner() {
                               <div
                                 key={`shared-${cluster[0].documentCode}-${cluster[0].status}`}
                                 id={rowId}
-                                onClick={() => ((cluster[0].signedFileKey || cluster[0].fileUrl || '').endsWith('.docx') ? handleDownload(cluster[0].id) : handleView(cluster[0].id))}
+                                onClick={() => handleOpenDoc(cluster[0])}
                                 className={cn(
                                   'relative flex flex-col items-center gap-1.5 p-3 rounded-[12px] border border-transparent cursor-pointer transition-colors hover:bg-slate-50 hover:border-[#eef2f7]',
                                   isHighlighted && 'ring-2 ring-blue-400 ring-inset bg-blue-50/40'
@@ -1256,14 +1538,14 @@ function CertificatesPageInner() {
                   </span>
                   <div className="flex items-center gap-2">
                     {selectedBatchIds.size > 0 && (
-                      <button
+                      <Button
                         onClick={() => handleDownloadSignedZip([...selectedBatchIds])}
                         disabled={downloadingZip}
-                        className="h-[34px] px-3.5 flex items-center gap-1.5 bg-[#111827] hover:bg-[#1f2937] text-white rounded-[10px] text-[12px] font-semibold transition-colors disabled:opacity-50"
+                        className="h-[34px] gap-1.5 text-[12px] rounded-[10px]"
                       >
                         <Archive className="w-3.5 h-3.5" />
                         ZIP seleccionados ({selectedBatchIds.size})
-                      </button>
+                      </Button>
                     )}
                     <button
                       onClick={() => handleDownloadSignedZip()}
@@ -1317,11 +1599,17 @@ function CertificatesPageInner() {
                           <div className="flex flex-col gap-1.5 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-[14px] font-bold text-[#111827] font-mono">{batch.code}</span>
-                              <span className={`text-[10.5px] font-bold px-2.5 py-1 rounded-full border ${meta.cls}`}>{meta.label}</span>
+                              <Badge variant={meta.variant} className="text-[10.5px] px-2.5 py-1">{meta.label}</Badge>
                             </div>
-                            <span className="text-[11.5px] text-[#9ca3af] font-medium">
+                            <span className="text-[11.5px] text-muted-foreground font-medium">
                               {batch.items.length} documento(s)
                               {rejected > 0 && <span className="text-red-500"> · {rejected} rechazado(s)</span>}
+                              {/* Quién lo envió: el firmante que abre la lista
+                                  necesita saber a quién preguntarle. */}
+                              {batch.createdBy && (
+                                <> · enviado por {[batch.createdBy.firstName, batch.createdBy.lastName]
+                                  .filter(Boolean).join(' ') || batch.createdBy.email}</>
+                              )}
                             </span>
                           </div>
                         </div>
@@ -1348,7 +1636,7 @@ function CertificatesPageInner() {
                             </button>
                           )}
                           <div className="flex flex-col items-end gap-1">
-                            <span className="text-[10.5px] font-bold text-[#9ca3af] uppercase tracking-wider">
+                            <span className="text-[10.5px] font-bold text-muted-foreground uppercase tracking-wider">
                               Decano {deanSigned}/{active.length} · Responsable {directorSigned}/{active.length}
                             </span>
                             <div className="w-[180px] h-[6px] bg-slate-100 rounded-full overflow-hidden">
@@ -1374,14 +1662,14 @@ function CertificatesPageInner() {
                                 <span className="text-[12.5px] font-semibold text-[#111827] truncate">
                                   {item.document.student.firstName} {item.document.student.lastName}
                                 </span>
-                                <span className="text-[10.5px] text-[#9ca3af] font-mono truncate">
+                                <span className="text-[10.5px] text-muted-foreground font-mono truncate">
                                   {item.document.documentCode || 'Sin código'}
                                   {item.rejectReason && <span className="text-red-400 font-sans"> — {item.rejectReason}</span>}
                                 </span>
                               </div>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-[6px] uppercase tracking-wider border shrink-0 ${badge.cls}`}>
+                              <Badge variant={badge.variant} className="text-[10px] px-2 py-0.5 rounded-[6px] uppercase tracking-wider shrink-0">
                                 {badge.label}
-                              </span>
+                              </Badge>
                             </div>
                           )
                         })}
@@ -1393,7 +1681,7 @@ function CertificatesPageInner() {
             </div>
           )}
 
-        </div>
+        </PageContainer>
       </div>
 
       {/* Invalidate Modal */}
@@ -1401,33 +1689,86 @@ function CertificatesPageInner() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[20px] shadow-xl w-full max-w-md p-6 border border-[#eef2f7]">
             <h2 className="text-[17px] font-bold text-[#0f172a] mb-2">Invalidar documento</h2>
-            <p className="text-[13px] text-[#64748b] mb-5">
+            <p className="text-[13px] text-[#64748b] mb-4">
               El documento dejará de ser válido para el estudiante. Queda registrado en el historial con la razón que indiques.
             </p>
+
+            {/* Qué se lleva por delante. Anular la designación arrastra la
+                solicitud que la precedió, porque pidió el cupo para una
+                designación que ya no existe. El certificado no entra: si se
+                emitió es porque el acta acreditó la práctica cumplida. */}
+            {invalidationImpact && invalidationImpact.cascade.length > 0 && (
+              <div className="mb-5 rounded-[12px] border border-amber-200 bg-amber-50 p-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="text-[12.5px] font-bold text-amber-900">
+                    Se anulará también lo que queda sin objeto
+                  </span>
+                </div>
+                <ul className="ml-6 list-disc text-[12.5px] text-amber-800 leading-relaxed">
+                  {invalidationImpact.cascade.map((c) => (
+                    <li key={c.documentType}>
+                      {c.count} {c.nombre}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[11.5px] text-amber-700 leading-snug">
+                  Un certificado ya emitido no se anula por esta vía: si existe, es porque el acta
+                  acreditó la práctica cumplida. Afecta a{' '}
+                  {invalidationImpact.students} estudiante{invalidationImpact.students > 1 ? 's' : ''}.
+                </p>
+              </div>
+            )}
+            {/* El motivo se elige de una lista (RF-24): con texto libre, cada
+                quien escribía lo mismo de otra forma y ningún reporte podía
+                agruparlo. La nota queda para lo que la etiqueta no dice. */}
+            <label className="block text-[12px] font-semibold text-[#334155] mb-1.5">Motivo</label>
+            <Select
+              value={invalidateReasonId}
+              onChange={(e) => setInvalidateReasonId(e.target.value)}
+              className="w-full mb-4"
+            >
+              <option value="">Elige un motivo…</option>
+              {motivos.map((m) => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </Select>
+
+            <label className="block text-[12px] font-semibold text-[#334155] mb-1.5">
+              Nota <span className="font-normal text-muted-foreground">(opcional)</span>
+            </label>
             <textarea
               value={invalidateReason}
               onChange={(e) => setInvalidateReason(e.target.value)}
-              className="w-full border border-[#cbd5e1] rounded-[12px] px-4 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 resize-none h-24"
-              placeholder="Ej: La empresa rechazó a 2 estudiantes y la solicitud ya no es válida."
+              className="w-full border border-[#cbd5e1] rounded-[12px] px-4 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 resize-none h-20"
+              placeholder="Ej: la empresa rechazó a 2 estudiantes."
             />
             <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => { setShowInvalidateModal(false); setDocToInvalidate(null); setInvalidateReason('') }}
-                className="px-4 py-2.5 text-[13px] font-semibold text-[#64748b] bg-slate-100 hover:bg-slate-200 rounded-[10px] transition-colors"
+              <Button
+                variant="secondary"
+                onClick={() => { setShowInvalidateModal(false); setDocToInvalidate(null); setInvalidateReason(''); setInvalidateReasonId('') }}
+                className="text-[13px] rounded-[10px]"
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="destructive"
                 onClick={handleInvalidate}
-                disabled={!invalidateReason.trim()}
-                className="px-4 py-2.5 text-[13px] font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-[10px] transition-colors"
+                disabled={!invalidateReasonId || invalidating}
+                className="text-[13px] rounded-[10px]"
               >
-                Confirmar invalidación
-              </button>
+                {invalidating ? 'Invalidando…' : 'Confirmar invalidación'}
+              </Button>
             </div>
           </div>
         </div>
       )}
+      <DocxPreviewModal
+        isOpen={!!docxPreview}
+        onClose={() => setDocxPreview(null)}
+        url={docxPreview?.url || null}
+        title={docxPreview?.title}
+      />
     </RoleGate>
   )
 }
